@@ -1,0 +1,61 @@
+CONTEXT: "E-commerce Checkout Microservice"
+TARGET: "TypeScript / Node.js"
+TRACE: "SRS-001 (Checkout Flow)", "SRS-005 (Payment Security)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Dependencies: DEPENDENCIES: [...] lists external services this component needs.
+      The transpiler will likely generate a constructor with Dependency Injection.
+   2. Inventory Check: ACHIEVE "Check Inventory" ON_ERROR: THROW... ensures we stop immediately if items are out of stock.
+   3. Payment: ACHIEVE "Process Stripe Payment" @external marks this as an external API call.
+   4. Creation: CREATE Order constructs the object in memory, populating fields like `id` with a UUID generator.
+   5. Persistence: PERSIST Order saves the object to the database using the injected OrderRepository.
+*/
+
+// 1. Design Decisions
+DECISION "ID Generation" @status("APPROVED"):
+    CHOSEN: "UUID v4"
+    AFFECTS: [Order.id]
+
+DECISION "Payment Integration":
+    CHOSEN: "Stripe API"
+    AFFECTS: [CheckoutService.process]
+
+// 2. Type Contracts
+/// Core request payload for checkout processing.
+TYPE OrderRequest:
+    customer_id: UUID
+    items: List<OrderItem> @min_length(1)
+    coupon_code: String @optional
+
+/// Represents a single line item in the order.
+TYPE OrderItem:
+    product_id: UUID
+    quantity: Integer @range(1, 99)
+
+// 3. Component Interface
+COMPONENT CheckoutService:
+    DEPENDENCIES: [OrderRepository, PaymentGateway, InventoryClient]
+    INTERFACE:
+        process(request: OrderRequest) -> Result<Order>
+
+// 4. Design Flow (Deterministic Constraints)
+FLOW process(request: OrderRequest):
+    @error_strategy("Fail-Fast")
+
+    1. VALIDATE request
+    
+    // 2. CHECK INVENTORY
+    // If stock is missing, we must fail immediately (no compensation needed yet).
+    2. ACHIEVE "Check Inventory"
+        ON_ERROR: THROW InsufficientStockException
+
+    // 3. PROCESS PAYMENT
+    // External call to Stripe. Failures here are safe to just throw.
+    3. ACHIEVE "Process Stripe Payment" @external
+        ON_ERROR: THROW PaymentFailedException
+    4. CREATE Order:
+        id: TRANSFORM(@generate("UUID"))
+        status: "PAID"
+    5. PERSIST Order via OrderRepository
+    6. RETURN Result.success(Order)

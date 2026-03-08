@@ -1,0 +1,80 @@
+/* 
+   --- GASD Operational Concerns Example ---
+   This file demonstrates how to use GASD to design for "Production Readiness".
+   
+   It addresses 6 key operational concerns:
+   1. Infrastructure Design: Using CONTEXT and DECISION.
+   2. Security Boundaries: Using @authorized, @sensitive, and @mask.
+   3. Deployment Strategy: Using DECISION to lock down rollout logic.
+   4. Error Handling: Using @retry, @circuit_breaker, and ON_ERROR.
+   5. Logging: Using the LOG primitive with @trace_id.
+   6. Monitoring: Using UPDATE Metric with @metric.
+*/
+
+CONTEXT: "Cloud-Native Microservice Architecture (AWS/Kubernetes)"
+TARGET: "Go 1.21"
+TRACE: "SRS-OBJ-001 (Production Readiness)"
+
+// --- 1. Infrastructure Design & 3. Deployment Strategy ---
+DECISION "Infrastructure Provider" @status("APPROVED"):
+    CHOSEN: "AWS EKS (Elastic Kubernetes Service)"
+    RATIONALE: "Requirement for high availability and auto-scaling"
+    AFFECTS: [*]
+
+DECISION "Deployment Rollout":
+    CHOSEN: "Canary Release"
+    RATIONALE: "Minimize blast radius for new feature deployments"
+    AFFECTS: [OrderProcessingService]
+
+// --- 2. Security Boundaries ---
+TYPE UserCredentials @sensitive:
+    username: String
+    password_hash: String @mask
+    totp_secret: String @mask @encrypted
+
+// --- 4. Error Handling, 5. Logging, & 6. Monitoring ---
+COMPONENT OrderProcessingService:
+    INTERFACE:
+        process_order(order_id: UUID, user_id: UUID) -> Result<Void>
+
+FLOW process_order(order_id, user_id) -> Result<Void>:
+    @authorized("ROLE_USER")
+    @trace_id(order_id)
+    
+    1. LOG "Initiating order processing" @severity("INFO")
+    
+    2. ACHIEVE "Validate Inventory"
+        ON_ERROR:
+            LOG "Inventory validation failed" @severity("ERROR")
+            UPDATE Metric "order_failures" @increment @labels(reason="inventory")
+            RETURN Result.failure
+            
+    3. ACHIEVE "Execute Payment"
+        @retry(3)
+        @circuit_breaker
+        @timeout(2000) // 2 seconds
+        ON_ERROR @type("GatewayTimeout"):
+            LOG "Payment gateway timed out after retries" @severity("CRITICAL")
+            UPDATE Metric "order_failures" @increment @labels(reason="payment_timeout")
+            ACHIEVE "Notify Operations"
+            RETURN Result.failure
+            
+    4. ACHIEVE "Update Order Status"
+    
+    5. LOG "Order processed successfully" @severity("INFO")
+    6. UPDATE Metric "orders_completed" @increment
+    7. RETURN Result.success
+
+COMPONENT HealthMonitor:
+    INTERFACE:
+        check_system_health() -> Status
+
+FLOW check_system_health():
+    1. ACHIEVE "Check DB Connectivity"
+    2. ACHIEVE "Check Cache Connectivity"
+    3. IF all_ok:
+        RETURN "HEALTHY"
+    4. ELSE:
+        LOG "System unhealthy" @severity("CRITICAL")
+        UPDATE Metric "system_health" @set(0)
+        RETURN "UNHEALTHY"

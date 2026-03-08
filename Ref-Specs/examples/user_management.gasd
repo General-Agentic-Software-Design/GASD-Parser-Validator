@@ -1,0 +1,91 @@
+/* 
+   --- 1. Context & Directives ---
+   Defines the environment and requirements trace.
+
+   --- Step-by-Step Breakdown ---
+   1. Decisions: The DECISION blocks at the top set global rules.
+      "Primary Key Strategy" = "UUID v7" means *every* ID in this system will be a UUID v7, ensuring consistency.
+   2. Types: TYPE User defines the schema. @auto_generate on `id` and `created_at` tells the database or ORM to handle these fields.
+   3. Component: COMPONENT AuthService implements the business logic.
+   4. Flow: The `register` flow connects everything: validation -> database check -> password hashing -> object creation -> persistence -> email notification.
+*/
+CONTEXT: "E-commerce Platform / Microservice"
+TARGET: "TypeScript 5.0+"
+TRACE: "SRS-101 (User Registration)", "SRS-105 (Security)"
+
+// --- 2. Design Decisions ---
+DECISION "Password Hashing" @status("APPROVED"):
+    CHOSEN: "Argon2id"
+    RATIONALE: "Current security best practice for GPU resistance"
+    AFFECTS: [AuthService, User.password_hash]
+
+DECISION "Primary Key Strategy":
+    CHOSEN: "UUID v7"
+    RATIONALE: "Time-ordered UUIDs for better database indexing performance"
+    AFFECTS: [User.id]
+
+// --- 3. Types & Contracts ---
+/// Core user entity.
+/// @trace SRS-101 (User Profile)
+TYPE User:
+    id: UUID @auto_generate
+    email: String @format("email") @unique
+    password_hash: String @min_length(60)
+    role: Enum(USER, ADMIN) @default(USER)
+    status: Enum(ACTIVE, SUSPENDED, PENDING)
+    created_at: DateTime @auto_generate
+
+/// Data payload for new user registration.
+TYPE RegistrationRequest:
+    email: String @format("email")
+    password: String @min_length(12) @constraint("Must include special char")
+
+// --- 4. Components & Interfaces ---
+COMPONENT AuthService @status("APPROVED"):
+    PATTERN: "Domain Service"
+    DEPENDENCIES: [UserRepository, EmailProvider]
+    
+    INTERFACE:
+        register(req: RegistrationRequest) -> String
+        suspend_user(user_id: UUID, reason: String) -> Void
+
+COMPONENT UserRepository @mockable:
+    PATTERN: "Data Access Object"
+    INTERFACE:
+        exist_by_email(email: String) -> Boolean
+        save(user: User) -> Void
+        find_by_id(id: UUID) -> Optional<User>
+
+// --- 5. Design Flows ---
+FLOW register(req: RegistrationRequest) -> String:
+    @error_strategy("Exception-based")
+
+    1. VALIDATE req
+    2. ENSURE UserRepository.exist_by_email(req.email) IS FALSE
+        OTHERWISE THROW ConflictException("Email already registered")
+    
+    3. ACHIEVE "Generate Secure Hash":
+        @heuristic("Use Decision: Password Hashing")
+        input: req.password
+        output: hash
+    
+    4. CREATE User:
+        email: req.email
+        password_hash: result_of(step 3)
+        role: "USER"
+        status: "ACTIVE"
+    
+    5. PERSIST User via UserRepository
+    6. ACHIEVE "Send Welcome Email" @async
+    7. RETURN User.id
+
+FLOW handle_login_failure(user_id, attempts):
+    MATCH attempts:
+        3 -> ACHIEVE "Send Warning Email"
+        5 -> ACHIEVE "Lock Account Temporarily"
+        10 -> ACHIEVE "Suspend Account" AND "Alert Security"
+        DEFAULT -> ACHIEVE "Log Failed Attempt"
+
+// --- 6. Global Constraints ---
+CONSTRAINT: "All PII (email) must be encrypted at rest in the database"
+INVARIANT: "A suspended user cannot perform a login flow"

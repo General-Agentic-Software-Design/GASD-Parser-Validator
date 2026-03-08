@@ -1,0 +1,30 @@
+CONTEXT: "Payment Microservice"
+TARGET: "Java Spring Boot"
+NAMESPACE: "com.acme.payment"
+
+/*
+    Demonstrates importing types from another namespace.
+    Note the usage of `IMPORT` and referencing types via Alias or direct matching.
+*/
+
+IMPORT "../multi_doc_system/shared_types.gasd" AS Common
+
+// Usage of imported types
+TYPE PaymentRequest:
+    user: Common.UserInfo       // Referencing imported type via Alias
+    amount: Common.Money
+    billing_address: Common.Address
+    token: String
+
+COMPONENT PaymentService:
+    INTERFACE:
+        process_payment(request: PaymentRequest) -> Result<String>
+
+FLOW process_payment(request: PaymentRequest) -> Result<String>:
+    1. VALIDATE request
+    2. LOG "Processing payment for user " + request.user.email
+    3. MATCH request.amount.currency:
+        "USD" -> ACHIEVE "Process Stripe Charge"
+        "EUR" -> ACHIEVE "Process SEPA Transfer"
+        DEFAULT -> THROW "Unsupported Currency"
+    4. RETURN "TransactionID-123"

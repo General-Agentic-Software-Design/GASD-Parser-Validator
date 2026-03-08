@@ -1,0 +1,20 @@
+CONTEXT: "General Software"
+TARGET: "Any"
+TRACE: "SRS-000 (Hello World)"
+
+/* 
+   A minimal Hello World example
+   demonstrating basic component structure.
+
+   --- Step-by-Step Breakdown ---
+   1. Directives: CONTEXT and TARGET tell the transpiler this is a general-purpose design.
+   2. Component Definition: COMPONENT Greeter creates a class/module named "Greeter".
+   3. Interface: Defines the public method `say_hello` which returns a String.
+   4. Flow: FLOW say_hello() provides the implementation logic—simply returning a literal string.
+*/
+COMPONENT Greeter:
+    INTERFACE:
+        say_hello() -> String
+
+FLOW say_hello():
+    1. RETURN "Hello, World!"

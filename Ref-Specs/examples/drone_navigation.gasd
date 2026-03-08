@@ -1,0 +1,72 @@
+CONTEXT: "Embedded Flight Control"
+TARGET: "C++ 20"
+TRACE: "SRS-501 (Safety Critical)", "SRS-505 (Human Override)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Scan: The drone looks for hazards.
+   2. Safe Case: If hazards.is_empty(), land immediately.
+   3. Unsure Case: The IF condition checks for `confidence < 0.8`. If the AI isn't sure:
+      - QUESTION: It pauses execution and sends a request to the operator console.
+      - MATCH human_response: It waits for the human to click "YES" or "NO" and acts accordingly.
+   4. Danger Case: If high-confidence hazard, aborts landing automatically.
+*/
+
+// --- Decisions ---
+DECISION "Computer Vision Model":
+    CHOSEN: "YOLOv8-Tiny"
+    RATIONALE: "Low latency inference required on edge hardware"
+    AFFECTS: [VisionSystem]
+
+// --- Types ---
+TYPE Waypoint:
+    lat: Float @range(-90.0, 90.0)
+    lon: Float @range(-180.0, 180.0)
+    alt: Float @range(0.0, 400.0) // Max 400ft compliance
+
+TYPE Hazard:
+    type: Enum(BIRD, WIRE, TREE, UNKNOWN)
+    confidence: Float @range(0.0, 1.0)
+    distance: Float
+
+// --- Components ---
+COMPONENT FlightController:
+    DEPENDENCIES: [MotorMixer, BatteryManager, CommLink]
+    INTERFACE:
+        navigate_to(wp: Waypoint) -> Void
+        land_now() -> Void
+
+// --- Human-in-the-Loop Flow ---
+// This flow demonstrates how GASD handles critical decision points
+// where AI confidence is low.
+FLOW autonomous_landing(current_loc: Waypoint):
+    1. ACHIEVE "Scan Landing Zone":
+        output: hazards
+    
+    2. IF hazards.is_empty():
+        // Case A: Safe automated landing
+        ACHIEVE "Perform Vertical Descent"
+        RETURN
+
+    /* 
+       Case B: Uncertainty
+       If we are unsure, we MUST ask the human operator.
+       This generates a blocking UI/API call in the implementation.
+    */
+    3. IF hazards.contains(h -> h.confidence < 0.8 OR h.type == UNKNOWN):
+        QUESTION: "Landing zone has unidentified obstacles. Proceed?"
+            BLOCKING: TRUE
+            CONTEXT: Image(current_loc.camera_feed)
+        
+        MATCH human_response:
+            "YES" -> ACHIEVE "Perform Vertical Descent"
+            "NO"  -> ACHIEVE "Hover and Wait"
+    
+    // Case C: High confidence hazard
+    4. ELSE:
+        ACHIEVE "Abort Landing"
+        ACHIEVE "Return to Loiter Alt"
+
+// --- Global Constraints ---
+CONSTRAINT: "Motor cutoff must trigger within 50ms of tilt > 90 degrees"
+INVARIANT: "Battery level must never drop below 10% in flight"

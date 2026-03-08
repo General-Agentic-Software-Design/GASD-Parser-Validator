@@ -1,0 +1,42 @@
+// invalid_all_errors.gasd
+// This file triggers an exhaustive list of semantic validation errors (V-codes)
+// while remaining syntactically valid.
+
+// Error: Missing CONTEXT directive (V002)
+// Error: Missing TARGET directive (V003)
+
+// Error: Duplicate Type name (V001)
+TYPE User:
+    id: Integer
+
+TYPE User:
+    name: String
+
+// Error: Unknown Type reference (V008)
+TYPE Profile:
+    owner: NonExistentType
+
+// Error: Component with unknown dependency (V009)
+COMPONENT DependentService:
+    DEPENDENCIES: ["MissingDatabase"]
+    INTERFACE:
+        run() -> Boolean
+
+// Error: Decision affecting unknown construct (V010)
+DECISION "BadAffect":
+    CHOSEN: "Option A"
+    AFFECTS: ["NonExistentComponent"]
+
+// Error: Duplicate Component name (V001)
+COMPONENT DuplicateComp:
+    INTERFACE:
+        init() -> Boolean
+
+COMPONENT DuplicateComp:
+    INTERFACE:
+        destroy() -> Boolean
+
+// Error: Unknown type in Flow (V008)
+FLOW ProcessData(input: UnknownInputType):
+    1. ACHIEVE "Prepare"
+    2. RETURN true

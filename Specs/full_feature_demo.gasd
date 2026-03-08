@@ -1,0 +1,91 @@
+CONTEXT: "Unified Agent Architecture"
+TARGET: "TypeScript", "Python3"
+TRACE: "EPIC-PARSER-001"
+NAMESPACE: "org.gasd.demo"
+IMPORT "common_types.gasd" AS Base
+
+/* 
+   Feature: TYPE definitions with Complex Types
+*/
+TYPE UserProfile:
+    id: Integer @trace #REQ-001
+    username: String
+    tags: List<String>
+    settings: Map<String, String>
+    status: Enum(ACTIVE, INACTIVE, PENDING)
+    lastLogin: Optional<Float>
+
+/*
+   Feature: COMPONENT with INTERFACE and Patterns
+*/
+COMPONENT Database:
+    INTERFACE:
+        query() -> Boolean
+
+COMPONENT Cache:
+    INTERFACE:
+        clear() -> Boolean
+
+COMPONENT UserRegistry:
+    PATTERN: "Repository"
+    DEPENDENCIES: ["Database", "Cache"]
+    INTERFACE:
+        getUser(id: Integer) -> UserProfile @cache("3600")
+        saveUser(u: UserProfile) -> Boolean
+
+/*
+   Feature: STRATEGY with Preconditions
+*/
+STRATEGY LoadBalancing:
+    ALGORITHM: "Round Robin"
+    PRECONDITION: true
+    COMPLEXITY: "O(1)"
+    INPUT: servers: List<String>
+    OUTPUT: String
+
+/*
+   Feature: FLOW with Numbered Steps and Action Types
+*/
+FLOW onboarding_flow(u: UserProfile) -> Boolean:
+    1. VALIDATE "username uniqueness"
+    2. CREATE UserRecord @trace #RECOVERY-001
+    3. TRANSFORM u.username, @enriched
+    4. PERSIST UserRecord via Database
+    5. EXECUTE "LoadBalancing"
+    6. LOG "User creation finalized"
+    7. ACHIEVE "email verification sent"
+    8. RETURN true
+
+/*
+   Feature: DECISION Blocks
+*/
+DECISION "Persistence Layer":
+    CHOSEN: "PostgreSQL"
+    RATIONALE: "ACID compliance required for user data."
+    ALTERNATIVES: ["MongoDB", "Redis"]
+    AFFECTS: ["UserRegistry"]
+
+/*
+   Feature: CONSTRAINTS and INVARIANTS
+*/
+CONSTRAINT: "Username must be at least 5 characters"
+INVARIANT: "System uptime > 99.9%"
+
+/*
+   Feature: Human-in-the-Loop (QUESTION / APPROVE)
+*/
+QUESTION: "Enable beta features for this user?"
+    BLOCKING: false
+    CONTEXT: u.id
+
+APPROVE "Account Verification":
+    STATUS: APPROVED
+    BY: "Security Auditor"
+    DATE: "2026-03-05"
+    NOTES: "Checked ID documentation."
+
+/*
+   Feature: Productivity Nodes
+*/
+TODO: "Implement OAuth2 integration"
+REVIEW: "Performance of recursive FLOW calls"

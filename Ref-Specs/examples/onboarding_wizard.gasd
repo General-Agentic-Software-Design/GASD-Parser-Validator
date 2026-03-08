@@ -1,0 +1,49 @@
+CONTEXT: "Web Application / React"
+NAMESPACE: "com.acme.onboarding"
+
+/*
+    UX DESIGN PHILOSOPHY:
+    - We define the *States* of the wizard (where the user can be).
+    - We define the *Data* required at each step.
+    - We define the *Flow* (transitions) between states.
+    - We do NOT define: CSS, layout, colors, or DOM structure.
+*/
+
+// The "State" of our UX is strictly typed
+TYPE OnboardingState:
+    step: Enum(WELCOME, IDENTITY, PLAN_SELECTION, PAYMENT, COMPLETE)
+    user_data: UserDraft
+    errors: Map<String, String>
+
+TYPE UserDraft:
+    email: String @format("email")
+    tier: Enum(FREE, PRO, ENTERPRISE)
+    payment_token: String
+
+// The "Behavioral Backbone": How the UI transitions
+FLOW submit_step(current_state: OnboardingState, input: Any) -> OnboardingState:
+    MATCH current_state.step:
+        WELCOME ->
+            1. TRANSFORM current_state.step = IDENTITY
+            2. RETURN current_state
+        
+        IDENTITY ->
+            1. VALIDATE input HAS email
+            2. IF email_exists(input.email):
+                 RETURN { ...current_state, errors: {email: "Taken"} }
+            3. UPDATE current_state.user_data.email = input.email
+            4. TRANSFORM current_state.step = PLAN_SELECTION
+            5. RETURN current_state
+
+        PLAN_SELECTION ->
+            // Logic drives state, not the other way around
+            1. UPDATE current_state.user_data.tier = input.tier
+            2. MATCH input.tier:
+                FREE -> TRANSFORM current_state.step = COMPLETE // Skip payment
+                PRO  -> TRANSFORM current_state.step = PAYMENT
+            3. RETURN current_state
+
+        PAYMENT ->
+            1. ACHIEVE "Validate Stripe Token"
+            2. TRANSFORM current_state.step = COMPLETE
+            3. RETURN current_state

@@ -1,0 +1,158 @@
+/*
+   Design: Error Reporting System
+   ===============================
+   Defines how the parser reports syntax errors and semantic errors
+   in both human-readable and machine-readable formats.
+
+   Output: Impl/errors/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Error Reporting Design"
+TARGET: "TypeScript"
+TRACE: "US-PARSER-005"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Error Output Format":
+    CHOSEN: "Dual Format: Human-Readable Console + Machine-Readable JSON"
+    RATIONALE: "Developers need clear console output; tooling (IDEs, CI) needs structured JSON for programmatic consumption."
+    AFFECTS: [ErrorReporter, ErrorFormatter]
+
+DECISION "Error Severity Model":
+    CHOSEN: "Three-Level: ERROR, WARNING, INFO"
+    RATIONALE: "ERROR blocks compilation, WARNING flags potential issues, INFO provides advisory notes."
+    AFFECTS: [ErrorReporter]
+
+// ===================================================================
+// Error Types
+// ===================================================================
+
+/// Syntax error: produced by the ANTLR parser when input violates grammar rules.
+TYPE SyntaxError @trace #AC-PARSER-005-01:
+    type: "SYNTAX"
+    message: String
+    line: Integer
+    column: Integer
+    sourceFile: String
+    offendingToken: String @optional
+    expectedTokens: List<String> @optional
+    contextSnippet: String @optional
+
+/// Semantic error: produced by the validation engine.
+TYPE SemanticErrorReport @trace #AC-PARSER-005-02:
+    type: "SEMANTIC"
+    code: String
+    message: String
+    severity: Enum(ERROR, WARNING, INFO)
+    line: Integer
+    column: Integer
+    sourceFile: String
+    context: String @optional
+    suggestions: List<String> @optional
+
+// ===================================================================
+// Machine-Readable Output Format
+// ===================================================================
+
+/// JSON output structure for tooling integration. @trace #AC-PARSER-005-03
+TYPE ErrorReport:
+    version: String @default("1.0.0")
+    sourceFile: String
+    success: Boolean
+    errorCount: Integer
+    warningCount: Integer
+    errors: List<ErrorEntry>
+
+TYPE ErrorEntry:
+    type: Enum(SYNTAX, SEMANTIC)
+    code: String @optional
+    severity: Enum(ERROR, WARNING, INFO)
+    message: String
+    location: ErrorLocation
+    context: String @optional
+    suggestions: List<String> @optional
+
+TYPE ErrorLocation:
+    line: Integer
+    column: Integer
+    endLine: Integer @optional
+    endColumn: Integer @optional
+
+// ===================================================================
+// Human-Readable Output Format
+// ===================================================================
+
+/// Console output format: shows file, line, column, message, and source snippet.
+/// Example:
+///   error[SYNTAX]: unexpected token 'foo'
+///     --> myfile.gasd:12:5
+///      |
+///   12 |     foo: bar
+///      |     ^^^ expected KEYWORD
+///
+FLOW format_human_readable(error: ErrorEntry) -> String:
+    @trace #AC-PARSER-005-01
+    1. ACHIEVE "Format severity tag (error/warning/info)"
+    2. ACHIEVE "Format file path with line:column"
+    3. ACHIEVE "Extract source line from file"
+    4. ACHIEVE "Add caret indicator under offending token"
+    5. ACHIEVE "Append expected tokens or suggestions if available"
+    6. RETURN "Formatted multi-line error string"
+
+// ===================================================================
+// Error Reporter Component
+// ===================================================================
+
+/// Central error reporter that collects all errors and formats output.
+COMPONENT ErrorReporter:
+    PATTERN: "Singleton"
+    DEPENDENCIES: [ParseTreeAPI, ValidationPipeline]
+    INTERFACE:
+        /// Add a syntax error from the parser.
+        addSyntaxError(error: SyntaxError) -> Void
+        /// Add a semantic error from the validator.
+        addSemanticError(error: SemanticErrorReport) -> Void
+        /// Get all errors as a structured JSON report.
+        toJSON() -> ErrorReport @trace #AC-PARSER-005-03
+        /// Get all errors as human-readable console output.
+        toConsole() -> String @trace #AC-PARSER-005-01
+        /// Check if any errors of severity ERROR exist.
+        hasErrors() -> Boolean
+        /// Get total error count.
+        getErrorCount() -> Integer
+        /// Get total warning count.
+        getWarningCount() -> Integer
+
+// ===================================================================
+// ANTLR Error Listener Integration
+// ===================================================================
+
+/// Custom ANTLR error listener that captures syntax errors
+/// and feeds them to the ErrorReporter.
+COMPONENT GASDErrorListener:
+    PATTERN: "Observer"
+    DEPENDENCIES: [ErrorReporter]
+    INTERFACE:
+        /// Called by ANTLR when a syntax error is encountered.
+        syntaxError(recognizer: String, offendingSymbol: String, line: Integer, column: Integer, msg: String, e: String) -> Void
+
+FLOW handle_syntax_error(line: Integer, column: Integer, msg: String, offendingSymbol: String):
+    @trace #AT-PARSER-005-01
+    1. CREATE SyntaxError:
+        type: "SYNTAX"
+        message: msg
+        line: line
+        column: column
+        offendingToken: offendingSymbol
+    2. PERSIST SyntaxError via ErrorReporter @trace #AT-PARSER-005-01
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Syntax errors MUST show file path, line number, and column" @trace #AC-PARSER-005-01
+CONSTRAINT: "Semantic errors MUST include context of the offending construct" @trace #AC-PARSER-005-02
+CONSTRAINT: "Error output MUST be available in machine-readable JSON format" @trace #AC-PARSER-005-03
+CONSTRAINT: "Error format MUST remain stable across versions for tooling integration" @trace #RT-PARSER-005-01

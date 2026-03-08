@@ -1,0 +1,47 @@
+CONTEXT: "User Service"
+TARGET: "TypeScript"
+TRACE: "SRS-101 (User Registration)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Data Type: TYPE UserRegistration defines constraints like @format("email").
+      The transpiler will generate code to validate emails automatically.
+   2. Flow Steps:
+      - VALIDATE data: Triggers the type constraints check.
+      - ENSURE uniqueness: Checks the database to see if the email exists.
+      - ACHIEVE "Hash Password": Tells the agent to implement hashing using the @algorithm("bcrypt") configuration.
+      - ACHIEVE "Notify User" @async: Sends an email *in the background* (asynchronously) so the user doesn't wait.
+*/
+DECISION "Security":
+    CHOSEN: "bcrypt"
+    RATIONALE: "Requirement for cost-factor adjustability"
+
+TYPE UserRegistration:
+    email: String @format("email") @unique
+    age: Integer @range(18, 120)
+
+COMPONENT RegistrationService:
+    PATTERN: "Service"
+    INTERFACE: register(data: UserRegistration) -> UUID
+
+FLOW register(data):
+    // 1. Validation (Schema check)
+    1. VALIDATE data
+
+    // 2. Business Logic Checks
+    2. ENSURE uniqueness(data.email)
+
+    // 3. Security (Password Hashing)
+    // Uses the configured 'bcrypt' strategy
+    3. ACHIEVE "Hash Password":
+        @algorithm("bcrypt")
+        @rounds(12)
+
+    // 4. Persistence
+    4. ACHIEVE "Save User"
+
+    // 5. Notifications (Async)
+    // Should not block the return of the user ID
+    5. ACHIEVE "Notify User" @async
+
+    6. RETURN User.id

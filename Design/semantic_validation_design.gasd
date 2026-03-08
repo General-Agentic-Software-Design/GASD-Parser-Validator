@@ -1,0 +1,131 @@
+/*
+   Design: Semantic Validation Engine
+   ====================================
+   Defines the multi-pass semantic analysis rules that validate
+   GASD files beyond syntactic correctness.
+
+   Output: Impl/validation/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Validation Design"
+TARGET: "TypeScript"
+TRACE: "US-PARSER-004"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Validation Architecture":
+    CHOSEN: "Multi-pass Pipeline"
+    RATIONALE: "Each validation pass focuses on one concern: name uniqueness, required sections, reference resolution, location enrichment. Passes can be composed and extended."
+    AFFECTS: [ValidationPipeline]
+
+DECISION "Error Collection Strategy":
+    CHOSEN: "Accumulate All Errors (Non-Halting)"
+    RATIONALE: "Users benefit from seeing all validation errors at once rather than fixing one error at a time."
+    AFFECTS: [ValidationPipeline, SemanticError]
+
+// ===================================================================
+// Validation Error Model
+// ===================================================================
+
+/// A semantic validation error with full location metadata.
+TYPE SemanticError @trace #AC-PARSER-004-04:
+    code: String
+    severity: Enum(ERROR, WARNING, INFO)
+    message: String
+    line: Integer
+    column: Integer
+    endLine: Integer @optional
+    endColumn: Integer @optional
+    sourceFile: String @optional
+    context: String @optional
+    suggestions: List<String> @optional
+
+// ===================================================================
+// Validation Passes
+// ===================================================================
+
+/// Pass 1: Duplicate Name Detection
+/// Ensures no two constructs of the same kind share a name.
+FLOW validate_duplicate_names() -> List<SemanticError>:
+    @trace #AC-PARSER-004-01
+    1. ACHIEVE "Collect all TYPE names into a set"
+    2. VALIDATE "No duplicate TYPE names exist"
+    3. ACHIEVE "Collect all COMPONENT names into a set"
+    4. VALIDATE "No duplicate COMPONENT names exist"
+    5. ACHIEVE "Collect all FLOW names into a set"
+    6. VALIDATE "No duplicate FLOW names exist" @trace #AT-PARSER-004-01
+    7. ACHIEVE "Collect all STRATEGY names into a set"
+    8. VALIDATE "No duplicate STRATEGY names exist"
+    9. ACHIEVE "Collect all DECISION names into a set"
+    10. VALIDATE "No duplicate DECISION names exist"
+    11. ENSURE "All names are unique within their construct kind"
+        OTHERWISE RETURN "List of SemanticError for each duplicate"
+
+/// Pass 2: Required Sections Validation
+/// Ensures mandatory directives and structure are present.
+FLOW validate_required_sections() -> List<SemanticError>:
+    @trace #AC-PARSER-004-02
+    1. VALIDATE "CONTEXT directive exists"
+    2. VALIDATE "TARGET directive exists"
+    3. VALIDATE "At least one TYPE, COMPONENT, or FLOW exists" @trace #AT-PARSER-004-02
+    4. VALIDATE "Every COMPONENT has an INTERFACE block"
+    5. VALIDATE "Every DECISION has a CHOSEN field"
+    6. VALIDATE "Every FLOW has at least one step"
+    7. ENSURE "All required sections are present"
+        OTHERWISE RETURN "List of SemanticError for missing sections"
+
+/// Pass 3: Reference Resolution
+/// Ensures all cross-references between constructs resolve to valid targets.
+FLOW validate_references() -> List<SemanticError>:
+    @trace #AC-PARSER-004-03
+    1. ACHIEVE "Build symbol table of all declared names"
+    2. VALIDATE "COMPONENT.DEPENDENCIES references resolve to known COMPONENTs"
+    3. VALIDATE "DECISION.AFFECTS references resolve to known constructs"
+    4. VALIDATE "FLOW parameter types resolve to known TYPEs"
+    5. VALIDATE "FLOW return types resolve to known TYPEs"
+    6. VALIDATE "COMPONENT method parameter types resolve"
+    7. VALIDATE "COMPONENT method return types resolve"
+    8. VALIDATE "TYPE field types resolve to primitives or declared TYPEs (exempts literal types)"
+    9. VALIDATE "IMPORT targets exist (if file system access available)"
+    10. ENSURE "All references resolve (though unresolved names are reported as WARNINGS to support external symbols)"
+        OTHERWISE LOG "Warnings for unresolved references"
+
+/// Pass 4: Location Metadata Enrichment
+/// Verifies that all reported errors carry correct location data.
+FLOW validate_error_locations() -> List<SemanticError>:
+    @trace #AC-PARSER-004-04
+    1. VALIDATE "Every SemanticError has line and column"
+    2. VALIDATE "Every SemanticError has a descriptive message"
+    3. VALIDATE "Error context points to the offending construct name"
+
+// ===================================================================
+// Validation Pipeline Orchestration
+// ===================================================================
+
+/// Master orchestrator: runs all passes and returns collected errors.
+COMPONENT ValidationPipeline:
+    PATTERN: "Pipeline"
+    DEPENDENCIES: [ASTGenerator]
+    INTERFACE:
+        /// Run all validation passes on a GASDFile AST.
+        validate(ast: GASDFile) -> List<SemanticError>
+        /// Run a single named pass.
+        runPass(passName: String, ast: GASDFile) -> List<SemanticError>
+
+FLOW run_all_validations(ast: GASDFile) -> List<SemanticError>:
+    1. ACHIEVE "Run validate_duplicate_names()" @trace #AC-PARSER-004-01
+    2. ACHIEVE "Run validate_required_sections()" @trace #AC-PARSER-004-02
+    3. ACHIEVE "Run validate_references()" @trace #AC-PARSER-004-03
+    4. ACHIEVE "Run validate_error_locations()" @trace #AC-PARSER-004-04
+    5. RETURN "Merged list of all SemanticErrors"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Validation MUST be non-halting: collect all errors before reporting" @trace #AC-PARSER-004-01
+CONSTRAINT: "Every error MUST include line, column, and context" @trace #AC-PARSER-004-04
+CONSTRAINT: "Reference resolution MUST cover all cross-construct links" @trace #AC-PARSER-004-03
+CONSTRAINT: "Required sections validation MUST check CONTEXT and TARGET at minimum" @trace #AC-PARSER-004-02

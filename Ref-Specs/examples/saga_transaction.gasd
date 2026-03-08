@@ -1,0 +1,83 @@
+CONTEXT: "E-commerce Microservices"
+TARGET: "Go (Golang)"
+TRACE: "SRS-205 (Order Reliability)", "SRS-210 (Inventory Consistency)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Flow: FLOW execute_order executes a sequence of dangerous operations.
+   2. Step 1 (Inventory): Reserves items. If it fails -> Fail Order.
+   3. Step 2 (Payment): Charges money. **Crucial**: If this fails, we must ON_ERROR: ACHIEVE "Release Inventory".
+      This "undo" action is called *Compensation*.
+   4. Step 3 (Shipping): Ships item. If this fails, we must undo *both* Payment (Refund) and Inventory (Release).
+   5. Success: If all pass, we update the status to "SHIPPED".
+*/
+
+// --- Decisions ---
+DECISION "Transaction Pattern":
+    CHOSEN: "SAGA Choreography"
+    RATIONALE: "Avoids central orchestrator bottleneck, better scalability"
+    AFFECTS: [OrderService, InventoryService, PaymentService]
+
+// --- Types ---
+TYPE OrderSagaData:
+    order_id: UUID
+    customer_id: UUID
+    amount: Decimal
+    items: List<OrderItem>
+    state: Enum(PENDING, RESERVED, PAID, SHIPPED, CANCELLED)
+
+// --- Components ---
+COMPONENT OrderWorkflow:
+    DEPENDENCIES: [InventoryClient, PaymentClient, NotificationService]
+    INTERFACE:
+        execute_order(order: OrderSagaData) -> Result<OrderSagaData>
+        compensate_order(order: OrderSagaData, failure_reason: String) -> Void
+
+// --- Flow with Compensation Logic ---
+FLOW execute_order(order):
+    @transaction_type("SAGA")
+    
+    1. VALIDATE order
+    2. ACHIEVE "Initialize State":
+        state: "PENDING"
+    3. PERSIST order
+
+    /* 
+       Step 1: Inventory Reservation
+       If this fails, we just fail the order.
+       No compensation needed yet.
+    */
+    4. ACHIEVE "Reserve Inventory":
+        input: order.items
+        ON_ERROR: 
+            ACHIEVE "Fail Order"
+            RETURN Result.failure("Inventory unavailable")
+
+    // Step 2: Payment Processing
+    5. ACHIEVE "Process Payment":
+        input: order.amount, order.customer_id
+        ON_ERROR: 
+            ACHIEVE "Release Inventory" // Compensation for Step 1
+            ACHIEVE "Fail Order"
+            RETURN Result.failure("Payment failed")
+
+    // Step 3: Shipping
+    6. ACHIEVE "Initiate Shipping":
+        input: order.id
+        ON_ERROR:
+            ACHIEVE "Refund Payment"    // Compensation for Step 2
+            ACHIEVE "Release Inventory" // Compensation for Step 1
+            ACHIEVE "Fail Order"
+            RETURN Result.failure("Shipping failed")
+
+    // Success Path
+    7. ACHIEVE "Update Order State":
+        state: "SHIPPED"
+        
+    8. ACHIEVE "Notify Customer Success" @async
+    9. RETURN Result.success(order)
+
+FLOW compensate_order(order, failure_reason):
+    1. LOG failure_reason
+    2. ACHIEVE "Mark Order Cancelled"
+    3. ACHIEVE "Notify Customer Failure"

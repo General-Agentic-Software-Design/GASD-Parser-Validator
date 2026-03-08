@@ -1,0 +1,23 @@
+CONTEXT: "Shared Library"
+NAMESPACE: "com.acme.common"
+
+/*
+    Shared types used across multiple microservices.
+    This file demonstrates how to define common data structures
+    that can be imported by other GASD files.
+*/
+
+TYPE Money:
+    amount: Decimal @range(0, 1000000)
+    currency: String @format("ISO-4217")
+
+TYPE Address:
+    street: String
+    city: String
+    country: String
+    zip: String @format("\d{5}(-\d{4})?")
+
+TYPE UserInfo:
+    user_id: UUID
+    email: String @format("email")
+    role: Enum(ADMIN, USER, GUEST)

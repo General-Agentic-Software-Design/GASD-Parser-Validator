@@ -1,0 +1,41 @@
+// fixed_invalid_all_errors.gasd
+// Fixed version of invalid_all_errors.gasd
+
+// FIX V002 & V003: Added required directives
+CONTEXT: "Exhaustive Testing"
+TARGET: "GASD-Parser-1.0.0"
+
+// FIX V001: Merged duplicate 'User' types
+TYPE User:
+    id: Integer
+    name: String
+
+// FIX V008: Resolved 'NonExistentType' to 'User'
+TYPE Profile:
+    owner: User
+
+// FIX V009: Defined 'Database' to resolve unknown dependency
+COMPONENT Database:
+    INTERFACE:
+        query() -> String
+
+COMPONENT DependentService:
+    DEPENDENCIES: ["Database"]
+    INTERFACE:
+        run() -> Boolean
+
+// FIX V010: Changed 'NonExistentComponent' to 'User'
+DECISION "FixedAffect":
+    CHOSEN: "Option A"
+    AFFECTS: ["User"]
+
+// FIX V001: Merged duplicate 'DuplicateComp' components
+COMPONENT UnifiedComp:
+    INTERFACE:
+        init() -> Boolean
+        destroy() -> Boolean
+
+// FIX V008: Resolved 'UnknownInputType' to 'User'
+FLOW ProcessData(input: User):
+    1. ACHIEVE "Fixed"
+    2. RETURN true

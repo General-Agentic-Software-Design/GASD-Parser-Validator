@@ -1,0 +1,3 @@
+// This file is missing required CONTEXT and TARGET directives
+TYPE Simple:
+    name: String

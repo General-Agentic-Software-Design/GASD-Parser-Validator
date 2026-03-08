@@ -1,0 +1,80 @@
+CONTEXT: "Distributed Systems Core"
+TARGET: "C" 
+TRACE: "SRS-300 (Data Consistency)", "SRS-301 (Availability)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Enum State: TYPE NodeState defines the valid states: FOLLOWER, CANDIDATE, LEADER.
+   2. Strategies: STRATEGY leader_election defines the complex math/logic of voting without writing the code.
+   3. Message Handling: FLOW handle_message uses MATCH to react to different network messages (RequestVote, Heartbeat).
+   4. Term Logic: CHECK msg.term > node.current_term enforces the rule that nodes always yield to a higher term (newer leader).
+*/
+
+// --- Types ---
+/// Represents the current state of a Raft node.
+TYPE NodeState: Enum(FOLLOWER, CANDIDATE, LEADER)
+
+/// A single entry in the replicated log.
+/// @invariant index must be unique and monotonic.
+TYPE LogEntry:
+    term: Integer
+    command: String
+    index: Integer @unique
+
+/// RPC messages exchanged between nodes.
+TYPE Message:
+    type: Enum(RequestVote, AppendEntries, Heartbeat)
+    term: Integer
+    sender_id: UUID
+
+// --- Strategies ---
+STRATEGY leader_election:
+    ALGORITHM: "Raft Leader Election"
+    PRECONDITION: node.state == CANDIDATE
+    INVARIANT: "Only one leader per term"
+    INPUT: votes_received: Integer, cluster_size: Integer
+    OUTPUT: Boolean // True if elected
+
+// --- Flow with Pattern Matching ---
+FLOW handle_message(node, msg):
+    // Universal term check
+    1. IF msg.term > node.current_term:
+        ACHIEVE "Update Local Term"
+        ACHIEVE "Step Down to Follower"
+    
+    // Message Dispatch
+    2. MATCH msg.type:
+        "RequestVote" -> 
+            ACHIEVE "Handle Vote Request":
+                strategy: "Grant if term is current and not voted"
+                
+        "AppendEntries" -> 
+            ENSURE msg.term >= node.current_term
+                OTHERWISE RETURN Response(Success=False)
+            
+            ACHIEVE "Replicate Log"
+            ACHIEVE "Step Down to Follower"
+            RETURN Response(Success=True)
+            
+        "Heartbeat" ->
+            ACHIEVE "Reset Election Timer"
+            ACHIEVE "Step Down to Follower"
+            
+        DEFAULT -> 
+            LOG "Unknown message type ignored"
+
+FLOW start_election(node):
+    ENSURE node.state == FOLLOWER
+    
+    1. ACHIEVE "Increment Term"
+    2. ACHIEVE "Become Candidate"
+    3. ACHIEVE "Vote for Self"
+    4. ACHIEVE "Broadcast RequestVote"
+    
+    5. ACHIEVE "Wait for Quorum or Timeout":
+        MATCH result:
+            MAJORITY_GRANTED -> 
+                ACHIEVE "Become Leader"
+                ACHIEVE "Start Heartbeat"
+            TIMEOUT -> 
+                ACHIEVE "Retry Election"
