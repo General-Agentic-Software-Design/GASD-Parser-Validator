@@ -1,0 +1,74 @@
+/* 
+   --- Extension Client Design (Expert Strict) ---
+   Logic for VS Code host interaction and workspace management.
+   Strictly follows GASD 1.0.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension"
+TARGET: "TypeScript 5.x"
+TRACE: #US-1, #US-15, #US-16, #US-27
+
+IMPORT "types.gasd" AS Types
+
+NAMESPACE: "gasd.vscode.client"
+
+COMPONENT ExtensionClient @trace #US-15, #US-27:
+    PATTERN: "VS Code Extension Entry Point"
+    DEPENDENCIES: [ProjectManager, SnippetProvider, PreviewManager]
+    
+    INTERFACE:
+        activate(context: ExtensionContext) -> Void
+        deactivate() -> Void
+        on_save(document: TextDocument) -> Void @trace #US-4
+        show_preview() -> Void @trace #US-12
+        register_file_association() -> Void @trace #AC-27.1
+        initialize_lsp_client() -> Void  // Registers for both 'file' and 'untitled' document schemes
+        register_commands() -> Void
+
+COMPONENT SnippetProvider @trace #US-2:
+    INTERFACE:
+        register_snippets() -> Void @trace #AC-2.1
+
+COMPONENT PreviewManager @trace #US-12:
+    INTERFACE:
+        open_preview(uri: String) -> Void @trace #AC-12.1
+
+COMPONENT ProjectManager @trace #US-15, #US-16:
+    INTERFACE:
+        scaffold_project(root_uri: String) -> Void
+        handle_file_move(old_uri: String, new_uri: String) -> Void @trace #AC-16.2
+
+// --- Flows ---
+
+/// Implements #US-15 (Project Scaffolding)
+FLOW initialize_gasd_project():
+    @trace #AC-15.1
+    1. VALIDATE "Workspace is open"
+    2. CREATE "build/" directory
+    3. CREATE "design/" directory
+    4. CREATE "user-story/" directory
+    5. CREATE "impl/" as the implementation root folder
+    6. PERSIST "package.json" and "tsconfig.json" inside "impl/"
+    7. CREATE "main.gasd" with expert template
+    8. LOG "GASD Project structure initialized"
+
+/// Implements #US-27 (File Association)
+FLOW handle_gasd_file_open(uri: String):
+    @trace #AC-27.1
+    1. MATCH uri extension:
+        ".gasd" -> 
+            ACHIEVE "Set languageId to 'gasd'"
+            ACHIEVE "Enable syntax highlighting (TextMate)"
+            ACHIEVE "Associate official icons/gasd_icon.png with file explorer"
+            ACHIEVE "Start LSP Client if idle"
+        DEFAULT -> RETURN
+
+/// Implements #US-1 (Syntax Highlighting)
+FLOW apply_theming():
+    @trace #AC-1.1 to #AC-1.6
+    1. ACHIEVE "Load gasd.tmLanguage.json"
+    2. VALIDATE "Directives, keywords, and types are mapped to standard scopes"
+    3. ACHIEVE "Apply semantic token mapping" @trace #US-21
+
+// --- Constraints ---
+CONSTRAINT: "Expert Compliance: Extension MUST NOT block the UI thread during scaffolding or indexing."

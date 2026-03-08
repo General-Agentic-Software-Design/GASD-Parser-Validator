@@ -1,0 +1,45 @@
+# demo_runner.gasd
+# Compliance: Build/build_plan.gasd
+# Purpose: Formalized Demo Sequence for AI/Human verification
+
+FLOW main_demo_sequence():
+    @goal("Demonstrate 100% feature coverage of Backbone.js implementation")
+    
+    1. ACHIEVE "Arithmetic Verification":
+        ACTION click_ac()
+        ACTION type_input("7 * 8 + sqrt(16)")
+        ACTION click_equals()
+        ENSURE result_is("60")
+
+    2. ACHIEVE "Scientific Verification":
+        ACTION click_ac()
+        ACTION type_input("sin(pi / 2) * 5")
+        ACTION click_equals()
+        ENSURE result_is("5")
+
+    3. ACHIEVE "Algebraic Solver Verification":
+        ACTION click_ac()
+        ACTION type_input("x^2 - 5x + 6 = 0")
+        ACTION click_solve()
+        ENSURE result_is("3, 2")
+
+    4. ACHIEVE "Graphing Verification":
+        ACTION click_ac()
+        ACTION plot_function("sin(x)")
+        ACTION plot_function("x^2")
+        ACTION plot_function("cos(x)")
+        ENSURE active_tab_is("graph")
+        ENSURE canvas_not_empty()
+
+    5. ACHIEVE "Persistence Verification":
+        ACTION switch_to_tab("history")
+        ACTION select_history_item("x^2 - 5x + 6 = 0")
+        ENSURE active_tab_is("calc")
+        ENSURE display_is("x^2 - 5x + 6 = 0")
+
+    6. ACHIEVE "UI Robustness Verification":
+        ACTION click_ac()
+        ENSURE display_is("0")
+        ENSURE result_is("0")
+
+    7. PERSIST "demo_result.log"

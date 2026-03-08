@@ -1,0 +1,80 @@
+/* 
+   GASD Design: Core Calculation Engine v1.0.0
+   ====================================
+   Scope: Arithmetic, Scientific Functions, Equation Solving
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "Core Computation Logic"
+TARGET: "JavaScript Engine"
+TRACE: "Requirements/User Stories.md#L39-L125,L188-L208"
+NAMESPACE: "org.calculator.core"
+
+// --- 1. Abstract Data Types ---
+
+TYPE CalculationResult:
+    value: Decimal @range(min: -1e308, max: 1e308)
+    formatted: String @max_length(64)
+    precision: Integer @default(12)
+
+TYPE EquationRoots:
+    roots: List<String>
+    type: Enum("REAL", "COMPLEX")
+
+// --- 2. Component Contracts ---
+
+COMPONENT MathEngine @injectable:
+    PATTERN: "Stateless Functional Parser"
+    INTERFACE:
+        evaluate(expression: String, context: Map<String, Decimal>) -> Result<CalculationResult> @trace("US 1.1")
+        solve_linear(equation: String) -> Result<CalculationResult> @trace("US 5.1")
+        solve_quadratic(equation: String) -> Result<EquationRoots> @trace("US 5.2")
+
+// --- 3. Interaction Flows ---
+
+FLOW evaluate_expression(expr: String) -> CalculationResult:
+    @error_strategy("Fail-Fast")
+    
+    1. VALIDATE expr @min_length(1)
+    2. ACHIEVE "Lexical Scanning"
+    3. ACHIEVE "Syntactic Parsing" // Build AST
+    4. ENSURE is_valid_math IS TRUE OTHERWISE THROW "Invalid Syntax"
+    5. ACHIEVE "Computation" @optimize("Precision-Safe")
+    6. ACHIEVE "Decimal Rounding" @trace("US 1.2")
+    7. PERSIST "calculation_history"
+    8. RETURN result
+    
+STRATEGY LexicalPolicy:
+    ALGORITHM: "Case-insensitive parsing of functions (sin, cos, etc.) and constants (PI, E). Strict tokenization (fail on unknown characters). Implicit multiplication (e.g., '2x'). supported unary minus. supported whitespace."
+    // Constraints mapped from algorithm description
+    CONSTRAINT: "Tokenizer MUST ignore arbitrary whitespace."
+    CONSTRAINT: "PI SHALL be defined as ~3.14159... and E as ~2.71828..."
+
+FLOW solve_equation(input: String) -> EquationRoots:
+    1. ACHIEVE "Normal Form Conversion": Transpose all terms to the LHS (e.g., 'f(x) = C' becomes 'f(x) - C = 0')
+    2. ACHIEVE "Identify Equation Type"
+    3. MATCH equation_type:
+        "LINEAR": ACHIEVE "Linear Solver"
+        "QUADRATIC": ACHIEVE "Quadratic Solver" 
+    4. ACHIEVE "Root Extraction"
+    5. ACHIEVE "Cleanup & Format"
+    6. RETURN roots
+
+CONSTRAINT ComplexRootDisplay: "Complex roots MUST be formatted as 'real ± imag i'. Components MUST NOT be omitted unless real part is zero."
+CONSTRAINT AlgebraicPrecision: "Results from algebraic solvers MUST be rounded to 6 decimal places for readability while maintaining 12-digit internal precision."
+CONSTRAINT FactorialOperator: "The '!' operator MUST be supported for non-negative integers. Non-integer input MUST throw 'Domain Error'."
+
+// --- 4. Quality Constraints ---
+
+CONSTRAINT: "Division by zero MUST return an explicit error result." @trace("US 1.1")
+CONSTRAINT: "All trigonometric functions MUST respect the global DEG/RAD toggle." @trace("US 2.1")
+CONSTRAINT: "Lexical scanning MUST follow the LexicalPolicy strategy."
+CONSTRAINT: "Algebraic solvers MUST support implicit coefficients (e.g., 'x^2' as '1x^2') and arbitrary whitespace."
+INVARIANT: "The main evaluation entry point MUST detect '=' to route between scientific and algebraic flows."
+INVARIANT: "Floating point errors SHALL be mitigated via Decimal-based arithmetic."
+INVARIANT: "Algebraic solvers MUST handle non-zero constants and terms on both sides of the '=' operator (e.g., 'x^2 + x = 10' is valid)."
+CONSTRAINT WhitespaceHandling: "Input components MUST allow and the tokenizer MUST ignore arbitrary whitespace (space, tab) within expressions and equations."
+CONSTRAINT SmartEquals: "The '=' trigger SHALL append the character if the input is an incomplete equation, or trigger evaluation if the input is a complete expression or equation."
+CONSTRAINT VariableContext: "The evaluation engine MUST support an explicit execution context for variable resolution (e.g., providing {x: value} for plotting)."
+CONSTRAINT ScientificNotation: "Lexical scanning MUST support scientific notation (e.g., '1.2e-5')."
+CONSTRAINT RobustTransposition: "Algebraic solvers MUST normalize equations by transposing all terms to the LHS and handle implicit coefficients (e.g., '-x' as '-1x')."

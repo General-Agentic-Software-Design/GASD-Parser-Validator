@@ -1,0 +1,63 @@
+```
+   GASD Design: Graph Plotting Engine v1.0.0
+   ==========================
+   Scope: Main View, Graph View, History Panel, Accessibility
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "Frontend UI Architecture"
+TARGET: "Modern Web Browser / Vanilla CSS"
+TRACE: "Requirements/User Stories.md#L256-L347"
+NAMESPACE: "org.calculator.ui"
+
+// --- 1. UI Components ---
+
+COMPONENT CalculatorApp:
+    PATTERN: "Single Page Application"
+    INTERFACE:
+        mount(root: DOM) -> Void
+        switch_tab(tab: Enum("CALCULATOR", "GRAPH", "HISTORY")) -> Void
+        resize_canvas() -> Void @agent_note("Required for visibility state transitions")
+
+COMPONENT DisplayPanel:
+    INTERFACE:
+        update_expression(txt: String) -> Void
+        update_result(txt: String) -> Void
+        highlight_error(pos: Integer) -> Void @trace("US 1.3")
+
+COMPONENT ButtonGrid:
+    INTERFACE:
+        on_click(key: String) -> Void
+        @authorized("user")
+
+COMPONENT HistoryList:
+    INTERFACE:
+        render_entries(items: List<CalculationEntry>) -> Void
+        on_item_select(id: UUID) -> Void @trace("US 6.2")
+
+// --- 2. Accessibility & Responsive Design ---
+
+@authorized("all")
+@agent_note("Ensure focus management and ARIA labels for screen readers.")
+TYPE AccessibilityStandards:
+    keyboard_nav: Boolean @default(true) @trace("US 8.1")
+    aria_support: Boolean @default(true)
+    touch_optimized: Boolean @default(true) @trace("US 8.2")
+
+// --- 3. Style Invariants ---
+
+INVARIANT: "The UI MUST be responsive across desktop and tablet." @trace("US 8.2")
+INVARIANT: "All buttons MUST have a minimum touch target of 44x44px." @trace("US 8.2")
+INVARIANT: "Graph canvas MUST scale to fit container width."
+INVARIANT: "Graph view MUST support interactive panning via mouse drag or touch drag."
+INVARIANT: "Canvas MUST be resized and re-rendered explicitly when becoming visible."
+INVARIANT: "Action triggers (Plot, Clear, AC, Equals, Clear History) MUST NOT directly append their text values to the expression input buffer."
+INVARIANT: "Graph view MUST provide explicit visual controls for Zoom In, Zoom Out, Reset, Auto-Scale, and Clear."
+INVARIANT: "The primary input field MUST support and preserve literal space characters entered via physical or virtual keyboard."
+INVARIANT: "Primary action triggers (e.g., 'Solve') MUST ONLY be visible within their relevant functional context (Calculator view)."
+CONSTRAINT InputSanitization: "Initial placeholder '0' MUST be replaced by the first character input if that character is a digit or variable, preventing '0x' or '01' scenarios."
+CONSTRAINT DisplayTruncation: "Result labels MUST use dynamic font sizing OR a maximum of 24pt to ensure long root strings (e.g., complex pairs) are not visually truncated."
+CONSTRAINT FocusManagement: "Global keyboard listeners MUST NOT intercept events if a non-math input field (e.g., a search box) is focused."
+CONSTRAINT KeyboardParity: "All functional characters available via UI buttons MUST be accessible via standard keyboard mappings. Specifically: 'Delete' MUST trigger 'All Clear' (AC), 'Backspace' MUST trigger 'Clear' (C), and constants 'pi' and 'e' MUST be accessible via 'p' and 'e' keys respectively."
+CONSTRAINT StateReset: "The 'All Clear' (AC) action MUST reset the following: expression input, result labels, error highlights, and instructional placeholders."
+CONSTRAINT ActionFeedback: "Primary actions (Plot, Solve) MUST trigger immediate visual state changes (e.g., tab switching or hiding hints) to confirm execution."

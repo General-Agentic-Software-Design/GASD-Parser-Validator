@@ -1,0 +1,82 @@
+   GASD Design: Graph Plotting Engine v1.0.0
+   ==================================
+   Scope: Function Plotting, Zoom, Pan, Interaction
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "Graph Visualization"
+TARGET: "HTML5 Canvas"
+TRACE: "Requirements/User Stories.md#L127-L186"
+NAMESPACE: "org.calculator.graph"
+
+// --- 1. Data Structures ---
+
+TYPE CartesianPoint:
+    x: Decimal
+    y: Decimal
+
+TYPE ViewPort:
+    xmin: Decimal
+    xmax: Decimal
+    ymin: Decimal
+    ymax: Decimal
+    zoom_level: Float @default(1.0)
+
+// --- 2. Component Contracts ---
+
+TYPE PlotterState:
+    current_functions: List<String> @default([]) // Persistence across UI events
+
+COMPONENT Plotter @status("APPROVED"):
+    PATTERN: "Layered Canvas Renderer"
+    INTERFACE:
+        render_function(fn: String, view: ViewPort) -> Void @trace("US 3.1")
+        auto_scale() -> Void @trace("US 3.1")
+        clear_plots() -> Void @trace("US 3.2")
+        get_coordinates(pixel_x: Integer, pixel_y: Integer) -> CartesianPoint @trace("US 4.1")
+        detect_key_points(fn: String) -> List<CartesianPoint> @trace("US 4.2")
+
+// --- 3. Plotting Strategy ---
+
+STRATEGY PlottingResolution:
+    ALGORITHM: "Adaptive Sampling"
+    PRECONDITION: "ViewPort is defined and fn is valid"
+    COMPLEXITY: "O(N) where N is horizontal pixel width"
+    INPUT: [fn: String, view: ViewPort, resolution: Integer]
+    OUTPUT: "Array of CartesianPoint"
+
+// --- 4. Logic Flows ---
+
+FLOW render_graph_flow():
+    @async @optimize("Performance")
+    
+    1. ACHIEVE "Coordinate Space Calculation"
+    2. ACHIEVE "Point Sampling" via PlottingResolution
+    3. ACHIEVE "Path Transformation" // Map cartesian to pixel
+    4. ACHIEVE "Canvas Draw" @trace("US 7.2")
+    5. ACHIEVE "Overlay Layer Rendering" // For legends/labels
+
+FLOW interact_with_graph():
+    1. ACHIEVE "Event Capture" // Mouse/Touch
+    2. MATCH interaction_type:
+        "HOVER": ACHIEVE "Coordinate Highlight"
+        "DRAG": ACHIEVE "Pan View" // Update xmin/xmax/ymin/ymax based on delta
+        "PINCH": ACHIEVE "Zoom View"
+    3. ACHIEVE "Canvas Buffer Refresh"
+
+FLOW clear_graph_flow():
+    1. ACHIEVE "Clear Current Functions State"
+    2. ACHIEVE "Clear Plot Buffers"
+    3. ACHIEVE "Canvas Reset"
+    4. RETURN Void
+
+// --- 5. Invariants ---
+
+INVARIANT: "Graph rendering MUST NOT block the UI thread." @trace("US 7.2")
+CONSTRAINT: "Auto-scale option MUST recalculate ViewPort bounds based on y-values."
+INVARIANT: "Variable replacement for plotting (e.g., 'x') MUST be case-insensitive."
+CONSTRAINT: "Viewport manipulations (Zoom/Pan/Reset) MUST NOT clear the `current_functions` state."
+CONSTRAINT: "Plotting MUST use a minimum of N samples where N = horizontal pixel width. Non-linear segments MUST be discarded if result is NaN/Inf." @agent_note("SamplingPrecision")
+CONSTRAINT: "The ViewPort state (xmin, xmax, ymin, ymax) MUST be preserved across tab switches and only reset via explicit 'Reset' or 'Plot' (if first function)." @agent_note("ViewPortPersistence")
+CONSTRAINT GridReadability: "Grid lines MUST adjust their scale dynamically based on the current zoom level to prevent visual density artifacts." @agent_note("GridReadability")
+CONSTRAINT SamplingContext: "The plotter SHALL use an explicit evaluation context for passing variables (e.g., 'x') to the math engine during sampling, rather than string replacement."

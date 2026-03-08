@@ -1,0 +1,53 @@
+/* 
+   --- GASD VS Code Extension Design (Orchestrator) ---
+   Main orchestrator for the official extension.
+   Strictly follows GASD 1.0.0 normative specification as an expert:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension / LSP"
+TARGET: "TypeScript 5.x"
+TRACE: #US-1 to #US-27
+
+IMPORT "types.gasd" AS Types
+IMPORT "lsp_server.gasd" AS Server
+IMPORT "extension_client.gasd" AS Client
+IMPORT "tests.gasd" AS Testing
+
+NAMESPACE: "gasd.vscode.main"
+
+/// Expert Pattern: Use a single orchestrator to manage lifecycle and components.
+
+COMPONENT GASDExtension @trace #US-1 to #US-27:
+    PATTERN: "Extension Entry Point"
+    DEPENDENCIES: [
+        Client.ExtensionClient,
+        Server.GASDServer,
+        Testing.AcceptanceTestSuite
+    ]
+    
+    RESOURCES:
+        - "language-configuration.json"
+        - "client/gasd.tmLanguage.json"
+        - "snippets/gasd.code-snippets"  // @trace #US-2
+        - "icons/gasd_icon.png"  // @trace #AC-27.2 actively used as language file logo
+
+    INTERFACE:
+        on_startup() -> Void
+        on_shutdown() -> Void
+
+// --- Architectural Decisions ---
+
+DECISION "Process Model":
+    CHOSEN: "Multi-process (Client Main + Server Thread)"
+    RATIONALE: "Ensures responsiveness by offloading parsing and AI tasks"
+    AFFECTS: [GASDExtension.Server]
+
+DECISION "Strict Compliance Enforcement":
+    CHOSEN: "Normative GASD 1.0.0 Validation"
+    RATIONALE: "Enforces expert-level patterns across all generated artifacts"
+    AFFECTS: [Server.Parser]
+
+// --- Global Invariants ---
+INVARIANT: "Expert Compliance: All components MUST trace back to #US or #AC identifiers."
+INVARIANT: "LSP 3.17 compliance for all core features." @trace #US-18 to #US-26
+INVARIANT: "Story-First Methodology: Design MUST be derived directly from user-story.md." @trace #US-27

@@ -1,0 +1,58 @@
+/* 
+   GASD Design: Acceptance Tests
+   =============================
+   Scope: Verification of User Stories and Definition of Done
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "Verification & Validation"
+TARGET: "End-to-End Test Runner"
+TRACE: "Requirements/User Stories.md#L376-L388"
+NAMESPACE: "org.calculator.tests"
+
+IMPORT "org.calculator.core" AS Core
+IMPORT "org.calculator.graph" AS Graph
+
+// --- 1. Test Scenarios ---
+
+TYPE TestCase:
+    id: String
+    description: String
+    input: Any
+    expected_output: Any
+    trace: String
+
+COMPONENT AcceptanceTester:
+    INTERFACE:
+        run_arithmetic_tests() -> Result<Void> @trace("Epic 1")
+        run_scientific_tests() -> Result<Void> @trace("Epic 2")
+        run_graph_verification() -> Result<Void> @trace("Epic 3")
+        run_performance_audit() -> Result<Void> @trace("Epic 7")
+
+// --- 2. Validation Flows ---
+
+FLOW verify_arithmetic_compliance():
+    @error_strategy("Fail-Fast")
+    1. VALIDATE PEMDAS_support
+    2. VALIDATE division_by_zero_error @trace("US 1.1")
+    3. VALIDATE decimal_rounding_12_places @trace("US 1.2")
+    4. VALIDATE unary_negation_support // e.g., -5, sin(-1)
+    5. ENSURE all_passed IS TRUE
+
+FLOW verify_graph_performance():
+    1. ACHIEVE "Render Stress Test"
+    2. MEASURE render_latency @range(max: 200) @trace("US 7.2")
+    3. MEASURE eval_latency @range(max: 50) @trace("US 7.2")
+    4. ENSURE metrics_match_requirements
+
+FLOW verify_offline_readiness():
+    1. ACHIEVE "Disable Network Simulation"
+    2. ACHIEVE "App Reload"
+    3. VALIDATE core_functionality_works @trace("US 7.1")
+    4. ENSURE no_external_calls_triggered
+
+// --- 3. Acceptance Constraints ---
+
+CONSTRAINT: "Every User Story MUST have at least one corresponding validation flow."
+CONSTRAINT: "No test suite SHALL use 'eval()' for execution." @trace("US DoD")
+INVARIANT: "The 'Definition of Done' is only satisfied if all verify_* flows return Success."

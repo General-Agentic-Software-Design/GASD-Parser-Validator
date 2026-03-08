@@ -1,0 +1,120 @@
+/* 
+   --- LSP Core Types (Expert Strict) ---
+   Normative data contracts for the GASD Language Server.
+   Strictly follows GASD 1.0.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension / LSP"
+TARGET: "TypeScript 5.x"
+TRACE: #US-5, #US-6, #US-7, #US-9, #US-19, #US-21, #US-22, #US-23
+
+NAMESPACE: "gasd.lsp.types"
+
+/// Mandatory: All design primitives must adhere to expert patterns.
+
+/// Represents a cursor position in a document.
+TYPE Position:
+    line: Integer @min(0)
+    character: Integer @min(0)
+
+/// Represents a range within a document.
+TYPE Range:
+    start: Position
+    end: Position
+
+/// Represents a specific location in a file.
+TYPE Location:
+    uri: String @format("uri")
+    range: Range
+
+/// A diagnostic message for linting/errors.
+/// @trace #AC-9.1, #AC-9.2, #AC-13.1
+TYPE Diagnostic:
+    range: Range
+    message: String
+    severity: Enum(ERROR, WARNING, INFO, HINT)
+    source: String @default("gasd-lsp")
+    code: Optional<String>
+
+/// A symbol definition for Outline and Breadcrumbs.
+/// @trace #AC-19.1
+TYPE SymbolInformation:
+    name: String
+    kind: Enum(FILE, MODULE, NAMESPACE, PACKAGE, CLASS, METHOD, PROPERTY, FIELD, CONSTRUCTOR, ENUM, INTERFACE, FUNCTION, VARIABLE, CONSTANT, STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, KEY, NULL, ENUM_MEMBER, STRUCT, EVENT, OPERATOR, TYPE_PARAMETER)
+    location: Location
+    containerName: Optional<String>
+
+/// Code completion item for IntelliSense.
+/// @trace #AC-5.1, #AC-5.2
+TYPE CompletionItem:
+    label: String
+    kind: Enum(TEXT, METHOD, FUNCTION, CONSTRUCTOR, FIELD, VARIABLE, CLASS, INTERFACE, MODULE, PROPERTY, UNIT, VALUE, ENUM, KEYWORD, SNIPPET, COLOR, FILE, REFERENCE, FOLDER, ENUM_MEMBER, CONSTANT, STRUCT, EVENT, OPERATOR, TYPE_PARAMETER)
+    detail: Optional<String>
+    documentation: Optional<String>
+    insertText: Optional<String>
+
+/// Hover content (markdown).
+/// @trace #AC-7.1
+TYPE Hover:
+    contents: String @format("markdown")
+    range: Optional<Range>
+
+/// Signature help for parameter guidance.
+/// @trace #AC-22.1
+TYPE SignatureHelp:
+    signatures: List<SignatureInformation>
+    activeSignature: Integer
+    activeParameter: Integer
+
+TYPE SignatureInformation:
+    label: String
+    documentation: Optional<String>
+    parameters: List<ParameterInformation>
+
+TYPE ParameterInformation:
+    label: String
+    documentation: Optional<String>
+
+/// Inlay hints for inline type/parameter info.
+/// @trace #AC-23.1
+TYPE InlayHint:
+    position: Position
+    label: String
+    kind: Enum(TYPE, PARAMETER)
+    paddingLeft: Optional<Boolean>
+    paddingRight: Optional<Boolean>
+
+/// represents a set of textual changes over many resources.
+TYPE WorkspaceEdit:
+    changes: Map<String, List<TextEdit>>
+
+TYPE TextEdit:
+    range: Range
+    newText: String
+
+/// Document highlights for cursor-based highlighting.
+/// @trace #AC-26.1
+TYPE DocumentHighlight:
+    range: Range
+    kind: Enum(TEXT, READ, WRITE)
+
+/// Selection range for smart select.
+/// @trace #AC-24.1
+TYPE SelectionRange:
+    range: Range
+    parent: Optional<SelectionRange>
+
+/// Call hierarchy item.
+/// @trace #AC-25.1
+TYPE CallHierarchyItem:
+    name: String
+    kind: SymbolInformation.kind
+    uri: String
+    range: Range
+    selectionRange: Range
+
+/// Formatting options.
+/// @trace #AC-4.1
+TYPE FormattingOptions:
+    tabSize: Integer
+    insertSpaces: Boolean

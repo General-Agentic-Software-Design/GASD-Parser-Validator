@@ -1,0 +1,96 @@
+   GASD Design: Application Flows v1.0.0
+   ==============================
+   Scope: Evaluation Flow, Plotting Flow, History Persistence
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "User Interaction Logic"
+TARGET: "Event Loop / LocalStorage"
+TRACE: "Requirements/User Stories.md#L349-L375"
+NAMESPACE: "org.calculator.flows"
+
+IMPORT "org.calculator.core" AS Core
+IMPORT "org.calculator.graph" AS Graph
+IMPORT "org.calculator.ui" AS UI
+
+// --- 1. Global Interaction Flows ---
+
+FLOW main_evaluation_process(input: String):
+    @trace("Section 5.1")
+    
+    1. VALIDATE input via UI.DisplayPanel
+    2. ACHIEVE "Equation vs Expression Routing":
+        MATCH input:
+            CONTAINS "=": ACHIEVE "Algebraic Solution" via Core.MathEngine.solve_equation(input)
+            DEFAULT: ACHIEVE "Scientific Computation" via Core.MathEngine.evaluate(input)
+    3. MATCH evaluation_result:
+        Success(res):
+            ACHIEVE "Update Display" via UI.DisplayPanel.update_result(res.formatted)
+            PERSIST "history_entry" via local_storage
+        Failure(err):
+            ACHIEVE "Error Feedback" via UI.DisplayPanel.highlight_error(err.pos)
+    4. ENSURE UI_state_is_consistent
+
+FLOW handle_smart_equals(input: String):
+    1. MATCH input_state:
+        CONTAINS "x" AND NOT CONTAINS "=": ACHIEVE "Append '='"
+        CONTAINS "x" AND CONTAINS "=": ACHIEVE "Algebraic Solution" via main_evaluation_process
+        DEFAULT: ACHIEVE "Scientific Computation" via main_evaluation_process
+    2. RETURN Void
+    
+FLOW handle_input(key: String):
+    1. MATCH key:
+        "DIGIT" | "OPERATOR" | "MATH_CONST": ACHIEVE "Append to expression"
+        "ACTION" (e.g. "Plot", "AC", "Clear"): ACHIEVE "Trigger logic" (Skip appending text)
+    2. RETURN Void
+
+FLOW main_plotting_process(fn: String):
+    @trace("Section 5.2")
+    
+    1. VALIDATE fn @min_length(1)
+    2. ACHIEVE "Reset ViewPort" via Graph.ViewPort
+    3. ACHIEVE "Render Graph" via Graph.Plotter.render_function(fn, default_view)
+    4. ACHIEVE "Switch Tab" via UI.CalculatorApp.switch_tab("GRAPH")
+    5. ACHIEVE "Force Resize" via UI.CalculatorApp.resize_canvas()
+    6. ACHIEVE "Add to History" // Record function string
+    7. ENSURE graph_is_visible
+    7. ENSURE graph_is_visible
+
+FLOW graph_interaction_handling(action: Enum("ZOOM_IN", "ZOOM_OUT", "RESET", "AUTO_SCALE", "CLEAR")):
+    1. MATCH action:
+        "ZOOM_IN": ACHIEVE "Zoom In" via Graph.Plotter.render_function
+        "ZOOM_OUT": ACHIEVE "Zoom Out" via Graph.Plotter.render_function
+        "RESET": ACHIEVE "Reset ViewPort" via Graph.ViewPort
+        "AUTO_SCALE": ACHIEVE "Recalculate Bounds" via Graph.Plotter.auto_scale()
+        "CLEAR": ACHIEVE "Clear All Plots" via Graph.Plotter.clear_plots()
+    2. ACHIEVE "Refresh Canvas"
+    3. RETURN Void
+
+FLOW history_management():
+    1. ACHIEVE "Load History" @trace("US 6.1")
+    2. ACHIEVE "Populate UI" via UI.HistoryList
+    3. MATCH user_action:
+        "SELECT": 
+            ACHIEVE "Load into input" via UI.DisplayPanel.update_expression
+            ACHIEVE "Switch Tab" via UI.CalculatorApp.switch_tab("CALCULATOR")
+        "CLEAR": 
+            ACHIEVE "Delete all" via UI.HistoryManager.clear()
+            ACHIEVE "Update Display" // Empty list
+    4. RETURN Void
+
+FLOW comprehensive_feature_demo():
+    @authorized("tester")
+    @agent_note("Used for final quality gate verification.")
+    
+    1. ACHIEVE "Scientific Mode Setup" (RAD Mode)
+    2. ACHIEVE "Expression Evaluation" (sin(PI/2)*5 + sqrt(25) == 10)
+    3. ACHIEVE "Equation Solving" (x^2 - 5x + 6 = 0 -> Roots: 3, 2)
+    4. ACHIEVE "Dynamic Plotting" (sin(x)*cos(x/2))
+    5. ACHIEVE "Interactive Exploration" (Zoom x2, Out x1, Pan)
+    6. ACHIEVE "State Persistence Check" (Reload from history)
+    7. ENSURE "All Core Requirements Satisfied"
+
+// --- 2. Functional Constraints ---
+
+CONSTRAINT: "All state changes MUST happen locally (Offline Mode)." @trace("US 7.1")
+CONSTRAINT: "Result persistence MUST NOT exceed 5MB localStorage limit."

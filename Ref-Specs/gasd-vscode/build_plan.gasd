@@ -1,0 +1,88 @@
+/* 
+   --- Build Plan: GASD VS Code Extension ---
+   Expert implementation of building and testing the official GASD extension.
+   Strictly follows GASD 1.0.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension Development"
+TARGET: "TypeScript 5.x", "VS Code API ^1.80.0"
+
+// --- 1. Architectural Decisions ---
+
+DECISION "Agent Knowledge Level":
+    CHOSEN: "GASD Expert (Strict)"
+    RATIONALE: "Ensures that all generated designs and implementation code adhere strictly to the GASD 1.0.0 normative specification"
+    AFFECTS: [Agent.generation_logic, Agent.validation_logic]
+
+DECISION "Communication Protocol":
+    CHOSEN: "LSP (Language Server Protocol)"
+    RATIONALE: "Decouples language logic from UI, allows reuse in other IDEs"
+    AFFECTS: [ExtensionClient, GASDServer]
+
+DECISION "AI Backend Interface":
+    CHOSEN: "Standardized JSON-over-HTTP"
+    RATIONALE: "Language-agnostic connection to agentic backends"
+    AFFECTS: [GASDServer.agent_service]
+
+
+DECISION "Parsing Strategy":
+    CHOSEN: "Nearley.js"
+    RATIONALE: "Formal EBNF support for strict GASD grammar compliance"
+    AFFECTS: [GASDServer.parser]
+
+// --- 2. Build & Test Flows ---
+
+FLOW initialize_environment():
+    1. VALIDATE "Node.js >= 18.0.0"
+    2. ACHIEVE "Scaffold Extension Project":
+        tool: "yo code"
+        template: "typescript"
+    3. CREATE "Project Structure":
+        folders: ["design", "user-story", "tests", "impl"]
+    4. PERSIST configuration via "impl/package.json"
+
+/// Quality Gate: All tests must pass before any packaging occurs.
+FLOW run_to_pass():
+    1. ACHIEVE "Run Unit Tests"
+    2. ACHIEVE "Run Integration Tests"
+    3. ACHIEVE "Run Acceptance Tests"
+    4. ENSURE "All tests passed"
+        OTHERWISE THROW "Build Failure: Quality Gates Not Met"
+
+/// Acceptance Tests mapping to User Story Criteria
+FLOW acceptance_test():
+    @trace #US-1, #US-5, #US-14, #US-18, #US-19, #US-27
+    1. ACHIEVE "Open folder containing .gasd file"
+    2. VALIDATE "File is recognized as GASD language" @trace #AC-27.1
+    3. VALIDATE "Syntax Highlighting applied" @trace #AC-1.1
+    3. ACHIEVE "Trigger IntelliSense at Position(10, 5)" @trace #AC-5.1
+    4. ENSURE "Suggestions include 'COMPONENT'" @trace #AC-5.2
+    5. ACHIEVE "Run 'Visualize Flow' command" @trace #AC-14.1
+    6. VALIDATE "Webview panel opens with Mermaid diagram"
+    7. ACHIEVE "Check Outline View" @trace #AC-19.1
+    8. VALIDATE "Symbols are correctly nested"
+    9. ACHIEVE "Trigger Quick Fix on Type Error" @trace #AC-18.1
+    10. VALIDATE "Correct type is suggested"
+
+FLOW generate_design():
+    /// Requirement: Always read user stories first to ensure 100% coverage and traceability.
+    1. ACHIEVE "Read user-story/user-story.md"
+    2. VALIDATE "All #US and #AC IDs are extracted"
+    3. ACHIEVE "Generate Design Files (.gasd)":
+        target: "design/"
+        compliance: "Strict GASD Expert"
+    4. PERSIST "Update design/vscode_gasd_extension.gasd with new @trace links"
+
+FLOW package_extension():
+    @trace #US-15
+    1. ACHIEVE "Run compile (tsc -b)"
+    2. VALIDATE "out/ directory is populated"
+    3. EXECUTE "npx @vscode/vsce package"
+    4. VERIFY "build/installation/vscode-gasd-1.0.0.vsix is created"
+    5. LOG "Extension packaged successfully for installation"
+
+// --- 3. Constraints ---
+CONSTRAINT: "The extension must load in less than 500ms"
+CONSTRAINT: "Syntax highlighting must be implemented via TextMate grammar"
+CONSTRAINT: "Zero-dependency installation: VSIX must be self-contained"
+CONSTRAINT: "Agent Compliance: Any agent-generated GASD or implementation code MUST strictly follow the GASD expert patterns and EBNF grammar."

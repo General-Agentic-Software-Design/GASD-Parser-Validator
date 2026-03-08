@@ -1,0 +1,110 @@
+/* 
+   GASD Design Specification for Graphical Calculator Lifecycle
+   ===========================================================
+   Source: Build Plan.md
+   Version: 1.1.0
+   Compliance: gasd-1.0.0.gasd
+*/
+
+CONTEXT: "Project Lifecycle & Build Orchestration"
+TARGET: "AI Agent"
+TRACE: "Build/Build Plan.md"
+NAMESPACE: "org.calculator.build"
+
+// --- 1. Architectural Decisions ---
+
+DECISION "Lifecycle Model":
+    CHOSEN: "Design-First Agentic Implementation"
+    RATIONALE: "Formal GASD specifications ensure deterministic and traceable code generation."
+    AFFECTS: ["Design Folder", "Implementation Folder", "QA"]
+
+DECISION "Implementation Target":
+    CHOSEN: "React OR Java"
+    RATIONALE: "The system supports both modern web (React) and traditional desktop (Java) environments."
+    ALTERNATIVES: ["React", "Java"]
+    AFFECTS: ["Implementation Folder", "Build Pipeline"]
+
+
+// --- 2. Phase 1: Build Design GASD Files ---
+
+/// The workflow for generating the formal design language specifications.
+FLOW build_design_artifacts():
+    @status("APPROVED")
+    
+    1. ACHIEVE "GASD Proficiency" @trace("gasd-1.0.0.gasd")
+    2. ACHIEVE "Requirement Analysis" @trace("Requirements/User Stories.md")
+    3. ACHIEVE "Functional Design":
+        CREATE "Design/core_logic.gasd"
+        CREATE "Design/graph_engine.gasd"
+        CREATE "Design/ui_components.gasd"
+        CREATE "Design/app_flows.gasd"
+    4. ACHIEVE "QA Design":
+        CREATE "Design/acceptance_tests.gasd"
+    5. ENSURE requirement_traceability IS TRUE
+    6. PERSIST "Design/"
+    7. ACHIEVE "Human Review Workflow"
+    8. ENSURE approval_status IS APPROVED
+
+// --- 3. Phase 2: Build Implementation Files ---
+
+/// The workflow for generating the source code from GASD specifications.
+FLOW build_implementation_files():
+    @precondition("approval_status == APPROVED")
+    
+    1. ACHIEVE "Specification Internalization" @trace("Design/*.gasd")
+    2. ACHIEVE "Target Confirmation":
+        ASK "Confirm the implementation target (React or Java)?"
+        ENSURE approval_status IS APPROVED
+    3. ACHIEVE "Code Generation":
+        MATCH implementation_target:
+
+            CASE "React":
+                CREATE "Implementation/React/core_arithmetic.js"
+                CREATE "Implementation/React/graph_renderer.js"
+                CREATE "Implementation/React/ui_controller.js"
+            CASE "Java":
+                CREATE "Implementation/Java/MathEngine.java"
+                CREATE "Implementation/Java/GraphPanel.java"
+                CREATE "Implementation/Java/MainFrame.java"
+        CREATE "Implementation/persistence.*"
+    4. ACHIEVE "Testing Implementation":
+        MATCH implementation_target:
+            CASE "React":
+                CREATE "Implementation/React/tests/e2e_acceptance.test.js"
+            CASE "Java":
+                CREATE "Implementation/Java/tests/AcceptanceTester.java"
+    5. ENSURE gasd_mapping_is_complete IS TRUE
+    6. PERSIST "Implementation/"
+    7. ACHIEVE "Final Human Review"
+
+
+
+// --- 4. Phase 3: Demo & Verification ---
+
+/// The final quality gate involving a comprehensive functional walkthrough.
+FLOW build_demo_verification():
+    @precondition("Implementation is complete")
+    
+    1. ACHIEVE "Demo Execution" @trace("Design/app_flows.gasd#comprehensive_feature_demo")
+    2. ACHIEVE "Bug Regression Check":
+        MATCH implementation_target:
+            CASE "React":
+                CHECK "Case-sensitivity" IS RESOLVED
+                CHECK "Equation Routing" IS RESOLVED
+                CHECK "Plot State Persistence" IS RESOLVED
+            CASE "Java":
+                CHECK "Case-sensitivity" IS RESOLVED
+                CHECK "Equation Routing" IS RESOLVED
+                CHECK "Plot State Persistence" IS RESOLVED
+    3. ACHIEVE "Visual Evidence Capture" // Recording demo
+    4. ACHIEVE "Final User Sign-off"
+    5. ENSURE project_is_ready_for_distribution IS TRUE
+
+// --- 5. Quality Invariants ---
+
+CONSTRAINT: "Implementation MUST NOT deviate from the approved GASD specification."
+CONSTRAINT: "All implementation files SHALL be placed in target-specific subfolders within the Implementation/ folder (e.g., Implementation/React or Implementation/Java)."
+
+CONSTRAINT: "All GASD design files MUST strictly use the official keywords from the gasd-1.0.0.gasd specification only. Non-standard keywords are strictly prohibited."
+CONSTRAINT: "Implementation MUST be 100% in compliance with the approved GASD design."
+INVARIANT: "Success is defined by the satisfaction of all verification flows in acceptance_tests.gasd."
