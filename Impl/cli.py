@@ -13,7 +13,9 @@ import os
 
 from .parser.ParseTreeAPI import ParseTreeAPI
 from .ast.ASTGenerator import ASTGenerator
+from .ast.ASTExporter import ASTExporter
 from .validation.ValidationPipeline import ValidationPipeline
+from .errors.ErrorReporter import ErrorReporter, IOErrorData
 
 
 def main():
@@ -47,6 +49,20 @@ def main():
         action="version",
         version="gasd-parser 1.1.0",
     )
+    parser.add_argument(
+        "--ast",
+        action="store_true",
+        help="Extract and output the AST in JSON format.",
+    )
+    parser.add_argument(
+        "--ast-output",
+        help="Path to save the extracted AST JSON file.",
+    )
+    parser.add_argument(
+        "--ast-combine",
+        action="store_true",
+        help="Combine multiple ASTs into a single JSON output.",
+    )
 
     args = parser.parse_args()
 
@@ -77,6 +93,7 @@ def main():
         sys.exit(1)
 
     all_reports = []
+    collected_asts = []
     success_count = 0
     failure_count = 0
 
@@ -110,7 +127,33 @@ def main():
             for err in semantic_errors:
                 reporter.add_semantic_error(err)
 
-        # === Output ===
+        # === AST Export (Per-file) ===
+        if args.ast and not reporter.has_errors():
+            exporter = ASTExporter()
+            if args.ast_combine:
+                collected_asts.append(ast)
+            else:
+                ast_json = exporter.to_json(ast)
+                if args.ast_output:
+                    out_path = args.ast_output
+                    if len(target_files) > 1:
+                        base, ext = os.path.splitext(args.ast_output)
+                        filename = os.path.basename(file_path).replace(".gasd", ".json")
+                        out_path = f"{base}.{filename}"
+                    
+                    try:
+                        with open(out_path, "w") as out_f:
+                            out_f.write(ast_json)
+                    except Exception as e:
+                        reporter.add_io_error(IOErrorData(
+                            message=str(e),
+                            path=out_path,
+                            operation="WRITE"
+                        ))
+                else:
+                    print(ast_json)
+
+        # === Final Output for Per-file processing ===
         if args.json:
             all_reports.append(reporter.to_json())
             if reporter.has_errors():
@@ -130,7 +173,8 @@ def main():
                     f"{len(ast.strategies)} strategies, "
                     f"{len(ast.decisions)} decisions"
                 )
-                print(f"OK    {file_path}  ({entity_counts})")
+                if not args.ast:
+                    print(f"OK    {file_path}  ({entity_counts})")
                 success_count += 1
 
     if args.json:
@@ -141,7 +185,22 @@ def main():
             "reports": all_reports
         }
         print(json.dumps(combined, indent=2))
-    elif len(target_files) > 1:
+    
+    # === AST Export (Combined) ===
+    if args.ast and args.ast_combine and collected_asts:
+        exporter = ASTExporter()
+        combined_ast_json = exporter.to_json(collected_asts)
+        if args.ast_output:
+            try:
+                with open(args.ast_output, "w") as out_f:
+                    out_f.write(combined_ast_json)
+            except Exception as e:
+                print(f"Error writing combined AST to {args.ast_output}: {e}", file=sys.stderr)
+                failure_count += 1
+        else:
+            print(combined_ast_json)
+
+    elif len(target_files) > 1 and not args.ast:
         # @trace #AC-PARSER-006-03
         print("\n--- Summary ---")
         print(f"Processed: {len(target_files)} files")

@@ -9,7 +9,7 @@ This parser is built using **ANTLR4** with a **Python 3** target, designed to be
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
 - **[Design/](Design/)**: GASD-level specifications for each parser component.
 - **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
-  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 38 acceptance and regression tests.
+  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 84 acceptance and regression tests.
 - **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria.
 - **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo.
 
@@ -79,6 +79,18 @@ gasd-parser my_spec.gasd
 
 # Output results in JSON (for tooling integration)
 gasd-parser my_spec.gasd --json
+
+# Extract and output the AST in JSON format (to console)
+gasd-parser my_spec.gasd --ast
+
+# Save the extracted AST to a specific file
+gasd-parser my_spec.gasd --ast --ast-output out.json
+
+# Process multiple files and combine their ASTs into a single JSON array
+gasd-parser spec1.gasd spec2.gasd --ast --ast-combine
+
+# Process multiple files into individual AST JSON files (out.spec1.json, out.spec2.json)
+gasd-parser spec1.gasd spec2.gasd --ast --ast-output out.json
 ```
 
 ## Development

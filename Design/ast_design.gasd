@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — AST Design"
 TARGET: "TypeScript"
-TRACE: "US-PARSER-003"
+TRACE: "US-PARSER-003", "US-PARSER-007"
 
 // ===================================================================
 // Decisions
@@ -29,6 +29,11 @@ DECISION "AST Node Identity":
     CHOSEN: "Discriminated Union with NodeKind Enum"
     RATIONALE: "Each AST node carries a 'kind' field for easy pattern matching and type narrowing in TypeScript."
     AFFECTS: [ASTNodes]
+
+DECISION "AST Serialization Format" @trace #AC-PARSER-007-03:
+    CHOSEN: "JSON"
+    RATIONALE: "JSON is the industry standard for structured data exchange and is easily consumable by downstream tooling."
+    AFFECTS: [ASTExporter]
 
 // ===================================================================
 // AST Node Base
@@ -210,11 +215,19 @@ COMPONENT ASTGenerator:
         visitFlowDef(ctx: FlowDefContext) -> FlowDefinition
         visitStrategyDef(ctx: StrategyDefContext) -> StrategyDefinition
 
+/// Component responsible for serializing the AST to JSON.
+COMPONENT ASTExporter @trace #US-PARSER-007:
+    PATTERN: "Serializer"
+    DEPENDENCIES: [ASTNodes]
+    INTERFACE:
+        /// Convert a GASDFile AST into a JSON string.
+        toJSON(ast: GASDFile, prettyPrint: Boolean) -> String @trace #AC-PARSER-007-03, #AC-PARSER-007-08
+
 // ===================================================================
 // Constraints
 // ===================================================================
 
 CONSTRAINT: "AST MUST be deterministic: same input always produces identical AST" @trace #AC-PARSER-003-04
 CONSTRAINT: "AST MUST enforce parent-child hierarchy (e.g. Fields under Types, Methods under Components)" @trace #AC-PARSER-003-02
-CONSTRAINT: "Every AST node MUST include source location metadata (line, column)" @trace #AC-PARSER-003-03
-CONSTRAINT: "AST node classes MUST represent all GASD constructs" @trace #AC-PARSER-003-01
+CONSTRAINT: "Every AST node MUST include source location metadata (line, column)" @trace #AC-PARSER-003-03, #AC-PARSER-007-10
+CONSTRAINT: "AST node classes MUST represent all GASD constructs" @trace #AC-PARSER-003-01, #AC-PARSER-007-07

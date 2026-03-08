@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — CLI Design"
 TARGET: "TypeScript", "Python3"
-TRACE: "US-PARSER-006"
+TRACE: "US-PARSER-006", "US-PARSER-007"
 
 // ===================================================================
 // Decisions
@@ -30,13 +30,18 @@ DECISION "Output Formatting":
     RATIONALE: "Provides immediate feedback per file, but a high-level summary at the end prevents scrolling fatigue on large codebases."
     AFFECTS: [GASDCLI]
 
+DECISION "AST Output Strategy" @trace #AC-PARSER-007-02, #AC-PARSER-007-04, #AC-PARSER-007-05, #AC-PARSER-007-06:
+    CHOSEN: "Optional enabling with flexible routing (Console/File/Combined)"
+    RATIONALE: "Users need flexibility to either inspect the AST directly or pipe it into other tools."
+    AFFECTS: [GASDCLI]
+
 // ===================================================================
 // CLI Component Definition
 // ===================================================================
 
 COMPONENT GASDCLI @trace #AC-PARSER-006-01:
     PATTERN: "Command-Line Interface"
-    DEPENDENCIES: [ParseTreeAPI, ASTGenerator, ValidationPipeline]
+    DEPENDENCIES: [ParseTreeAPI, ASTGenerator, ASTExporter, ValidationPipeline]
     INTERFACE:
         /// Main application entry point handling sys.argv
         main() -> Void
@@ -47,7 +52,7 @@ COMPONENT GASDCLI @trace #AC-PARSER-006-01:
 
 FLOW execute_cli_validation(args: List<String>) -> Integer:
     @trace #AC-PARSER-006-02
-    1. ACHIEVE "Parse flags (--json, --validate) and positional path arguments"
+    1. ACHIEVE "Parse flags (--json, --validate, --ast, --ast-output, --ast-combine) and positional path arguments" @trace #AC-PARSER-007-02, #AC-PARSER-007-05, #AC-PARSER-007-06
     2. CREATE target_files: "Empty list of paths"
     3. ACHIEVE "Evaluate each path in args":
         ACHIEVE "Recursively find *.gasd files for directories"
@@ -65,11 +70,17 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
         IF "Syntax successful":
             ACHIEVE "Run ASTGenerator"
             ACHIEVE "Run ValidationPipeline"
+            IF "Validation successful AND --ast enabled":
+                ACHIEVE "Run ASTExporter" @trace #AC-PARSER-007-01
+                IF "NOT --ast-combine":
+                    ACHIEVE "Print JSON to console OR Save to individual file" @trace #AC-PARSER-007-04, #AC-PARSER-007-05
         ACHIEVE "Print file result (OK/FAIL)"
         ACHIEVE "Update summary counters"
         
-    7. ACHIEVE "Print final validation summary across all files" @trace #AC-PARSER-006-03
-    8. RETURN 1
+    7. IF "--ast-combine AND AST collection NOT empty":
+        ACHIEVE "Merge ASTs and Print to console OR Save to file" @trace #AC-PARSER-007-06
+    8. ACHIEVE "Print final validation summary across all files" @trace #AC-PARSER-006-03
+    9. RETURN 1
 
 // ===================================================================
 // Constraints
@@ -78,3 +89,5 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
 CONSTRAINT: "CLI MUST exit with code 1 if ANY parsed file contains errors" @trace #AC-PARSER-006-03
 CONSTRAINT: "Directory traversal MUST only process files ending with .gasd extension" @trace #AC-PARSER-006-02
 CONSTRAINT: "CLI MUST process all discovered files sequentially and not halt on the first file error" @trace #AC-PARSER-006-03
+CONSTRAINT: "AST Extraction MUST ONLY occur for files that pass semantic validation" @trace #AC-PARSER-007-01
+CONSTRAINT: "CLI MUST provide clear error messages for I/O failures during AST export" @trace #AC-PARSER-007-09

@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Error Reporting Design"
 TARGET: "TypeScript"
-TRACE: "US-PARSER-005"
+TRACE: "US-PARSER-005", "US-PARSER-007"
 
 // ===================================================================
 // Decisions
@@ -66,7 +66,7 @@ TYPE ErrorReport:
     errors: List<ErrorEntry>
 
 TYPE ErrorEntry:
-    type: Enum(SYNTAX, SEMANTIC)
+    type: Enum(SYNTAX, SEMANTIC, IO)
     code: String @optional
     severity: Enum(ERROR, WARNING, INFO)
     message: String

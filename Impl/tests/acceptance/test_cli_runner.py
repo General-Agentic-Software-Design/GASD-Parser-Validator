@@ -9,7 +9,7 @@ from unittest.mock import patch
 import sys
 from io import StringIO
 
-from Impl.cli_runner import main
+from Impl.cli import main
 
 def test_cli_multiple_valid_files():
     """AT-PARSER-006-01: Test parsing multiple explicit valid files."""

@@ -15,6 +15,13 @@ class SyntaxErrorData:
     expectedTokens: Optional[List[str]] = None
     contextSnippet: Optional[str] = None
 
+@dataclass
+class IOErrorData:
+    type: str = "IO"
+    message: str = ""
+    path: str = ""
+    operation: str = "" # "READ" or "WRITE"
+
 class ErrorReporter:
     """
     Central error reporter that collects syntax and semantic errors.
@@ -23,6 +30,7 @@ class ErrorReporter:
         self.source_file = source_file
         self.syntax_errors: List[SyntaxErrorData] = []
         self.semantic_errors: List[SemanticError] = []
+        self.io_errors: List[IOErrorData] = []
 
     def add_syntax_error(self, error: SyntaxErrorData):
         self.syntax_errors.append(error)
@@ -30,11 +38,16 @@ class ErrorReporter:
     def add_semantic_error(self, error: SemanticError):
         self.semantic_errors.append(error)
 
+    def add_io_error(self, error: IOErrorData):
+        self.io_errors.append(error)
+
     def has_errors(self) -> bool:
-        return len(self.syntax_errors) > 0 or any(e.severity == "ERROR" for e in self.semantic_errors)
+        return (len(self.syntax_errors) > 0 or 
+                any(e.severity == "ERROR" for e in self.semantic_errors) or
+                len(self.io_errors) > 0)
 
     def get_error_count(self) -> int:
-        return len(self.syntax_errors) + sum(1 for e in self.semantic_errors if e.severity == "ERROR")
+        return len(self.syntax_errors) + sum(1 for e in self.semantic_errors if e.severity == "ERROR") + len(self.io_errors)
 
     def get_warning_count(self) -> int:
         return sum(1 for e in self.semantic_errors if e.severity == "WARNING")
@@ -78,6 +91,15 @@ class ErrorReporter:
                 "suggestions": err.suggestions
             })
 
+        for err in self.io_errors:
+            report["errors"].append({
+                "type": "IO",
+                "severity": "ERROR",
+                "message": err.message,
+                "path": err.path,
+                "operation": err.operation
+            })
+
         return json.dumps(report, indent=2)
 
     def to_console(self) -> str:
@@ -96,6 +118,12 @@ class ErrorReporter:
             output.append(f"  --> {self.source_file}:{err.line}:{err.column}")
             if err.context:
                 output.append(f"  Context: {err.context}")
+            output.append("")
+
+        for err in self.io_errors:
+            output.append(f"error[IO]: {err.message}")
+            output.append(f"  Path: {err.path}")
+            output.append(f"  Operation: {err.operation}")
             output.append("")
             
         return "\n".join(output)
