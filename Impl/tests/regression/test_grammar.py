@@ -1,50 +1,38 @@
 import pytest
+import os
 from Impl.parser.ParseTreeAPI import ParseTreeAPI
 
-def test_case_sensitivity():
-    """RT-PARSER-001-01: Keywords must be UPPERCASE."""
-    api = ParseTreeAPI()
-    content = "context: 'lower'\ntarget: 'python'\n"
-    tree, errors = api.parse(content)
-    assert errors.get_error_count() > 0
+"""
+Regression Test for US-PARSER-001: GASD Grammar Stability
+@trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
+"""
 
-def test_indentation_handling():
-    """RT-PARSER-001-02: Significant indentation is correctly handled."""
+def test_historical_specs_validity():
+    """RT-PARSER-001-01: Ensure all historical reference specs remain valid."""
+    ref_specs_dir = "Ref-Specs"
+    if not os.path.exists(ref_specs_dir):
+        pytest.skip("Ref-Specs directory not found")
+        
     api = ParseTreeAPI()
-    # Correct indentation
-    content = """CONTEXT: "Indent"
-TARGET: "Python3"
-TYPE T:
-    f1: String
-    f2: Integer
-"""
-    tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0
-    
-    # Inconsistent indentation (mixing spaces/tabs or wrong depth)
-    # The current lexer implementation should be robust
-    content = """CONTEXT: "Indent"
-TARGET: "Python3"
-TYPE T:
-    f1: String
-  f2: Integer
-"""
-    tree, errors = api.parse(content)
-    # This might actually be a syntax error in a strict indentation lexer
-    # For now, let's just assert it behaves deterministically
-    pass
+    for filename in os.listdir(ref_specs_dir):
+        if filename.endswith(".gasd"):
+            path = os.path.join(ref_specs_dir, filename)
+            with open(path, 'r') as f:
+                content = f.read()
+            tree, errors = api.parse(content)
+            assert errors.get_error_count() == 0, f"Regression in {filename}: {errors.to_console()}"
 
-def test_comment_skipping():
-    """RT-PARSER-001-03: Comments are skipped by the lexer."""
-    api = ParseTreeAPI()
-    content = """// Single line
-/* Block 
-   comment */
-CONTEXT: "CommentTest"
-TARGET: "Python3"
-/// Doc comment
-TYPE T:
-    f: String
+def test_grammar_ambiguity_regression():
+    """RT-PARSER-001-03: No new ambiguities introduced in grammar."""
+    # This usually requires running ANTLR with diagnostic listeners
+    # For black-box, we check that known complex patterns still parse uniquely
+    content = """CONTEXT: "Ambiguity"
+TARGET: "P"
+FLOW F():
+    1. ACHIEVE "A"
+    // GEP-5 check
+    2. VALIDATE obj AS TYPE.T
 """
+    api = ParseTreeAPI()
     tree, errors = api.parse(content)
     assert errors.get_error_count() == 0

@@ -80,53 +80,75 @@ class ASTGenerator(GASDParserVisitor):
         return Directive(directiveType="TRACE", values=[v.getText() for v in ctx.value_list().value()], **self._get_loc(ctx))
 
     def visitNamespace_stmt(self, ctx: GASDParser.Namespace_stmtContext):
-        return Directive(directiveType="NAMESPACE", values=[ctx.STRING_LITERAL().getText().strip('"')], **self._get_loc(ctx))
+        val = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else "unknown"
+        return Directive(directiveType="NAMESPACE", values=[val], **self._get_loc(ctx))
 
     def visitImport_stmt(self, ctx: GASDParser.Import_stmtContext):
-        val = ctx.STRING_LITERAL().getText().strip('"')
+        val = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else "unknown"
         alias = ctx.soft_id().getText() if ctx.soft_id() else None
         return Directive(directiveType="IMPORT", values=[val], alias=alias, **self._get_loc(ctx))
 
     def visitDecision_blk(self, ctx: GASDParser.Decision_blkContext):
         loc = self._get_loc(ctx)
-        name = ctx.STRING_LITERAL(0).getText().strip('"')
-        chosen = ctx.STRING_LITERAL(1).getText().strip('"')
-        rationale = ctx.STRING_LITERAL(2).getText().strip('"') if len(ctx.STRING_LITERAL()) > 2 else None
+        sl = ctx.STRING_LITERAL()
+        name = sl[0].getText().strip('"') if len(sl) > 0 else "Unknown"
+        chosen = sl[1].getText().strip('"') if len(sl) > 1 else ""
         
-        # Simpler handling for list literals for now
+        # Handle RATIONALE correctly based on RATIONALE_KW presence
+        rationale = None
+        if ctx.RATIONALE_KW():
+            # If RATIONALE_KW exists, it must be the 3rd STRING_LITERAL (index 2)
+            # because the 1st is name and 2nd is chosen.
+            rationale = sl[2].getText().strip('"') if len(sl) > 2 else None
+        
+        alternatives = []
+        if ctx.ALTERNATIVES_KW():
+            # Find the list literal following ALTERNATIVES
+            idx = -1
+            for i in range(ctx.getChildCount()):
+                if ctx.getChild(i).getText() == "ALTERNATIVES":
+                    # Check if next child or next-next is list_literal
+                    for j in range(i+1, min(i+4, ctx.getChildCount())):
+                        child = ctx.getChild(j)
+                        if isinstance(child, GASDParser.List_literalContext):
+                            idx = j
+                            break
+                    if idx != -1: break
+            if idx != -1:
+                alt_node = ctx.getChild(idx)
+                alternatives = [v.getText().strip('"') for v in alt_node.value()]
+
         affects = []
         if ctx.AFFECTS_KW():
             # Find the list literal following AFFECTS
             idx = -1
             for i in range(ctx.getChildCount()):
                 if ctx.getChild(i).getText() == "AFFECTS":
-                    idx = i + 2 # Skip COLON
-                    break
+                    for j in range(i+1, min(i+4, ctx.getChildCount())):
+                        child = ctx.getChild(j)
+                        if isinstance(child, GASDParser.List_literalContext):
+                            idx = j
+                            break
+                    if idx != -1: break
             if idx != -1:
                 affects_node = ctx.getChild(idx)
-                if isinstance(affects_node, GASDParser.List_literalContext):
-                    affects = [v.getText().strip('"') for v in affects_node.value()]
+                affects = [v.getText().strip('"') for v in affects_node.value()]
 
-        return Decision(name=name, chosen=chosen, rationale=rationale, affects=affects, **loc)
+        return Decision(name=name, chosen=chosen, rationale=rationale, alternatives=alternatives, affects=affects, **loc)
 
     def visitType_def(self, ctx: GASDParser.Type_defContext):
         loc = self._get_loc(ctx)
-        name = ctx.soft_id().getText()
+        name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
         fields = []
-        for f in ctx.field_def():
-            fields.append(self.visit(f))
-        
-        # If it's a type expression after colon (e.g. TYPE X: Enum(...))
-        if ctx.type_expr():
-            # For now, we don't have a direct fields for Aliases but we can add one if needed.
-            pass
-            
+        if ctx.field_def():
+            for f in ctx.field_def():
+                fields.append(self.visit(f))
         return TypeDefinition(name=name, fields=fields, **loc)
 
     def visitField_def(self, ctx: GASDParser.Field_defContext):
         loc = self._get_loc(ctx)
-        name = ctx.type_expr(0).getText()
-        type_expr = self.visit(ctx.type_expr(1))
+        name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
+        type_expr = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Unknown", **loc)
         return FieldNode(name=name, typeExpr=type_expr, **loc)
 
     # Labeled expression visitors are defined later in the class
@@ -134,15 +156,15 @@ class ASTGenerator(GASDParserVisitor):
     def visitType_expr(self, ctx: GASDParser.Type_exprContext):
         loc = self._get_loc(ctx)
         
-        # Unified Generics: soft_id (LANGLE type_expr (COMMA type_expr)* RANGLE)?
+        # Unified Generics: (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
         if ctx.soft_id():
-            base = ctx.soft_id()[0].getText()
-            args = [self.visit(a) for a in ctx.type_expr()]
+            segments = [id.getText() for id in ctx.soft_id() if id]
+            base = ".".join(segments)
+            args = [self.visit(a) for a in ctx.type_expr() if a]
             
             # Special case for Enum
             if ctx.ENUM_KW():
-                enums = [id.getText() for id in ctx.soft_id()]
-                return TypeExpression(baseType="Enum", enumValues=enums, **loc)
+                return TypeExpression(baseType="Enum", enumValues=segments, **loc)
                 
             is_optional = ctx.OPTIONAL_KW() is not None or base == "Optional"
             if is_optional and args:
@@ -259,10 +281,15 @@ class ASTGenerator(GASDParserVisitor):
         target = ""
         substeps = []
 
+        as_binding = None
+        type_path = None
+
         if ctx.action():
             action_data = self.visit(ctx.action())
             action_name = action_data["action"]
             target = action_data["target"]
+            as_binding = action_data.get("as_binding")
+            type_path = action_data.get("type_path")
         elif ctx.control_flow():
             cf_data = self.visit(ctx.control_flow())
             action_name = cf_data["action"]
@@ -279,7 +306,7 @@ class ASTGenerator(GASDParserVisitor):
         if ctx.internal_block():
             substeps.extend(self.visit(ctx.internal_block()))
 
-        return FlowStepNode(stepNumber=num, action=action_name, target=target, subSteps=substeps, annotations=step_annotations, **loc)
+        return FlowStepNode(stepNumber=num, action=action_name, target=target, asBinding=as_binding, typePath=type_path, subSteps=substeps, annotations=step_annotations, **loc)
 
     def visitInternal_block(self, ctx: GASDParser.Internal_blockContext):
         substeps = []
@@ -354,11 +381,10 @@ class ASTGenerator(GASDParserVisitor):
         target = ""
         
         if ctx.VALIDATE_KW():
-            target = self._get_text(ctx.expr(), 0)
-            sl = ctx.STRING_LITERAL()
-            if sl:
-                sl_text = sl[0].getText() if isinstance(sl, list) else sl.getText()
-                target = f"{sl_text} {target}".strip()
+            target = ctx.expr(0).getText() if ctx.expr(0) else ""
+            as_binding = "AS TYPE"
+            type_path = ctx.type_expr().getText() if ctx.type_expr() else ""
+            return {"action": "VALIDATE", "target": target, "as_binding": as_binding, "type_path": type_path}
         elif ctx.ACHIEVE_KW():
             sl = ctx.STRING_LITERAL()
             if isinstance(sl, list):

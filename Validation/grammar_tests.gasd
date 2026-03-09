@@ -1,0 +1,65 @@
+/*
+   Validation: Grammar — GASD Syntax Tests
+   =======================================
+   Defines the acceptance and regression tests for the GASD grammar.
+   Based on Design/grammar_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Grammar Validation"
+TARGET: "ANTLR4"
+TRACE: "US-PARSER-001"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_grammar_valid_file():
+    @trace #AT-PARSER-001-01
+    1. ACHIEVE "Parse a valid .gasd file with all core constructs"
+    2. ENSURE "Grammar produces a parse tree without errors"
+
+FLOW test_grammar_missing_keyword():
+    @trace #AT-PARSER-001-02
+    1. ACHIEVE "Parse input with missing mandatory keyword (e.g. COMPONENT name:)"
+    2. ENSURE "Grammar rejects with syntax error"
+
+FLOW test_grammar_indentation():
+    @trace #AT-PARSER-001-03
+    1. ACHIEVE "Parse input with incorrect indentation"
+    2. ENSURE "Grammar rejects with syntax error"
+
+FLOW test_grammar_multiple_components():
+    @trace #AT-PARSER-001-04
+    1. ACHIEVE "Parse file with multiple COMPONENTs"
+    2. ENSURE "Grammar parses all components correctly"
+
+// ===================================================================
+// Negative Tests (GEP-5 Special)
+// ===================================================================
+
+FLOW test_validate_missing_binding():
+    @trace #AC-PARSER-008-02, #NT-VALIDATE-001
+    1. ACHIEVE "Parse 'VALIDATE user' WITHOUT 'AS TYPE.User'"
+    2. ENSURE "Grammar rejects the statement"
+
+FLOW test_validate_complex_path():
+    @trace #AC-PARSER-008-01, #AC-PARSER-008-03
+    1. ACHIEVE "Parse 'VALIDATE address AS TYPE.User.Address'"
+    2. ENSURE "Grammar accepts the complex type path"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_grammar_regression():
+    @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
+    1. ACHIEVE "Parse all historical reference specs"
+    2. ENSURE "All historically valid files remain valid"
+    3. ENSURE "Ambiguity warnings = 0"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every grammar test MUST prove correct tokenization and hierarchy" @trace #AC-PARSER-001-03
+CONSTRAINT: "Grammar validation MUST be performed against official ANTLR4 tooling" @trace #AC-PARSER-001-02

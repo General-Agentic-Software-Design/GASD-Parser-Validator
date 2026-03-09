@@ -1,41 +1,14 @@
-CONTEXT: "Test System"
-TARGET: "Python3"
+CONTEXT: "Valid Sample"
+TARGET: "TypeScript"
 
 TYPE User:
     id: Integer
     name: String
-    email: Optional<String>
 
-COMPONENT UserAuth:
-    PATTERN: "Service"
+COMPONENT AuthService:
     INTERFACE:
         login(u: User) -> Boolean
-        logout() -> Boolean
 
-FLOW user_login_flow(u: User) -> Boolean:
-    1. VALIDATE "user credentials"
-    2. ACHIEVE "open session"
-    3. RETURN true
-
-STRATEGY AuthStrategy:
-    ALGORITHM: "OAuth2"
-    INPUT: u: User
-    OUTPUT: Boolean
-
-DECISION "Auth Type":
-    CHOSEN: "JWT"
-    AFFECTS: ["UserAuth"]
-
-CONSTRAINT: "Users must be unique"
-INVARIANT: "Session must be active"
-
-QUESTION: "Continue login?"
-    BLOCKING: true
-
-APPROVE "User Registration":
-    STATUS: APPROVED
-    BY: "Admin"
-    DATE: "2026-03-05"
-
-TODO: "Implement MFA"
-REVIEW: "Security check"
+FLOW Main():
+    1. VALIDATE user AS TYPE.User
+    2. ACHIEVE "Login"

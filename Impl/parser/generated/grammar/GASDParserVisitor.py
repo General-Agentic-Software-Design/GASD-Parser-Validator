@@ -1,4 +1,4 @@
-# Generated from GASDParser.g4 by ANTLR 4.13.2
+# Generated from Impl/grammar/GASDParser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .GASDParser import GASDParser
@@ -126,6 +126,11 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#action.
     def visitAction(self, ctx:GASDParser.ActionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#action_id.
+    def visitAction_id(self, ctx:GASDParser.Action_idContext):
         return self.visitChildren(ctx)
 
 

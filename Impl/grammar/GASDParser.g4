@@ -69,7 +69,7 @@ type_def
     ;
 
 field_def
-    : type_expr COLON type_expr annotations? NEWLINE
+    : soft_id COLON type_expr annotations? NEWLINE
     ;
 
 type_expr
@@ -148,7 +148,7 @@ permissive_token
     ;
 
 action
-    : VALIDATE_KW (STRING_LITERAL | expr)? permissive_token* COLON?
+    : VALIDATE_KW expr AS_KW TYPE_KW DOT type_expr
     | ACHIEVE_KW STRING_LITERAL (AND_KW STRING_LITERAL)* (COLON | EQUALS)? permissive_token*
     | CREATE_KW (type_expr | soft_id) (COLON | EQUALS)? permissive_token* (COLON permissive_token*)?
     | PERSIST_KW expr (VIA_KW expr)? (COLON | EQUALS)? permissive_token*
@@ -160,7 +160,41 @@ action
     | TRANSFORM_KW LPAREN annotation RPAREN
     | UPDATE_KW expr? permissive_token*
     | APPLY_KW STRATEGY_KW soft_id (LPAREN value_list? RPAREN)?
-    | soft_id (DOT soft_id)* (LPAREN value_list? RPAREN)? permissive_token* (COLON permissive_token*)?
+    | action_id (DOT soft_id)* (LPAREN value_list? RPAREN)? permissive_token* (COLON permissive_token*)?
+    ;
+
+action_id
+    : IDENTIFIER
+    | ACHIEVE_KW
+    | CREATE_KW
+    | PERSIST_KW
+    | RETURN_KW
+    | LOG_KW
+    | THROW_KW
+    | EXECUTE_KW
+    | TRANSFORM_KW
+    | UPDATE_KW
+    | APPLY_KW
+    | TYPE_KW
+    | RESOURCES_KW
+    | CONTEXT_KW
+    | TARGET_KW
+    | TRACE_KW
+    | NAMESPACE_KW
+    | IMPORT_KW
+    | AS_KW
+    | WITH_KW
+    | VIA_KW
+    | TO_KW
+    | HAS_KW
+    | CONTAINS_KW
+    | IS_KW
+    | NOT_KW
+    | AND_KW
+    | OR_KW
+    | MATCH_KW
+    | DEFAULT_KW
+    | STATUS_KW
     ;
 
 control_flow
@@ -345,13 +379,11 @@ soft_id
     | TRACE_KW
     | NAMESPACE_KW
     | IMPORT_KW
-    | AS_KW
     | DECISION_KW
     | CHOSEN_KW
     | RATIONALE_KW
     | ALTERNATIVES_KW
     | AFFECTS_KW
-    | TYPE_KW
     | LIST_KW
     | MAP_KW
     | ENUM_KW
@@ -361,7 +393,6 @@ soft_id
     | PATTERN_KW
     | DEPENDENCIES_KW
     | FLOW_KW
-    | VALIDATE_KW
     | ACHIEVE_KW
     | CREATE_KW
     | PERSIST_KW
@@ -397,6 +428,18 @@ soft_id
     | BLOCKING_KW
     | TODO_KW
     | REVIEW_KW
+    | VALIDATE_KW
+    | TYPE_KW
+    | AS_KW
+    | WITH_KW
+    | VIA_KW
+    | TO_KW
+    | HAS_KW
+    | CONTAINS_KW
+    | APPLY_KW
+    | UPDATE_KW
+    | TRANSFORM_KW
+    | RESOURCES_KW
     | IS_KW
     | NOT_KW
     | AND_KW

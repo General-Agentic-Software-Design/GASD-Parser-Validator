@@ -17,7 +17,7 @@ TYPE Node:
     TYPE: Integer
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Errors: {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Errors: {errors.to_console()}"
     
     generator = ASTGenerator()
     ast = generator.visit(tree)
@@ -35,7 +35,7 @@ TYPE ActionNode:
     actionType: Enum(VALIDATE, ACHIEVE, CONTEXT, TARGET, FLOW)
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Errors: {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Errors: {errors.to_console()}"
     
     generator = ASTGenerator()
     ast = generator.visit(tree)

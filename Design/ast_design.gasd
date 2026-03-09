@@ -18,21 +18,25 @@ TRACE: "US-PARSER-003", "US-PARSER-007"
 DECISION "AST vs CST":
     CHOSEN: "Separate AST Layer"
     RATIONALE: "The ANTLR parse tree (CST) includes syntactic noise (colons, commas, keywords). A clean AST simplifies downstream analysis and code generation."
+    ALTERNATIVES: ["Separate AST Layer", "In-place CST Processing"]
     AFFECTS: [ASTGenerator, ASTNodes]
 
 DECISION "AST Generation Method":
     CHOSEN: "ANTLR Visitor-based Transformation"
     RATIONALE: "A visitor walks the CST and constructs typed AST nodes, allowing full control over the output shape."
+    ALTERNATIVES: ["ANTLR Visitor-based Transformation", "CST Listener-based Construction"]
     AFFECTS: [ASTGenerator]
 
 DECISION "AST Node Identity":
     CHOSEN: "Discriminated Union with NodeKind Enum"
     RATIONALE: "Each AST node carries a 'kind' field for easy pattern matching and type narrowing in TypeScript."
+    ALTERNATIVES: ["Discriminated Union with NodeKind Enum", "Class-based Polymorphism"]
     AFFECTS: [ASTNodes]
 
 DECISION "AST Serialization Format" @trace #AC-PARSER-007-03:
     CHOSEN: "JSON"
     RATIONALE: "JSON is the industry standard for structured data exchange and is easily consumable by downstream tooling."
+    ALTERNATIVES: ["JSON", "XML", "Protobuf"]
     AFFECTS: [ASTExporter]
 
 // ===================================================================
@@ -153,6 +157,8 @@ TYPE FlowStepNode:
     kind: "FlowStep"
     action: Enum(VALIDATE, ACHIEVE, CREATE, PERSIST, RETURN, LOG, EXECUTE, TRANSFORM, ENSURE, MATCH, IF, ELSE, APPLY, UPDATE, ON_ERROR, OTHERWISE, THROW)
     target: String
+    asBinding: String @optional @trace #AC-PARSER-008-04
+    typePath: String @optional @trace #AC-PARSER-008-04
     errorHandler: String @optional
     subSteps: List<FlowStepNode> @optional
 

@@ -1,6 +1,6 @@
 # GASD Parser & Validator
 
-The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1.0**).
+The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1.1**).
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
@@ -43,6 +43,12 @@ The easiest way to use the parser is to install it as a standalone tool:
 ```bash
 pip3 install -r requirements.txt
 pip3 install Build/Installation
+```
+
+To uninstall the standalone CLI:
+
+```bash
+pip3 uninstall gasd-parser
 ```
 
 See the [Installation README](Build/Installation/README.md) for more details.

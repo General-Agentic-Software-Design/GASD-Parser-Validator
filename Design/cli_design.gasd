@@ -18,21 +18,25 @@ TRACE: "US-PARSER-006", "US-PARSER-007"
 DECISION "Input Argument Strategy":
     CHOSEN: "Variadic file/directory paths (nargs='*')"
     RATIONALE: "Users need to validate entire architecture projects at once, rather than passing a single file at a time. This mirrors standard compiler CLI behavior."
+    ALTERNATIVES: ["Variadic file/directory paths (nargs='*')", "Single file only"]
     AFFECTS: [GASDCLI]
 
 DECISION "Directory Traversal":
     CHOSEN: "Recursive discovery of .gasd files"
     RATIONALE: "When a directory is provided, the tool should automatically locate all valid specification files within its hierarchy."
+    ALTERNATIVES: ["Recursive discovery of .gasd files", "Flat directory only"]
     AFFECTS: [GASDCLI]
 
 DECISION "Output Formatting":
     CHOSEN: "Per-file status followed by aggregated summary (unless JSON mode)"
     RATIONALE: "Provides immediate feedback per file, but a high-level summary at the end prevents scrolling fatigue on large codebases."
+    ALTERNATIVES: ["Per-file status followed by aggregated summary", "Aggregated summary only"]
     AFFECTS: [GASDCLI]
 
 DECISION "AST Output Strategy" @trace #AC-PARSER-007-02, #AC-PARSER-007-04, #AC-PARSER-007-05, #AC-PARSER-007-06:
     CHOSEN: "Optional enabling with flexible routing (Console/File/Combined)"
     RATIONALE: "Users need flexibility to either inspect the AST directly or pipe it into other tools."
+    ALTERNATIVES: ["Optional enabling with flexible routing", "Standard output only"]
     AFFECTS: [GASDCLI]
 
 // ===================================================================

@@ -16,22 +16,27 @@ class RequiredSectionsPass(ValidationPass):
         has_context = False
         has_target = False
         
-        # Directives check commented out to accommodate informal Ref-Specs
-        # if not has_context:
-        #     errors.append(SemanticError(
-        #         code='V002',
-        #         severity='ERROR',
-        #         message="Missing required CONTEXT directive.",
-        #         line=1, column=1
-        #     ))
-        #     
-        # if not has_target:
-        #     errors.append(SemanticError(
-        #         code='V003',
-        #         severity='ERROR',
-        #         message="Missing required TARGET directive.",
-        #         line=1, column=1
-        #     ))
+        for d in ast.directives:
+            if d.directiveType == "CONTEXT":
+                has_context = True
+            if d.directiveType == "TARGET":
+                has_target = True
+
+        if not has_context:
+            errors.append(SemanticError(
+                code='V002',
+                severity='ERROR',
+                message="Missing required CONTEXT directive.",
+                line=1, column=1
+            ))
+            
+        if not has_target:
+            errors.append(SemanticError(
+                code='V003',
+                severity='ERROR',
+                message="Missing required TARGET directive.",
+                line=1, column=1
+            ))
             
         if not (ast.types or ast.components or ast.flows):
             errors.append(SemanticError(
@@ -41,15 +46,15 @@ class RequiredSectionsPass(ValidationPass):
                 line=1, column=1
             ))
             
-        # for comp in ast.components:
-        #     if not comp.methods:  # The grammar forces INTERFACE block, so this checks if there are methods inside
-        #         errors.append(SemanticError(
-        #             code='V005',
-        #             severity='ERROR',
-        #             message=f"COMPONENT '{comp.name}' must have an INTERFACE block with at least one method.",
-        #             line=comp.line, column=comp.column,
-        #             context=comp.name
-        #         ))
+        for comp in ast.components:
+            if not comp.methods:  # AC-PARSER-004-02: Component must have interface
+                errors.append(SemanticError(
+                    code='V005',
+                    severity='ERROR',
+                    message=f"COMPONENT '{comp.name}' must have an INTERFACE block with at least one method.",
+                    line=comp.line, column=comp.column,
+                    context=comp.name
+                ))
                 
         for dec in ast.decisions:
             if not dec.chosen:
@@ -59,6 +64,24 @@ class RequiredSectionsPass(ValidationPass):
                     message=f"DECISION '{dec.name}' must have a CHOSEN field.",
                     line=dec.line, column=dec.column,
                     context=dec.name
+                ))
+            if not dec.alternatives:
+                errors.append(SemanticError(
+                    code='V014',
+                    severity='ERROR',
+                    message=f"DECISION '{dec.name}' must have at least one ALTERNATIVE.",
+                    line=dec.line, column=dec.column,
+                    context=dec.name
+                ))
+                
+        for s in ast.strategies:
+            if not s.algorithm:
+                errors.append(SemanticError(
+                    code='V013',
+                    severity='ERROR',
+                    message=f"STRATEGY '{s.name}' must define an ALGORITHM.",
+                    line=s.line, column=s.column,
+                    context=s.name
                 ))
                 
         for f in ast.flows:

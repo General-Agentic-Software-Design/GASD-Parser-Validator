@@ -25,7 +25,7 @@ def test_ast_generation_valid():
 def test_ast_location_metadata():
     """AT-PARSER-003-01: Every AST node contains source location metadata."""
     api = ParseTreeAPI()
-    content = "CONTEXT: 'LocTest'\nTARGET: 'Python3'\nTYPE T: \n  f: String\n"
+    content = 'CONTEXT: "LocTest"\nTARGET: "Python3"\nTYPE T:\n  f: String\n'
     tree, errors = api.parse(content)
     
     generator = ASTGenerator()

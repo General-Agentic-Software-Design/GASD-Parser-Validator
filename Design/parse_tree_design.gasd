@@ -18,11 +18,13 @@ TRACE: "US-PARSER-002"
 DECISION "Parse Tree Representation":
     CHOSEN: "ANTLR4 Native Parse Tree (ParserRuleContext)"
     RATIONALE: "ANTLR4 automatically generates a concrete syntax tree (CST); we use built-in visitor/listener patterns to traverse it."
+    ALTERNATIVES: ["ANTLR4 Native Parse Tree", "Custom Interface-based Tree"]
     AFFECTS: [ParseTreeBuilder, ParseTreeAPI]
 
 DECISION "Tree Traversal Pattern":
     CHOSEN: "Visitor Pattern"
     RATIONALE: "Visitor allows returning values from each rule, which is essential for AST construction in Phase 2. Listeners are fire-and-forget."
+    ALTERNATIVES: ["Visitor Pattern", "Listener Pattern"]
     AFFECTS: [GASDVisitor]
 
 // ===================================================================

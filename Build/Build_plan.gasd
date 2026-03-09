@@ -8,7 +8,7 @@
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "ANTLR4", "Python3"
-TRACE: "EPIC-PARSER-001", "US-PARSER-001", "US-PARSER-002", "US-PARSER-003", "US-PARSER-004", "US-PARSER-005", "US-PARSER-006", "US-PARSER-007"
+TRACE: "EPIC-PARSER-001", "US-PARSER-001", "US-PARSER-002", "US-PARSER-003", "US-PARSER-004", "US-PARSER-005", "US-PARSER-006", "US-PARSER-007", "US-PARSER-008"
 
 // ===================================================================
 // PHASE 1 — Design (Output: Design/ folder)
@@ -19,7 +19,7 @@ TRACE: "EPIC-PARSER-001", "US-PARSER-001", "US-PARSER-002", "US-PARSER-003", "US
 /// to ensure 100% coverage and traceability.
 FLOW phase1_generate_designs():
     1. ACHIEVE "Read Requirements/User_story.md"
-    2. VALIDATE "All #US, #AC, #AT, #RT IDs are extracted"
+    2. ENSURE "All #US, #AC, #AT, #RT IDs are extracted"
     3. ACHIEVE "Generate Design/grammar_design.gasd" @trace #US-PARSER-001
     4. ACHIEVE "Generate Design/parse_tree_design.gasd" @trace #US-PARSER-002
     5. ACHIEVE "Generate Design/ast_design.gasd" @trace #US-PARSER-003
@@ -27,22 +27,23 @@ FLOW phase1_generate_designs():
     7. ACHIEVE "Generate Design/error_reporting_design.gasd" @trace #US-PARSER-005
     8. ACHIEVE "Generate Design/cli_design.gasd" @trace #US-PARSER-006
     9. ACHIEVE "Update Design/ast_design.gasd & Design/cli_design.gasd for JSON extraction" @trace #US-PARSER-007
-    10. VALIDATE "All AC IDs are traced in design files"
+    10. ACHIEVE "Update Design/grammar_design.gasd & Design/ast_design.gasd for VALIDATE AS TYPE binding" @trace #US-PARSER-008
+    11. ENSURE "All AC IDs are traced in design files"
 
 // ===================================================================
-// PHASE 2 — Implementation (Output: Impl/ folder)
-// Generate production code from Phase 1 designs.
+// PHASE 2 — Validation Specifications (Output: Validation/ folder)
+// Generate explicit, comprehensive GASD test cases strictly based on the Design/ folder.
 // ===================================================================
 
-FLOW phase2_generate_implementation():
-    1. ACHIEVE "Implement Impl/grammar/gasd.g4 from Design/grammar_design.gasd" @trace #US-PARSER-001
-    2. EXECUTE "antlr4 -Dlanguage=Python3 -visitor Impl/grammar/gasd.g4 -o Impl/parser/generated"
-    3. VALIDATE "Grammar compiles successfully" @trace #AC-PARSER-001-02
-    4. ACHIEVE "Implement Impl/parser/ from Design/parse_tree_design.gasd" @trace #US-PARSER-002
-    5. ACHIEVE "Implement Impl/ast/ from Design/ast_design.gasd" @trace #US-PARSER-003
-    6. ACHIEVE "Implement Impl/validation/ from Design/semantic_validation_design.gasd" @trace #US-PARSER-004
-    7. ACHIEVE "Implement Impl/errors/ from Design/error_reporting_design.gasd" @trace #US-PARSER-005
-    8. ACHIEVE "Implement AST JSON Export in Impl/ast/ & Impl/cli/" @trace #US-PARSER-007
+FLOW phase2_generate_validation_specs():
+    1. ACHIEVE "Generate Validation/grammar_tests.gasd from Design/grammar_design.gasd"
+    2. ACHIEVE "Generate Validation/parse_tree_tests.gasd from Design/parse_tree_design.gasd"
+    3. ACHIEVE "Generate Validation/ast_tests.gasd from Design/ast_design.gasd"
+    4. ACHIEVE "Generate Validation/semantic_validation_tests.gasd from Design/semantic_validation_design.gasd"
+    5. ACHIEVE "Generate Validation/error_reporting_tests.gasd from Design/error_reporting_design.gasd"
+    6. ACHIEVE "Generate Validation/cli_tests.gasd from Design/cli_design.gasd"
+    7. ENSURE "Validation specs cover all constraints and type definitions present in the Design folder"
+
 
 // ===================================================================
 // PHASE 3 — Testing (Output: Impl/tests/ folder)
@@ -50,39 +51,69 @@ FLOW phase2_generate_implementation():
 // ===================================================================
 
 FLOW phase3_generate_tests():
+    /// Requirement: Consult ONLY Requirements/ and Design/ folders.
+    /// Do NOT use Impl/ (implementation) as a reference during test generation.
+    1. ACHIEVE "Review Requirements/, Validation/ and Design/ for testing scope"
     // Acceptance Tests
-    1. ACHIEVE "Generate Impl/tests/acceptance/test_grammar.py" @trace #AT-PARSER-001-01, #AT-PARSER-001-02, #AT-PARSER-001-03, #AT-PARSER-001-04
-    2. ACHIEVE "Generate Impl/tests/acceptance/test_parse_tree.py" @trace #AT-PARSER-002-01, #AT-PARSER-002-02, #AT-PARSER-002-03
-    3. ACHIEVE "Generate Impl/tests/acceptance/test_ast.py" @trace #AT-PARSER-003-01, #AT-PARSER-003-02, #AT-PARSER-003-03
-    4. ACHIEVE "Generate Impl/tests/acceptance/test_semantic.py" @trace #AT-PARSER-004-01, #AT-PARSER-004-02, #AT-PARSER-004-03
-    5. ACHIEVE "Generate Impl/tests/acceptance/test_errors.py" @trace #AT-PARSER-005-01, #AT-PARSER-005-02
-    6. ACHIEVE "Generate Impl/tests/acceptance/test_cli_runner.py" @trace #AT-PARSER-006-01, #AC-PARSER-006-02, #AC-PARSER-006-03
-    7. ACHIEVE "Generate Impl/tests/acceptance/test_ast_extraction.py covering all AT-PARSER-007-0* tests" @trace #AT-PARSER-007-01, #AT-PARSER-007-02, #AT-PARSER-007-03, #AT-PARSER-007-04, #AT-PARSER-007-05, #AT-PARSER-007-06, #AT-PARSER-007-07, #AT-PARSER-007-08
+    2. ACHIEVE "Generate Impl/tests/acceptance/test_grammar.py" @trace #AT-PARSER-001-01, #AT-PARSER-001-02, #AT-PARSER-001-03, #AT-PARSER-001-04
+    3. ACHIEVE "Generate Impl/tests/acceptance/test_parse_tree.py" @trace #AT-PARSER-002-01, #AT-PARSER-002-02, #AT-PARSER-002-03
+    4. ACHIEVE "Generate Impl/tests/acceptance/test_ast.py" @trace #AT-PARSER-003-01, #AT-PARSER-003-02, #AT-PARSER-003-03
+    5. ACHIEVE "Generate Impl/tests/acceptance/test_semantic.py" @trace #AT-PARSER-004-01, #AT-PARSER-004-02, #AT-PARSER-004-03
+    6. ACHIEVE "Generate Impl/tests/acceptance/test_errors.py" @trace #AT-PARSER-005-01, #AT-PARSER-005-02
+    7. ACHIEVE "Generate Impl/tests/acceptance/test_cli_runner.py" @trace #AT-PARSER-006-01, #AC-PARSER-006-02, #AC-PARSER-006-03
+    8. ACHIEVE "Generate Impl/tests/acceptance/test_ast_extraction.py covering all AT-PARSER-007-0* tests" @trace #AT-PARSER-007-01, #AT-PARSER-007-02, #AT-PARSER-007-03, #AT-PARSER-007-04, #AT-PARSER-007-05, #AT-PARSER-007-06, #AT-PARSER-007-07, #AT-PARSER-007-08
+    9. ACHIEVE "Generate Impl/tests/acceptance/test_explicit_binding.py covering AT-VALIDATE-001, AT-VALIDATE-002, AT-VALIDATE-003, NT-VALIDATE-001, NT-VALIDATE-002" @trace #US-PARSER-008
     // Regression Tests
-    7. ACHIEVE "Generate Impl/tests/regression/test_grammar.py" @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
-    8. ACHIEVE "Generate Impl/tests/regression/test_parse_tree.py" @trace #RT-PARSER-002-01, #RT-PARSER-002-02
-    9. ACHIEVE "Generate Impl/tests/regression/test_ast.py" @trace #RT-PARSER-003-01, #RT-PARSER-003-02
-    10. ACHIEVE "Generate Impl/tests/regression/test_semantic.py" @trace #RT-PARSER-004-01, #RT-PARSER-004-02
-    11. ACHIEVE "Generate Impl/tests/regression/test_errors.py" @trace #RT-PARSER-005-01
-    12. ACHIEVE "Include CLI regression in RT-PARSER-006-01" @trace #RT-PARSER-006-01
-    13. ACHIEVE "Add exhaustive AST extraction regression tests in Impl/tests/regression/test_ast_regression.py" @trace #RT-PARSER-007-01, #RT-PARSER-007-02, #RT-PARSER-007-03, #RT-PARSER-007-04, #RT-PARSER-007-05, #RT-PARSER-007-06, #RT-PARSER-007-07
-    14. VALIDATE "100% Traceability and Coverage for all AC-PARSER-007-*, AT-PARSER-007-*, and RT-PARSER-007-*"
+    10. ACHIEVE "Generate Impl/tests/regression/test_grammar.py" @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
+    11. ACHIEVE "Generate Impl/tests/regression/test_parse_tree.py" @trace #RT-PARSER-002-01, #RT-PARSER-002-02
+    12. ACHIEVE "Generate Impl/tests/regression/test_ast.py" @trace #RT-PARSER-003-01, #RT-PARSER-003-02
+    13. ACHIEVE "Generate Impl/tests/regression/test_semantic.py" @trace #RT-PARSER-004-01, #RT-PARSER-004-02
+    14. ACHIEVE "Generate Impl/tests/regression/test_errors.py" @trace #RT-PARSER-005-01
+    15. ACHIEVE "Include CLI regression in RT-PARSER-006-01" @trace #RT-PARSER-006-01
+    16. ACHIEVE "Add exhaustive AST extraction regression tests in Impl/tests/regression/test_ast_regression.py" @trace #RT-PARSER-007-01, #RT-PARSER-007-02, #RT-PARSER-007-03, #RT-PARSER-007-04, #RT-PARSER-007-05, #RT-PARSER-007-06, #RT-PARSER-007-07
+    17. ACHIEVE "Add exhaustive VALIDATE AS TYPE binding regression tests in Impl/tests/regression/test_binding_regression.py" @trace #RT-VALIDATE-001, #RT-VALIDATE-002
+    18. ENSURE "100% Traceability and Coverage for all AC-PARSER-007-*, AT-PARSER-007-*, and RT-PARSER-007-*"
+    // Negative Tests
+    26. ACHIEVE "Add exhaustive negative testing suite covering all spec constraints (V001-V014, S001-S002)" @trace #US-PARSER-005, #US-PARSER-008
+    27. ACHIEVE "Generate Specs/exhaustive_negative_examples.gasd as normative negative reference"
+    // Design Validation Tests
+    19. ACHIEVE "Generate Impl/tests/design_validation/grammar_tests.py from Validation/grammar_tests.gasd"
+    20. ACHIEVE "Generate Impl/tests/design_validation/parse_tree_tests.py from Validation/parse_tree_tests.gasd"
+    21. ACHIEVE "Generate Impl/tests/design_validation/ast_tests.py from Validation/ast_tests.gasd"
+    22. ACHIEVE "Generate Impl/tests/design_validation/semantic_validation_tests.py from Validation/semantic_validation_tests.gasd"
+    23. ACHIEVE "Generate Impl/tests/design_validation/error_reporting_tests.py from Validation/error_reporting_tests.gasd"
+    24. ACHIEVE "Generate Impl/tests/design_validation/cli_tests.py from Validation/cli_tests.gasd"
+    25. ENSURE "100% Traceability and Coverage for all Design Validation Tests"
+
+
+// ===================================================================
+// PHASE 4 — Implementation (Output: Impl/ folder)
+// Generate production code from Phase 1 designs.
+// ===================================================================
+
+FLOW phase4_generate_implementation():
+    1. ACHIEVE "Implement Impl/grammar/gasd.g4 from Design/grammar_design.gasd" @trace #US-PARSER-001
+    2. ACHIEVE "antlr4 -Dlanguage=Python3 -visitor Impl/grammar/gasd.g4 -o Impl/parser/generated"
+    3. ENSURE "Grammar compiles successfully" @trace #AC-PARSER-001-02
+    4. ACHIEVE "Implement Impl/parser/ from Design/parse_tree_design.gasd" @trace #US-PARSER-002
+    5. ACHIEVE "Implement Impl/ast/ from Design/ast_design.gasd" @trace #US-PARSER-003
+    6. ACHIEVE "Implement Impl/validation/ from Design/semantic_validation_design.gasd" @trace #US-PARSER-004
+    7. ACHIEVE "Implement Impl/errors/ from Design/error_reporting_design.gasd" @trace #US-PARSER-005
+    8. ACHIEVE "Implement AST JSON Export in Impl/ast/ & Impl/cli/" @trace #US-PARSER-007
+    9. ACHIEVE "Implement Mandatory VALIDATE AS TYPE Binding in Impl/parser/ & Impl/validation/" @trace #US-PARSER-008
 
 /// Quality Gate: All tests must pass before delivery.
 FLOW run_to_pass():
-    1. EXECUTE "pytest Impl/tests"
-    2. EXECUTE "gasd-parser ./Ref-Specs with all options"
-    3. ENSURE "Dont make any changes to the gasd files in Ref-Specs folder"
-    4. ENSURE "Fixing implementation till zero warnings or errors from 'gasd-parser ./Ref-Specs'"
-    5. ENSURE "Fixing implementation till All tests pass"
+    1. ACHIEVE "pytest Impl/tests including acceptance, regression and design validation tests"
+    2. ENSURE "Fixing implementation till All tests pass"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================
-// PHASE 4 — Packaging (Output: Build/Installation/ folder)
+// PHASE 5 — Packaging (Output: Build/Installation/ folder)
 // Package the GASD parser as a standalone installable application.
 // ===================================================================
 
-FLOW phase4_package_standalone():
+FLOW phase5_package_standalone():
     1. ACHIEVE "Create Build/Installation/setup.py with package metadata"
     2. ACHIEVE "Create Build/Installation/pyproject.toml with build system config"
     3. ACHIEVE "Create Build/Installation/gasd_parser/ package directory"
@@ -90,10 +121,10 @@ FLOW phase4_package_standalone():
     5. ACHIEVE "Create Build/Installation/gasd_parser/__main__.py as CLI entry point"
     6. ACHIEVE "Create Build/Installation/gasd_parser/cli.py with argument parsing"
     7. ACHIEVE "Create Build/Installation/README.md with usage instructions"
-    8. VALIDATE "pip install -e Build/Installation succeeds"
-    9. VALIDATE "gasd-parser --help shows CLI usage"
-    10. VALIDATE "gasd-parser Specs/valid_sample.gasd exits 0"
-    11. VALIDATE "gasd-parser Specs/invalid_duplicates.gasd exits non-zero"
-    12. VALIDATE "gasd-parser parses multiple files and directories recursively" @trace #AC-PARSER-006-01, #AC-PARSER-006-02
-    13. VALIDATE "gasd-parser --ast generates JSON output" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
-    14. VALIDATE "gasd-parser --ast-combine merges multiple ASTs" @trace #AC-PARSER-007-06
+    8. ENSURE "pip install -e Build/Installation succeeds"
+    9. ENSURE "gasd-parser --help shows CLI usage"
+    10. ENSURE "gasd-parser Specs/valid_sample.gasd exits 0"
+    11. ENSURE "gasd-parser Specs/invalid_duplicates.gasd exits non-zero"
+    12. ENSURE "gasd-parser parses multiple files and directories recursively" @trace #AC-PARSER-006-01, #AC-PARSER-006-02
+    13. ENSURE "gasd-parser --ast generates JSON output" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
+    14. ENSURE "gasd-parser --ast-combine merges multiple ASTs" @trace #AC-PARSER-007-06

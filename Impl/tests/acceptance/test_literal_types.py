@@ -22,7 +22,7 @@ TYPE StatusEvent:
     status: "PENDING"
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Unexpected errors: {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Unexpected errors: {errors.to_console()}"
 
 
 def test_integer_literal_type_parses():
@@ -35,7 +35,7 @@ TYPE VersionedData:
     version: 1
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Unexpected errors: {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Unexpected errors: {errors.to_console()}"
 
 
 def test_float_literal_type_parses():

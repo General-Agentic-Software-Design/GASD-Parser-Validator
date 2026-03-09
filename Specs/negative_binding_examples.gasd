@@ -1,0 +1,18 @@
+CONTEXT: "NegativeBinding"
+TARGET: "TypeScript"
+
+TYPE User:
+    id: Integer
+
+FLOW InvalidFlows():
+    // NT-VALIDATE-001: Missing AS TYPE
+    1. VALIDATE user
+    
+    // NT-VALIDATE-002: Unknown Type path
+    2. VALIDATE user AS TYPE.NonExistentType
+    
+    // NT-VALIDATE-003: Dot without Type
+    3. VALIDATE user AS TYPE.
+    
+    // NT-VALIDATE-004: Missing TYPE keyword
+    4. VALIDATE user AS User

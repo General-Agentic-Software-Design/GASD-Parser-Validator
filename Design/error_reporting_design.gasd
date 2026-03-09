@@ -18,11 +18,13 @@ TRACE: "US-PARSER-005", "US-PARSER-007"
 DECISION "Error Output Format":
     CHOSEN: "Dual Format: Human-Readable Console + Machine-Readable JSON"
     RATIONALE: "Developers need clear console output; tooling (IDEs, CI) needs structured JSON for programmatic consumption."
+    ALTERNATIVES: ["Console + JSON", "Console Only", "JSON Only"]
     AFFECTS: [ErrorReporter, ErrorFormatter]
 
 DECISION "Error Severity Model":
     CHOSEN: "Three-Level: ERROR, WARNING, INFO"
     RATIONALE: "ERROR blocks compilation, WARNING flags potential issues, INFO provides advisory notes."
+    ALTERNATIVES: ["Three-Level: ERROR, WARNING, INFO", "Two-Level: ERROR, WARNING"]
     AFFECTS: [ErrorReporter]
 
 // ===================================================================

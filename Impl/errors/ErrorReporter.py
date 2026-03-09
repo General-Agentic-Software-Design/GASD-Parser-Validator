@@ -110,6 +110,7 @@ class ErrorReporter:
             output.append(f"  --> {self.source_file}:{err.line}:{err.column}")
             if err.offendingToken:
                 output.append(f"  Token: '{err.offendingToken}'")
+            output.append(" " * (err.column + 5) + "^")
             output.append("")
 
         for err in self.semantic_errors:

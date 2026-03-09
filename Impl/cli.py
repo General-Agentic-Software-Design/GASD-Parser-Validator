@@ -16,6 +16,7 @@ from .ast.ASTGenerator import ASTGenerator
 from .ast.ASTExporter import ASTExporter
 from .validation.ValidationPipeline import ValidationPipeline
 from .errors.ErrorReporter import ErrorReporter, IOErrorData
+from . import __version__
 
 
 def main():
@@ -47,7 +48,7 @@ def main():
     parser.add_argument(
         "--version",
         action="version",
-        version="gasd-parser 1.1.0",
+        version=f"gasd-parser {__version__}",
     )
     parser.add_argument(
         "--ast",
@@ -204,7 +205,7 @@ def main():
         # @trace #AC-PARSER-006-03
         print("\n--- Summary ---")
         print(f"Processed: {len(target_files)} files")
-        print(f"Success:   {success_count}")
+        print(f"Success: {success_count}")
         print(f"Failed:    {failure_count}")
 
     sys.exit(1 if failure_count > 0 else 0)  # @trace #AC-PARSER-006-03

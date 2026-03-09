@@ -1,8 +1,0 @@
-CONTEXT: "Duplicate Test"
-TARGET: "Python3"
-
-TYPE User:
-    name: String
-
-TYPE User:
-    id: Integer

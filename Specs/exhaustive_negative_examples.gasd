@@ -1,0 +1,101 @@
+// --- Lexical/Syntax Errors ---
+
+// S001: Indentation Error (Dedent mismatch)
+CONTEXT: "IndentError"
+TARGET: "P"
+TYPE T:
+  f: String
+    wrong_indent: Integer
+
+// S002: General Syntax Error (Missing colon)
+CONTEXT: "SyntaxError"
+TARGET: "P"
+FLOW F()
+    1. ACHIEVE "A"
+
+// --- Semantic Errors ---
+
+// V001: Duplicate Name
+CONTEXT: "Duplicate"
+TARGET: "P"
+TYPE T: f: S
+TYPE T: f: S
+
+// V002: Missing CONTEXT
+TARGET: "P"
+TYPE T: f: S
+
+// V003: Missing TARGET
+CONTEXT: "NoTarget"
+TYPE T: f: S
+
+// V004: Empty File (already covered, but good to have)
+CONTEXT: "Empty"
+TARGET: "P"
+
+// V005: Component missing methods
+CONTEXT: "InterfaceFail"
+TARGET: "P"
+COMPONENT C:
+    INTERFACE:
+        // No methods
+
+// V006: Decision missing CHOSEN
+CONTEXT: "DecisionFail"
+TARGET: "P"
+DECISION "D":
+    ALTERNATIVES: ["A", "B"]
+
+// V007: Flow missing steps
+CONTEXT: "FlowFail"
+TARGET: "P"
+FLOW F():
+    // No steps here
+
+// V008: Unknown type reference (Warning)
+CONTEXT: "UnknownType"
+TARGET: "P"
+TYPE T:
+    f: UnknownType
+
+// V009: Unknown component dependency (Warning)
+CONTEXT: "UnknownDep"
+TARGET: "P"
+COMPONENT C:
+    DEPENDENCIES: UnknownComp
+    INTERFACE:
+        m()
+
+// V010: Decision affects unknown construct (Warning)
+CONTEXT: "UnknownAffect"
+TARGET: "P"
+DECISION "D":
+    CHOSEN: "A"
+    ALTERNATIVES: ["A"]
+    AFFECTS: ["UnknownThing"]
+
+// V011: VALIDATE binding unknown TYPE
+CONTEXT: "BindingFail"
+TARGET: "P"
+FLOW F():
+    1. VALIDATE user AS TYPE.UnknownUser
+
+// V012: VALIDATE missing binding (Parsing as action_id fallback)
+CONTEXT: "MissingBinding"
+TARGET: "P"
+FLOW F():
+    1. VALIDATE user
+
+// V013: Strategy missing algorithm
+CONTEXT: "StrategyFail"
+TARGET: "P"
+STRATEGY S:
+    INPUT: input: String
+    OUTPUT: Integer
+    // No ALGORITHM
+
+// V014: Decision missing alternatives
+CONTEXT: "DecisionAltFail"
+TARGET: "P"
+DECISION "D":
+    CHOSEN: "X"

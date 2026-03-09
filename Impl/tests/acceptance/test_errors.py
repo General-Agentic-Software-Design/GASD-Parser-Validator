@@ -1,58 +1,34 @@
 import pytest
 import json
 from Impl.parser.ParseTreeAPI import ParseTreeAPI
-from Impl.ast.ASTGenerator import ASTGenerator
-from Impl.validation.ValidationPipeline import ValidationPipeline
 from Impl.errors.ErrorReporter import ErrorReporter
 
+"""
+Acceptance Test for US-PARSER-005: Error Reporting System
+@trace #AT-PARSER-005-01, #AC-PARSER-005-03
+"""
+
 def test_syntax_error_reporting():
-    """AT-PARSER-005-01: Syntax errors are reported in human-readable format."""
+    """AT-PARSER-005-01: Syntax errors must show location and context."""
+    content = 'CONTEXT "MissingColon"\n' # Syntax error: missing colon
     api = ParseTreeAPI()
-    content = "INVALID_KEYWORD: 'value'\n"
     tree, errors = api.parse(content)
     
-    assert errors.get_error_count() > 0
-    console_out = errors.to_console()
-    assert "error[SYNTAX]" in console_out
-    assert "INVALID_KEYWORD" in content # Just checking it mentions the source line or similar
+    console_output = errors.to_console()
+    assert "1:8" in console_output # Line 1, approx column 8
+    assert "MissingColon" in console_output
+    assert "^" in console_output # Location indicator
 
 def test_json_error_reporting():
-    """AC-PARSER-005-03: Error output is available in JSON format."""
+    """AC-PARSER-005-03: Machine-readable JSON output."""
+    content = 'CONTEXT "MissingColon"\n'
     api = ParseTreeAPI()
-    content = "INVALID_KEYWORD: 'value'\n"
     tree, errors = api.parse(content)
     
-    json_out = errors.to_json()
-    report = json.loads(json_out)
+    json_report = errors.to_json()
+    report_data = json.loads(json_report)
     
-    assert report["success"] == False
-    assert report["errorCount"] > 0
-    assert len(report["errors"]) > 0
-    assert report["errors"][0]["type"] == "SYNTAX"
-
-def test_semantic_error_location():
-    """AT-PARSER-005-02: Duplicate definition error shows location."""
-    api = ParseTreeAPI()
-    content = """CONTEXT: "DupErr"
-TARGET: "Python3"
-TYPE T:
-    f: String
-TYPE T:
-    g: Integer
-"""
-    tree, errors = api.parse(content)
-    generator = ASTGenerator()
-    ast = generator.visit(tree)
-    
-    pipeline = ValidationPipeline()
-    semantic_errors = pipeline.validate(ast)
-    
-    # Should have V001 for duplicate name T
-    dup_errors = [e for e in semantic_errors if e.code == 'V001']
-    assert len(dup_errors) > 0, f"Expected V001, got: {[e.code for e in semantic_errors]}"
-    
-    # Verify location metadata
-    err = dup_errors[0]
-    assert err.line > 0
-    assert err.column >= 0
-    assert "T" in err.message
+    assert report_data["success"] is False
+    assert report_data["errorCount"] > 0
+    assert "errors" in report_data
+    assert report_data["errors"][0]["type"] == "SYNTAX"

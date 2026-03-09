@@ -73,11 +73,41 @@ class ReferenceResolutionPass(ValidationPass):
                             context=dec.name
                         ))
 
-        # Validate Flow types
+        # Validate Flow types and VALIDATE bindings
+        def check_steps(steps, context_name):
+            if not steps: return
+            for step in steps:
+                if step.action == "VALIDATE":
+                    if not step.asBinding or not step.typePath:
+                        errors.append(SemanticError(
+                            code='V012',
+                            severity='ERROR',
+                            message=f"VALIDATE action requires explicit 'AS TYPE.X' binding",
+                            line=step.line, column=step.column,
+                            context=context_name
+                        ))
+                    elif step.typePath not in declared_types:
+                         errors.append(SemanticError(
+                            code='V011',
+                            severity='ERROR',
+                            message=f"VALIDATE binding resolves to unknown TYPE '{step.typePath}'",
+                            line=step.line, column=step.column,
+                            context=context_name
+                        ))
+                if step.subSteps:
+                    check_steps(step.subSteps, context_name)
+
         for f in ast.flows:
             for param in f.parameters:
                 check_type_expr(param.type, f, f.name)
             check_type_expr(f.returnType, f, f.name)
+            check_steps(f.steps, f.name)
+
+        for s in ast.strategies:
+            if s.inputs:
+                for param in s.inputs:
+                    check_type_expr(param.type, s, s.name)
+            check_type_expr(s.output, s, s.name)
             
         # Validate Type definitions
         for t in ast.types:

@@ -2,7 +2,7 @@
    Design: GASD Grammar — ANTLR4 Grammar Specification
    ====================================================
    Defines the complete ANTLR4 grammar for parsing GASD 1.1.0 files.
-   This design covers every language construct from the normative specification.
+   The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1.1**).
 
    Output: Impl/grammar/gasd.g4
 */
@@ -29,16 +29,19 @@ TRACE: "US-PARSER-001"
 DECISION "Lexer Architecture":
     CHOSEN: "Split Lexer + Parser Grammar (GASDLexer.g4 / GASDParser.g4)"
     RATIONALE: "Indentation handling requires custom lexer logic; separating lexer and parser keeps concerns clean."
+    ALTERNATIVES: ["Split Lexer + Parser", "Combined Grammar"]
     AFFECTS: [GASDLexer, GASDParser]
 
 DECISION "Indentation Strategy":
     CHOSEN: "Custom Lexer with INDENT/DEDENT Token Emission"
     RATIONALE: "GASD uses Python-style significant whitespace. A custom lexer override tracks indentation depth and emits synthetic INDENT/DEDENT tokens on the token stream."
+    ALTERNATIVES: ["Custom Lexer with INDENT/DEDENT", "Whitespace-agnostic grammar", "Brace-based scopes"]
     AFFECTS: [GASDLexer]
 
 DECISION "Comment Handling":
     CHOSEN: "Lexer-Level Skip with Documentation Channel"
     RATIONALE: "Single-line (//) and block (/* */) comments are skipped. Documentation comments (///) are sent to a hidden channel for downstream doc generation."
+    ALTERNATIVES: ["Lexer-Level Skip with Documentation Channel", "C-style skip"]
     AFFECTS: [GASDLexer]
 
 // ===================================================================
@@ -200,7 +203,7 @@ TYPE ComponentRule:
 TYPE FlowRule:
     syntax: "FLOW IDENTIFIER '(' param_list? ')' ('->' type_expr)? ':' INDENT (flow_step)+ DEDENT"
     flow_step: "INTEGER '.' (action | control_flow) annotations? | annotations"
-    actions: "Permissive sequences of tokens supporting natural language descriptions in ACHIEVE, CREATE, RETURN, LOG, etc."
+    actions: "Permissive sequences of tokens supporting natural language descriptions in ACHIEVE, CREATE, RETURN, LOG, etc. VALIDATE MUST use explicit binding: VALIDATE expr AS TYPE.typePath." @trace #AC-PARSER-008-01, #AC-PARSER-008-03
     control_flow: "ENSURE expr [OTHERWISE action] | MATCH expr | IF expr ... ELSE"
 
 /// STRATEGY definition rule.
@@ -236,4 +239,5 @@ CONSTRAINT: "Grammar MUST be unambiguous — zero ANTLR warnings in production" 
 CONSTRAINT: "All GASD keywords are case-sensitive and MUST be UPPERCASE" @trace #AC-PARSER-001-03
 CONSTRAINT: "Grammar MUST reject syntactically invalid files with clear error tokens" @trace #AC-PARSER-001-04
 CONSTRAINT: "Grammar MUST support all GASD 1.1.0 constructs including Literal Types and expert natural language patterns" @trace #AC-PARSER-001-03
+CONSTRAINT: "Grammar MUST reject VALIDATE statements without explicit AS TYPE binding" @trace #AC-PARSER-008-02
 CONSTRAINT: "INLINE_TRACE (@trace) MUST NOT consume colons ':' to prevent swallowing structural delimiters"

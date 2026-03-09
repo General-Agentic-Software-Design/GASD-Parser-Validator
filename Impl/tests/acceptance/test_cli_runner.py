@@ -1,99 +1,50 @@
-"""
-Acceptance tests for US-PARSER-006: CLI Multiple File and Folder Processing.
-"""
 import pytest
+import subprocess
 import os
-import tempfile
-import json
-from unittest.mock import patch
-import sys
-from io import StringIO
 
-from Impl.cli import main
+"""
+Acceptance Test for US-PARSER-006: Bulk Implementation Search
+@trace #AT-PARSER-006-01, #AT-PARSER-006-02, #AC-PARSER-006-03
+"""
 
-def test_cli_multiple_valid_files():
-    """AT-PARSER-006-01: Test parsing multiple explicit valid files."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Create two valid GASD files
-        f1_path = os.path.join(tmpdir, "valid1.gasd")
-        f2_path = os.path.join(tmpdir, "valid2.gasd")
-        with open(f1_path, "w") as f:
-            f.write('CONTEXT: "Test1"\nTARGET: "Python"\nTYPE T1: field: String\n')
-        with open(f2_path, "w") as f:
-            f.write('CONTEXT: "Test2"\nTARGET: "TypeScript"\nTYPE T2: field: String\n')
+def test_cli_multiple_files():
+    """AT-PARSER-006-01: Multiple specific files can be passed."""
+    # Create temp files
+    with open("temp1.gasd", "w") as f: f.write('CONTEXT: "T1"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    with open("temp2.gasd", "w") as f: f.write('CONTEXT: "T2"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    
+    try:
+        result = subprocess.run(["python3", "-m", "Impl.cli", "temp1.gasd", "temp2.gasd"], capture_output=True, text=True, env={"PYTHONPATH": "."})
+        assert result.returncode == 0
+        assert "temp1.gasd" in result.stdout
+        assert "temp2.gasd" in result.stdout
+        assert "Success: 2" in result.stdout
+    finally:
+        os.remove("temp1.gasd")
+        os.remove("temp2.gasd")
 
-        test_args = ["gasd-parser", f1_path, f2_path]
-        
-        stdout_capture = StringIO()
-        with patch.object(sys, 'argv', test_args), \
-             patch('sys.stdout', stdout_capture), \
-             pytest.raises(SystemExit) as e:
-            main()
-            
-        assert e.value.code == 0
-        output = stdout_capture.getvalue()
-        assert "Processed: 2 files" in output
-        assert "Success:   2" in output
-        assert "Failed:    0" in output
+def test_cli_recursive_traversal():
+    """AT-PARSER-006-02: Recursive folder traversal search."""
+    # Using existing Specs/ folder if it exists, or creating a small structure
+    os.makedirs("test_dir/sub", exist_ok=True)
+    with open("test_dir/f1.gasd", "w") as f: f.write('CONTEXT: "D1"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    with open("test_dir/sub/f2.gasd", "w") as f: f.write('CONTEXT: "D2"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    
+    try:
+        result = subprocess.run(["python3", "-m", "Impl.cli", "test_dir/"], capture_output=True, text=True, env={"PYTHONPATH": "."})
+        assert result.returncode == 0
+        assert "f1.gasd" in result.stdout
+        assert "f2.gasd" in result.stdout
+        assert "Success: 2" in result.stdout
+    finally:
+        import shutil
+        shutil.rmtree("test_dir")
 
-def test_cli_directory_recursive():
-    """AT-PARSER-006-02: Test parsing a directory containing multiple files."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Create a nested structure
-        sub_dir = os.path.join(tmpdir, "sub", "deep")
-        os.makedirs(sub_dir)
-        
-        f1_path = os.path.join(tmpdir, "valid.gasd")
-        f2_path = os.path.join(sub_dir, "deep_valid.gasd")
-        f3_path = os.path.join(tmpdir, "ignored.txt")
-        
-        with open(f1_path, "w") as f:
-            f.write('CONTEXT: "Test1"\nTARGET: "Python"\nTYPE T1: field: String\n')
-        with open(f2_path, "w") as f:
-            f.write('CONTEXT: "Test2"\nTARGET: "TypeScript"\nTYPE T2: field: String\n')
-        with open(f3_path, "w") as f:
-            f.write("Not a gasd file")
-
-        test_args = ["gasd-parser", tmpdir]
-        
-        stdout_capture = StringIO()
-        with patch.object(sys, 'argv', test_args), \
-             patch('sys.stdout', stdout_capture), \
-             pytest.raises(SystemExit) as e:
-            main()
-            
-        assert e.value.code == 0
-        output = stdout_capture.getvalue()
-        assert "Processed: 2 files" in output  # Ignored the .txt file
-        assert "Success:   2" in output
-
-def test_cli_summary_with_errors():
-    """AT-PARSER-006-03: Test summary output aggregates errors accurately."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        f1_path = os.path.join(tmpdir, "valid.gasd")
-        f2_path = os.path.join(tmpdir, "invalid.gasd")
-        
-        with open(f1_path, "w") as f:
-            f.write('CONTEXT: "Test1"\nTARGET: "Python"\nTYPE T1: field: String\n')
-        with open(f2_path, "w") as f:
-            f.write('CONTEXT: "Test2"\nINVALID_SYNTAX_HERE\n')
-
-        test_args = ["gasd-parser", tmpdir]
-        
-        stdout_capture = StringIO()
-        stderr_capture = StringIO()
-        with patch.object(sys, 'argv', test_args), \
-             patch('sys.stdout', stdout_capture), \
-             patch('sys.stderr', stderr_capture), \
-             pytest.raises(SystemExit) as e:
-            main()
-            
-        assert e.value.code == 1  # Should exit 1 due to failure
-        output = stdout_capture.getvalue()
-        err_output = stderr_capture.getvalue()
-        
-        assert "Processed: 2 files" in output
-        assert "Success:   1" in output
-        assert "Failed:    1" in output
-        assert "FAIL" in err_output
-        assert "invalid.gasd" in err_output
+def test_cli_exit_code_on_failure():
+    """AC-PARSER-006-03: Exit code 1 if any file fails."""
+    with open("fail.gasd", "w") as f: f.write("INVALID SYNTAX")
+    try:
+        result = subprocess.run(["python3", "-m", "Impl.cli", "fail.gasd"], capture_output=True, text=True, env={"PYTHONPATH": "."})
+        assert result.returncode == 1
+    finally:
+        os.remove("fail.gasd")

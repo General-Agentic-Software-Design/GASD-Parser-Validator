@@ -88,6 +88,8 @@ class FlowStepNode(ASTNodeBase):
     action: str = ""
     target: str = ""
     kind: str = "FlowStep"
+    asBinding: Optional[str] = None
+    typePath: Optional[str] = None
     errorHandler: Optional[str] = None
     subSteps: Optional[List['FlowStepNode']] = None
 

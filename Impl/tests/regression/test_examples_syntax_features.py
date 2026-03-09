@@ -17,7 +17,7 @@ FLOW calc():
         RETURN
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.to_console()}"
     
     ast = generator = ASTGenerator().visit(tree)
     # Just checking it doesn't crash AST generation
@@ -36,7 +36,7 @@ FLOW exec():
         input: filter(y -> y.active == TRUE)
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.to_console()}"
 
 def test_flexible_precondition_and_apply():
     """RT: Flexible PRECONDITION (multiple soft_ids/strings) and APPLY keywords parse correctly."""
@@ -57,7 +57,7 @@ FLOW run():
     APPLY STRATEGY search(target)
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.to_console()}"
 
 def test_standalone_annotations():
     """RT: Standalone annotations in FLOW blocks parse correctly."""
@@ -67,12 +67,12 @@ CONTEXT: "Test"
 TARGET: "TypeScript"
 FLOW annotated_flow():
     @error_strategy("Fail-Fast")
-    1. VALIDATE input
+    1. VALIDATE input AS TYPE.Input
     @trace("REQ-1")
     2. RETURN output
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.to_console()}"
 
 def test_otherwise_in_control_flow():
     """RT: OTHERWISE as standalone action or within ENSURE parses correctly."""

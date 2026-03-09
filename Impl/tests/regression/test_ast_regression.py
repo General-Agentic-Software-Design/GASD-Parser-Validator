@@ -16,7 +16,7 @@ class TestASTRegression(unittest.TestCase):
         os.makedirs(self.test_dir, exist_ok=True)
         self.sample_file = os.path.join(self.test_dir, "reg_test.gasd")
         with open(self.sample_file, "w") as f:
-            f.write('CONTEXT: "Regression"\nTYPE RegType:\n    text: String\n')
+            f.write('CONTEXT: "Regression"\nTARGET: "Python3"\nTYPE RegType:\n    text: String\n')
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -46,7 +46,7 @@ class TestASTRegression(unittest.TestCase):
         special_file = os.path.join(self.test_dir, "special.gasd")
         # GASD uses strings like "Value"
         with open(special_file, "w", encoding="utf-8") as f:
-            f.write('CONTEXT: "Special"\nTYPE Emoji:\n    val: "🎉 🚀"\n')
+            f.write('CONTEXT: "Special"\nTARGET: "Python3"\nTYPE Emoji:\n    val: "🎉 🚀"\n')
         
         result = self.run_parser([special_file, "--ast"])
         self.assertEqual(result.returncode, 0)

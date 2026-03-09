@@ -18,11 +18,13 @@ TRACE: "US-PARSER-004"
 DECISION "Validation Architecture":
     CHOSEN: "Multi-pass Pipeline"
     RATIONALE: "Each validation pass focuses on one concern: name uniqueness, required sections, reference resolution, location enrichment. Passes can be composed and extended."
+    ALTERNATIVES: ["Multi-pass Pipeline", "Single-pass Monolithic Validator"]
     AFFECTS: [ValidationPipeline]
 
 DECISION "Error Collection Strategy":
     CHOSEN: "Accumulate All Errors (Non-Halting)"
     RATIONALE: "Users benefit from seeing all validation errors at once rather than fixing one error at a time."
+    ALTERNATIVES: ["Accumulate All Errors", "Halt on First Error"]
     AFFECTS: [ValidationPipeline, SemanticError]
 
 // ===================================================================
@@ -51,15 +53,15 @@ TYPE SemanticError @trace #AC-PARSER-004-04:
 FLOW validate_duplicate_names() -> List<SemanticError>:
     @trace #AC-PARSER-004-01
     1. ACHIEVE "Collect all TYPE names into a set"
-    2. VALIDATE "No duplicate TYPE names exist"
+    2. ACHIEVE "Verify that no duplicate TYPE names exist"
     3. ACHIEVE "Collect all COMPONENT names into a set"
-    4. VALIDATE "No duplicate COMPONENT names exist"
+    4. ACHIEVE "Verify that no duplicate COMPONENT names exist"
     5. ACHIEVE "Collect all FLOW names into a set"
-    6. VALIDATE "No duplicate FLOW names exist" @trace #AT-PARSER-004-01
+    6. ACHIEVE "Verify that no duplicate FLOW names exist" @trace #AT-PARSER-004-01
     7. ACHIEVE "Collect all STRATEGY names into a set"
-    8. VALIDATE "No duplicate STRATEGY names exist"
+    8. ACHIEVE "Verify that no duplicate STRATEGY names exist"
     9. ACHIEVE "Collect all DECISION names into a set"
-    10. VALIDATE "No duplicate DECISION names exist"
+    10. ACHIEVE "Verify that no duplicate DECISION names exist"
     11. ENSURE "All names are unique within their construct kind"
         OTHERWISE RETURN "List of SemanticError for each duplicate"
 
@@ -67,12 +69,12 @@ FLOW validate_duplicate_names() -> List<SemanticError>:
 /// Ensures mandatory directives and structure are present.
 FLOW validate_required_sections() -> List<SemanticError>:
     @trace #AC-PARSER-004-02
-    1. VALIDATE "CONTEXT directive exists"
-    2. VALIDATE "TARGET directive exists"
-    3. VALIDATE "At least one TYPE, COMPONENT, or FLOW exists" @trace #AT-PARSER-004-02
-    4. VALIDATE "Every COMPONENT has an INTERFACE block"
-    5. VALIDATE "Every DECISION has a CHOSEN field"
-    6. VALIDATE "Every FLOW has at least one step"
+    1. ACHIEVE "Check that CONTEXT directive exists"
+    2. ACHIEVE "Check that TARGET directive exists"
+    3. ACHIEVE "Check that at least one TYPE, COMPONENT, or FLOW exists" @trace #AT-PARSER-004-02
+    4. ACHIEVE "Check that every COMPONENT has an INTERFACE block"
+    5. ACHIEVE "Check that every DECISION has a CHOSEN field"
+    6. ACHIEVE "Check that every FLOW has at least one step"
     7. ENSURE "All required sections are present"
         OTHERWISE RETURN "List of SemanticError for missing sections"
 
@@ -81,24 +83,25 @@ FLOW validate_required_sections() -> List<SemanticError>:
 FLOW validate_references() -> List<SemanticError>:
     @trace #AC-PARSER-004-03
     1. ACHIEVE "Build symbol table of all declared names"
-    2. VALIDATE "COMPONENT.DEPENDENCIES references resolve to known COMPONENTs"
-    3. VALIDATE "DECISION.AFFECTS references resolve to known constructs"
-    4. VALIDATE "FLOW parameter types resolve to known TYPEs"
-    5. VALIDATE "FLOW return types resolve to known TYPEs"
-    6. VALIDATE "COMPONENT method parameter types resolve"
-    7. VALIDATE "COMPONENT method return types resolve"
-    8. VALIDATE "TYPE field types resolve to primitives or declared TYPEs (exempts literal types)"
-    9. VALIDATE "IMPORT targets exist (if file system access available)"
-    10. ENSURE "All references resolve (though unresolved names are reported as WARNINGS to support external symbols)"
-        OTHERWISE LOG "Warnings for unresolved references"
+    2. ACHIEVE "Resolve COMPONENT.DEPENDENCIES to known COMPONENTs"
+    3. ACHIEVE "Resolve DECISION.AFFECTS to known constructs"
+    4. ACHIEVE "Resolve FLOW parameter types to known TYPEs"
+    5. ACHIEVE "Resolve FLOW return types to known TYPEs"
+    6. ACHIEVE "Resolve COMPONENT method parameter types"
+    7. ACHIEVE "Resolve COMPONENT method return types"
+    8. ACHIEVE "Resolve TYPE field types to primitives or declared TYPEs"
+    9. ACHIEVE "Resolve FLOW VALIDATE statements' AS TYPE binding" @trace #AC-PARSER-008-05, #AT-VALIDATE-001
+    10. ACHIEVE "Verify IMPORT targets exist"
+    11. ENSURE "All references resolve (though unresolved names are reported as WARNINGS to support external symbols)"
+        OTHERWISE THROW "Unresolved references found"
 
 /// Pass 4: Location Metadata Enrichment
 /// Verifies that all reported errors carry correct location data.
 FLOW validate_error_locations() -> List<SemanticError>:
     @trace #AC-PARSER-004-04
-    1. VALIDATE "Every SemanticError has line and column"
-    2. VALIDATE "Every SemanticError has a descriptive message"
-    3. VALIDATE "Error context points to the offending construct name"
+    1. ACHIEVE "Verify every SemanticError has line and column"
+    2. ACHIEVE "Verify every SemanticError has a descriptive message"
+    3. ACHIEVE "Verify error context points to the offending construct name"
 
 // ===================================================================
 // Validation Pipeline Orchestration

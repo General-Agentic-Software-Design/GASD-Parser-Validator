@@ -140,4 +140,4 @@ FLOW create_block_test():
     2. RETURN
 """
     tree, errors = api.parse(content)
-    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.get_errors()}"
+    assert errors.get_error_count() == 0, f"Expected 0 errors, got {errors.to_console()}"
