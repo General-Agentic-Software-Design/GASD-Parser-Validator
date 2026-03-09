@@ -1,0 +1,7 @@
+CONTEXT: "Bug Reproduction"
+
+FLOW reproduce_attribute_error() -> Void:
+    1. ACHIEVE "Normal action"
+    2. MATCH "condition":
+        "true" -> ACHIEVE "Nested action"
+        DEFAULT -> ACHIEVE "Default action"
