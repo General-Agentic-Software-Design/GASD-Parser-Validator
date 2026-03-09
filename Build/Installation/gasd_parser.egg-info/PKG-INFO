@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: gasd-parser
-Version: 1.1.1
+Version: 1.1.2
 Summary: Official GASD 1.1 Parser and Validator
 Author: GASD Team
 Requires-Python: >=3.8

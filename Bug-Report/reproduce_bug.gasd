@@ -1,7 +1,9 @@
 CONTEXT: "Bug Reproduction"
+TARGET: "Python3"
 
-FLOW reproduce_attribute_error() -> Void:
+FLOW reproduce_attribute_error() -> String:
     1. ACHIEVE "Normal action"
     2. MATCH "condition":
-        "true" -> ACHIEVE "Nested action"
+        "true" -> VALIDATE "data" AS TYPE.UnknownType
         DEFAULT -> ACHIEVE "Default action"
+    3. RETURN "Done"

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="gasd-parser",
-    version="1.1.1",
+    version="1.1.2",
     author="GASD Team",
     description="Official GASD 1.1 Parser and Validator",
     long_description=open("README.md").read() if open("README.md") else "",

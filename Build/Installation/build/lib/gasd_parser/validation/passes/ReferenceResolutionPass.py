@@ -77,7 +77,8 @@ class ReferenceResolutionPass(ValidationPass):
         def check_steps(steps, context_name):
             if not steps: return
             for step in steps:
-                if step.action == "VALIDATE":
+                # 1. Safely check for action type
+                if hasattr(step, "action") and step.action == "VALIDATE":
                     if not step.asBinding or not step.typePath:
                         errors.append(SemanticError(
                             code='V012',
@@ -94,8 +95,25 @@ class ReferenceResolutionPass(ValidationPass):
                             line=step.line, column=step.column,
                             context=context_name
                         ))
-                if step.subSteps:
+                
+                # 2. Recursively check all possible sub-step locations
+                if hasattr(step, "subSteps") and step.subSteps:
                     check_steps(step.subSteps, context_name)
+                if hasattr(step, "cases"): # MatchNode
+                    for case in step.cases:
+                        # Handle potential 'steps' or 'target' if it's a list
+                        steps_to_check = getattr(case, "steps", None)
+                        if not steps_to_check:
+                            target = getattr(case, "target", None)
+                            if isinstance(target, list):
+                                steps_to_check = target
+                        
+                        if steps_to_check:
+                            check_steps(steps_to_check, context_name)
+                if hasattr(step, "thenSteps"): # IfNode
+                    check_steps(step.thenSteps, context_name)
+                if hasattr(step, "elseSteps"): # IfNode
+                    check_steps(step.elseSteps, context_name)
 
         for f in ast.flows:
             for param in f.parameters:
