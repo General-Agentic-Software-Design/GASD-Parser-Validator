@@ -216,13 +216,14 @@ def main():
             "failureCount": failure_count,
             "reports": all_reports
         }
-        if (args.ast or args.ast_sem) and collected_asts:
+        if (args.ast or args.ast_sem) and collected_asts and not args.ast_output:
             if args.ast_sem:
                 combined["asts"] = [a.to_dict() for a in collected_asts if a is not None]
             else:
                 exporter = ASTExporter()
                 combined["asts"] = [exporter._to_dict(a) for a in collected_asts if a is not None]
-        print(json.dumps(combined, indent=2))
+        if not args.ast_output or failure_count > 0:
+            print(json.dumps(combined, indent=2))
     
     # === AST Export (Combined) ===
     if (args.ast or args.ast_sem) and args.ast_combine and collected_asts:
@@ -246,13 +247,12 @@ def main():
             # Combined AST is output via the main JSON reporting block
             pass
 
-    if not args.json:
+    if not args.json or args.ast_output:
         # Summary is always shown in non-json mode
-        if True:
-            print("\n--- Summary ---", file=sys.stderr)
-            print(f"Files Validated: {len(target_files)}", file=sys.stderr)
-            print(f"Pass:            {success_count}", file=sys.stderr)
-            print(f"Failed:          {failure_count}", file=sys.stderr)
+        print("\n--- Summary ---", file=sys.stderr)
+        print(f"Files Validated: {len(target_files)}", file=sys.stderr)
+        print(f"Pass:            {success_count}", file=sys.stderr)
+        print(f"Failed:          {failure_count}", file=sys.stderr)
 
     sys.exit(1 if failure_count > 0 else 0)  # @trace #AC-PARSER-006-03
 
