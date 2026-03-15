@@ -1,0 +1,51 @@
+/*
+   Design: Semantic Hashing & Determinism
+   ======================================
+   Implements §1.1.0 requirement for deterministic SHA-256 fingerprints
+   of semantic nodes for CI/CD comparison.
+
+   Output: Impl/semantic/hashing/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Hashing Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-010", "US-SEMAST-011"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Hashing Algorithm":
+    CHOSEN: "SHA-256"
+    RATIONALE: "Provides high collision resistance and is the standard for cryptographic system fingerprints."
+    ALTERNATIVES: ["MD5", "SHA-1", "SHA-256"]
+    AFFECTS: [SemanticHasher]
+
+DECISION "Hash Input Pre-processing":
+    CHOSEN: "Canonical JSON Representation"
+    RATIONALE: "Serializing nodes to sorted, canonical JSON before hashing ensures minor syntactic whitespace changes don't affect the semantic fingerprint."
+    ALTERNATIVES: ["Raw File Strings", "Canonical JSON Representation"]
+    AFFECTS: [SemanticHasher]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT SemanticHasher @trace #AC-SEMAST-010-04:
+    INTERFACE:
+        /// Compute deterministic SHA-256 hash for a node.
+        computeHash(node: SemanticNodeBase) -> String @trace #AC-SEMAST-010-01
+        /// Compare two system states for semantic drift.
+        compare(oldState: SemanticSystem, newState: SemanticSystem) -> List<DriftReport> @trace #AC-SEMAST-011-01
+
+COMPONENT DeterminismGuard @trace #AC-SEMAST-011-03:
+    INTERFACE:
+        /// Verify that the system state is identical across multiple runs.
+        verifyRuns(inputs: List<GASDFile>) -> Boolean @trace #AC-SEMAST-011-02
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Hashes MUST ignore comments and whitespace variations (§1.1.0)." @trace #AC-SEMAST-010-05
+CONSTRAINT: "Hashes MUST be computed recursively for all child nodes." @trace #AC-SEMAST-010-06

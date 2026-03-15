@@ -1,0 +1,19 @@
+CONTEXT: "Pricing Engine"
+TARGET: "TypeScript"
+TRACE: "SRS-120 (Pricing Logic)"
+
+/// Calculates the final price based on a discount code.
+/*
+   --- Step-by-Step Breakdown ---
+   1. Match Block: The MATCH code: block works like a switch or case statement.
+   2. Cases:
+      - If code is "VIP_20", it returns 80% of the price.
+      - If code is "FLAT_10", it subtracts 10.
+   3. Default: DEFAULT ensures that if no code matches, the original price is returned.
+      This guarantees the function always returns a value.
+*/
+FLOW calculate_discount(price, code):
+    MATCH code:
+        "VIP_20"  -> RETURN price * 0.8  // 20% off for VIPs
+        "FLAT_10" -> RETURN price - 10   // Flat $10 off
+        DEFAULT   -> RETURN price        // No discount otherwise

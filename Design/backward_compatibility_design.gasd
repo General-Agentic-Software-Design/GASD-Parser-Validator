@@ -1,0 +1,42 @@
+/*
+   Design: Backward Compatibility Guarantee
+   =======================================
+   Ensures §US-SEMAST-017 and §US-SEMAST-020 requirements are met: no modification
+   to existing syntactic parsing logic, performance regressions, or breaking
+   changes to existing specifications.
+
+   Output: Impl/semantic/validation/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Compatibility Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-017", "US-SEMAST-020"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Semantic Integration Pattern":
+    CHOSEN: "Post-Processing Pipeline"
+    RATIONALE: "The semantic layer is implemented as a separate module that consumes the syntactic AST. This ensures zero changes to the core ANTLR parser or ASTGenerator."
+    ALTERNATIVES: ["In-thread Analysis", "Post-Processing Pipeline"]
+    AFFECTS: [SemanticPipeline]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT CompatibilityGuard @trace #AC-SEMAST-017-04:
+    INTERFACE:
+        /// Run existing parser tests and verify byte-identical output.
+        verifySyntacticIntegrity() -> Boolean @trace #AC-SEMAST-017-03
+        /// Benchmark semantic overhead (should be zero if --ast-sem is off).
+        measureOverhead() -> Void @trace #AC-SEMAST-017-09
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "NO existing file in Impl/parser/ or Impl/ast/ may be modified." @trace #AC-SEMAST-017-05
+CONSTRAINT: "Syntactic output MUST remain byte-identical if --ast-sem is not used." @trace #AC-SEMAST-017-08
+CONSTRAINT: "Command-line defaults MUST remain unchanged." @trace #AC-SEMAST-017-07

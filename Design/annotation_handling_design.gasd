@@ -1,0 +1,53 @@
+/*
+   Design: Annotation Handling & Resolution
+   ========================================
+   GASD 1.1.0 §14 specifies rich metadata via annotations.
+   This design covers the resolution, validation, and inheritance
+   of annotations across semantic boundaries.
+
+   Output: Impl/semantic/annotations/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Annotation Handling"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-004"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Annotation Inheritance":
+    CHOSEN: "Override Pattern"
+    RATIONALE: "Annotations on sub-components (e.g., FIELDS) override those on the parent (e.g., TYPE) of the same name. This allows granular specification while preserving defaults."
+    ALTERNATIVES: ["Additive Pattern", "Override Pattern"]
+    AFFECTS: [AnnotationResolver]
+
+// ===================================================================
+// Annotation Model
+// ===================================================================
+
+TYPE ResolvedAnnotation @trace #AC-SEMAST-004-01:
+    name: String
+    arguments: Map<String, Any>
+    scope: Enum(SYSTEM, TYPE, COMPONENT, FLOW, STEP, FIELD)
+    source: SymbolLink // Where the annotation was first defined
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT AnnotationResolver @trace #AC-SEMAST-004-04:
+    INTERFACE:
+        /// Resolve syntactic annotations into typed semantic data.
+        resolve(node: SemanticNodeBase) -> List<ResolvedAnnotation> @trace #AC-SEMAST-004-02
+        /// Validate annotation usage against scope and arguments.
+        validate(annotation: ResolvedAnnotation, node: SemanticNodeBase) -> Void @trace #AC-SEMAST-004-03
+        /// Extract specific annotation by name with hierarchy walking.
+        get(node: SemanticNodeBase, name: String) -> ResolvedAnnotation @optional
+
+// ===================================================================
+// Standard Annotations (§14 Reference)
+// ===================================================================
+
+CONSTRAINT: "Annotations MUST be validated for correct argument types (e.g. @trace requires String)." @trace #AC-SEMAST-004-05
+CONSTRAINT: "Scoped annotations (e.g. @sensitive) MUST propagate to child nodes if not overridden." @trace #AC-SEMAST-004-06

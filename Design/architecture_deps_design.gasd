@@ -1,0 +1,62 @@
+/*
+   Design: Architecture & Dependency Analysis
+   ==========================================
+   Tracks COMPONENT wiring, §13 interface compliance, and §17/§18
+   resource dependencies.
+
+   Output: Impl/semantic/architecture/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Architecture Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-005"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Dependency Tracking":
+    CHOSEN: "Explicit Dependency Graph"
+    RATIONALE: "A central graph allows for easy cycle detection and impact analysis when a component changes."
+    ALTERNATIVES: ["Distributed Linker", "Explicit Dependency Graph"]
+    AFFECTS: [DependencyGraph]
+
+// ===================================================================
+// Architectural Model
+// ===================================================================
+
+TYPE DependencyGraph @trace #AC-SEMAST-005-01:
+    nodes: Map<String, ComponentNode>
+    edges: List<DependencyEdge>
+
+TYPE DependencyEdge:
+    source: SymbolLink
+    target: SymbolLink
+    kind: Enum(CALLS, EXTENDS, USES_RESOURCE, BINDS_TYPE)
+
+TYPE ComponentNode:
+    id: String
+    kind: Enum(Component, Interface, Repository, Service)
+    publicMethods: List<MethodSignature>
+    requiredResources: List<SymbolLink>
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT DependencyAnalyzer @trace #AC-SEMAST-005-05:
+    INTERFACE:
+        /// Build dependency graph from resolved components.
+        analyze(components: List<ResolvedComponentNode>) -> DependencyGraph @trace #AC-SEMAST-005-02
+        /// Verify interface compliance (Liskov substitution).
+        verifyInterface(comp: ResolvedComponentNode, interface: SymbolLink) -> Void @trace #AC-SEMAST-005-03
+        /// Detect circular dependencies in the system.
+        detectCycles(graph: DependencyGraph) -> List<CyclePath> @trace #AC-SEMAST-005-04
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Component dependencies MUST be resolved via SymbolTable." @trace #AC-SEMAST-005-06
+CONSTRAINT: "Resource blocks (§18) MUST be treated as architectural nodes in the graph." @trace #AC-SEMAST-005-07
+CONSTRAINT: "Interface mismatches (missing methods) MUST be reported as semantic errors." @trace #AC-SEMAST-005-08

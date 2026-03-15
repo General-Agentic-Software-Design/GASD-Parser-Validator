@@ -1,0 +1,60 @@
+/*
+   Design: Built-in Standard Types Support
+   =======================================
+   Ensures §US-SEMAST-019 requirements are met: implicit support 
+   for fundamental primitives, structural generics, and domain types.
+
+   Scope: 14 core built-in types.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Model Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-019"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Built-in Registration Strategy":
+    CHOSEN: "Global Symbol Table Initialization"
+    RATIONALE: "Pre-registering types in the global scope of the SymbolTable ensures they are always resolvable without requiring local definitions in .gasd files."
+    ALTERNATIVES: ["Global Symbol Table Initialization", "Local On-Demand Resolution"]
+    AFFECTS: [SymbolTable]
+
+DECISION "Generic Type Handling":
+    CHOSEN: "Template-based Validation"
+    RATIONALE: "Structural types (Map, List, Result, Optional) are registered as generic markers. The validator enforces argument counts (e.g., Map<K,V> requires 2 args)."
+    ALTERNATIVES: ["Template-based Validation", "Post-hoc Structural Proofs"]
+    AFFECTS: [ReferenceResolutionPass]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT BuiltinTypeRegistry @trace #AC-SEMAST-019-01:
+    INTERFACE:
+        /// Register the 15 standard types: 
+        /// Primitives: String, Integer, Float, Decimal, Boolean, Bytes, UUID, DateTime, Void, Any
+        /// Structural: List<T>, Map<K,V>, Optional<T>, Result<T>
+        /// Domain: Enum
+        initializeBuiltins(symbolTable: SymbolTable) -> Void @trace #AC-SEMAST-019-01
+        
+        /// Verify generic arguments for structural types.
+        validateGenerics(typeName: String, args: List<Type>) -> Result<Void> @trace #AC-SEMAST-019-03
+
+COMPONENT BuiltinTypeAgnosticValidator @trace #AC-SEMAST-019-02:
+    INTERFACE:
+        /// Ensure V008 warnings are suppressed for built-in identifiers.
+        checkIdentifier(id: String) -> Boolean @trace #AC-SEMAST-019-02
+        
+        /// Resolve VALIDATE AS TYPE bindings to built-ins.
+        resolveBinding(binding: String) -> Result<Type> @trace #AC-SEMAST-019-06
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "SymbolTable MUST pre-populate exactly matching types from §5.1-§5.2." @trace #AC-SEMAST-019-01
+CONSTRAINT: "Explicit Built-in Types: String, Integer, Float, Decimal, Int, Boolean, Bytes, UUID, DateTime, Void, Any, List, Map, Optional, Result, Enum" @trace #AC-SEMAST-019-01
+CONSTRAINT: "Shadowing of built-in types by local definitions MUST throw an error." @trace #AC-SEMAST-019-04
+CONSTRAINT: "Built-in types MUST be usable in all domain domains (TYPE, METHOD, FLOW)." @trace #AC-SEMAST-019-05

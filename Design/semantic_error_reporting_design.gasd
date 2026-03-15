@@ -1,0 +1,44 @@
+/*
+   Design: Semantic Error Reporting
+   ================================
+   Provides structured, diagnostic error reporting for semantic
+   violations (§15) and validation failures.
+
+   Output: Impl/semantic/errors/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Error Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-012"
+
+// ===================================================================
+// Error Model
+// ===================================================================
+
+TYPE SemanticError @trace #AC-SEMAST-012-01:
+    code: String // e.g., "S001", "V005"
+    message: String
+    level: Enum(INFO, WARNING, ERROR, FATAL)
+    location: SourceRange
+    context: List<String> @optional
+    remediation: String @optional
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT SemanticErrorReporter @trace #AC-SEMAST-012-03:
+    INTERFACE:
+        /// Report a new semantic error with context.
+        report(error: SemanticError) -> Void @trace #AC-SEMAST-012-02
+        /// Aggregate errors from all analysis passes.
+        getSummary() -> ErrorSummary
+        /// Clear reporter for next analysis run.
+        reset() -> Void
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Errors MUST include precise line/column mapping back to origin." @trace #AC-SEMAST-012-02
+CONSTRAINT: "Error codes MUST correspond to GASD 1.1.0 Spec sections." @trace #AC-SEMAST-012-01

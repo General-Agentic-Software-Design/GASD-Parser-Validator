@@ -21,21 +21,24 @@ class ValidationPass:
     def validate(self, ast: GASDFile) -> List[SemanticError]:
         raise NotImplementedError("Subclasses must implement validate()")
 
-from .passes.DuplicateNamesPass import DuplicateNamesPass
-from .passes.RequiredSectionsPass import RequiredSectionsPass
-from .passes.ReferenceResolutionPass import ReferenceResolutionPass
-from .passes.LocationEnrichmentPass import LocationEnrichmentPass
+
 
 class ValidationPipeline:
     def __init__(self):
-        self.passes: List[ValidationPass] = [
+        self.passes = []
+
+    def validate(self, ast: GASDFile) -> List[SemanticError]:
+        from .passes.DuplicateNamesPass import DuplicateNamesPass
+        from .passes.RequiredSectionsPass import RequiredSectionsPass
+        from .passes.ReferenceResolutionPass import ReferenceResolutionPass
+        from .passes.LocationEnrichmentPass import LocationEnrichmentPass
+        
+        self.passes = [
             DuplicateNamesPass(),
             RequiredSectionsPass(),
             ReferenceResolutionPass(),
             LocationEnrichmentPass()
         ]
-
-    def validate(self, ast: GASDFile) -> List[SemanticError]:
         all_errors = []
         for vpass in self.passes:
             all_errors.extend(vpass.validate(ast))

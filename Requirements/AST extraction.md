@@ -29,7 +29,7 @@ So that **I can use the structured data to generate other files or perform exter
 | AC-PARSER-007-01 | AST extraction is performed ONLY after successful semantic validation.                                 |
 | AC-PARSER-007-02 | AST extraction is optional and must be enabled via a command-line option (e.g., `--ast`).              |
 | AC-PARSER-007-03 | The output format for the extracted AST is JSON.                                                       |
-| AC-PARSER-007-04 | The default behavior is to print the JSON AST to the console (STDOUT).                                |
+| AC-PARSER-007-04 | The JSON AST is printed to the console (STDOUT) ONLY when the `--json` flag is specified (Silent JSON behavior). |
 | AC-PARSER-007-05 | The CLI supports specifying an output file for the AST (e.g., `--ast-output <path>`).                  |
 | AC-PARSER-007-06 | When processing multiple files, the behavior (one JSON per file vs. combined) is controlled by a command-line option (e.g., `--ast-combine`). |
 | AC-PARSER-007-07 | The extracted AST structure strictly follows the hierarchy defined in `Design/ast_design.gasd`.        |
@@ -66,7 +66,7 @@ So that **I can use the structured data to generate other files or perform exter
 | RT-PARSER-007-04 | Special characters (UTF-8) in GASD strings are correctly escaped and preserved in the JSON AST. |
 | RT-PARSER-007-05 | Version reporting (`--version`) remains unchanged and accurate.             |
 | RT-PARSER-007-06 | Execution of existing test suites (e.g., `pytest`, `npm test`) shows 100% pass rate for all legacy features. |
-| RT-PARSER-007-07 | Valid historical GASD files in `Ref-Specs` continue to parse correctly without requiring AST flags. |
+
 
 ---
 

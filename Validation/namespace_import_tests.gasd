@@ -1,0 +1,43 @@
+/*
+   Validation: Semantic AST — Namespace & Import Tests
+   ===================================================
+   Verifies cross-file symbol resolution and lazy loading.
+   Based on Design/namespace_import_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Namespace Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-009"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_namespace_resolution():
+    @trace #AT-SEMAST-009-01, #AC-SEMAST-009-01
+    1. ACHIEVE "Define NAMESPACE 'Core.Auth' with an exported TYPE"
+    2. ENSURE "TYPE is mapped within the ResolvedNamespace exportedSymbols"
+
+FLOW test_semast_import_resolution():
+    @trace #AT-SEMAST-009-02, #AC-SEMAST-009-02
+    1. ACHIEVE "IMPORT 'Core.Auth' into another file"
+    2. ENSURE "ImportResolver locates the remote namespace successfully"
+
+FLOW test_semast_namespace_alias():
+    @trace #AT-SEMAST-009-03, #AC-SEMAST-009-05
+    1. ACHIEVE "IMPORT 'Core.Auth' AS 'Auth'"
+    2. ENSURE "Symbols are resolvable via 'Auth.TypeName'"
+
+FLOW test_semast_import_symbol_export():
+    @trace #AT-SEMAST-009-04, #AC-SEMAST-009-03
+    1. ACHIEVE "Import module and reference a specific field of an remote exported component"
+    2. ENSURE "Dependency analyzer verifies the remote signature correctly"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_namespace_regression_circular():
+    @trace #RT-SEMAST-009-01
+    1. ACHIEVE "File A imports File B, File B imports File A"
+    2. ENSURE "Resolver detects circle and raises specific semantic cycle error"

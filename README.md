@@ -1,6 +1,6 @@
 # GASD Parser & Validator
 
-The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1.2**).
+The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1**).
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
@@ -86,17 +86,21 @@ gasd-parser my_spec.gasd
 # Output results in JSON (for tooling integration)
 gasd-parser my_spec.gasd --json
 
-# Extract and output the AST in JSON format (to console)
-gasd-parser my_spec.gasd --ast
+# Extract and output the Syntactic AST in JSON format (to console)
+# Note: Raw JSON to stdout requires the --json flag for single files
+gasd-parser my_spec.gasd --ast --json
 
-# Save the extracted AST to a specific file
-gasd-parser my_spec.gasd --ast --ast-output out.json
+# Extract and output the Semantic AST in JSON format
+gasd-parser my_spec.gasd --ast-sem --json
 
-# Process multiple files and combine their ASTs into a single JSON array
-gasd-parser spec1.gasd spec2.gasd --ast --ast-combine
+# Save the extracted Semantic AST to a specific file
+gasd-parser my_spec.gasd --ast-sem --ast-output sem.json
 
-# Process multiple files into individual AST JSON files (out.spec1.json, out.spec2.json)
-gasd-parser spec1.gasd spec2.gasd --ast --ast-output out.json
+# Process multiple files and combine their Semantic ASTs into a single JSON
+gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-combine --json
+
+# Process multiple files into individual Semantic AST JSON files (out.spec1.json, out.spec2.json)
+gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-output out.json
 ```
 
 ## Development

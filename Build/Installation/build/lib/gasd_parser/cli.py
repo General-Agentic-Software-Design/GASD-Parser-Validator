@@ -56,6 +56,11 @@ def main():
         help="Extract and output the AST in JSON format.",
     )
     parser.add_argument(
+        "--ast-sem",
+        action="store_true",
+        help="Extract and output the Semantic AST in JSON format.",
+    )
+    parser.add_argument(
         "--ast-output",
         help="Path to save the extracted AST JSON file.",
     )
@@ -111,7 +116,7 @@ def main():
             if args.json:
                 all_reports.append(reporter.to_json())
             else:
-                print(f"FAIL  {file_path}", file=sys.stderr)
+                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
                 print(reporter.to_console(), file=sys.stderr)
             failure_count += 1
             continue
@@ -128,13 +133,40 @@ def main():
             for err in semantic_errors:
                 reporter.add_semantic_error(err)
 
+        # === Phase 4: Semantic AST Generation ===
+        semantic_ast = None
+        if args.ast_sem and not reporter.has_errors():
+            from .semantic.SemanticPipeline import SemanticPipeline
+            from .semantic.SymbolTable import SemanticError
+            sem_pipeline = SemanticPipeline()
+            try:
+                semantic_ast = sem_pipeline.run(ast)
+            except SemanticError as e:
+                from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
+                reporter.add_semantic_error(ValidationSemanticError(
+                    code="SEMAST-ERR",
+                    severity="ERROR",
+                    message=str(e),
+                    line=0,
+                    column=0,
+                    sourceFile=file_path
+                ))
+
         # === AST Export (Per-file) ===
-        if args.ast and not reporter.has_errors():
+        if (args.ast or args.ast_sem) and not reporter.has_errors():
             exporter = ASTExporter()
-            if args.ast_combine:
-                collected_asts.append(ast)
-            else:
-                ast_json = exporter.to_json(ast)
+            export_ast = ast
+            
+            if args.ast_sem:
+                from .semantic.SemanticASTExporter import SemanticASTExporter
+                exporter = SemanticASTExporter()
+                export_ast = semantic_ast
+
+            if args.ast_combine or args.json:
+                collected_asts.append(export_ast)
+            
+            if not args.ast_combine:
+                ast_json = exporter.to_json(export_ast)
                 if args.ast_output:
                     out_path = args.ast_output
                     if len(target_files) > 1:
@@ -151,8 +183,10 @@ def main():
                             path=out_path,
                             operation="WRITE"
                         ))
-                else:
-                    print(ast_json)
+                elif not args.json and not args.ast_combine:
+                    # Raw JSON output is intentionally suppressed unless --json or --ast-combine (without --json) is specified.
+                    # This matches the user preference for "silent JSON" in default mode.
+                    pass
 
         # === Final Output for Per-file processing ===
         if args.json:
@@ -163,19 +197,16 @@ def main():
                 success_count += 1
         else:
             if reporter.has_errors():
-                print(f"FAIL  {file_path}", file=sys.stderr)
+                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
                 print(reporter.to_console(), file=sys.stderr)
                 failure_count += 1
             else:
-                entity_counts = (
-                    f"{len(ast.types)} types, "
-                    f"{len(ast.components)} components, "
-                    f"{len(ast.flows)} flows, "
-                    f"{len(ast.strategies)} strategies, "
-                    f"{len(ast.decisions)} decisions"
-                )
-                if not args.ast:
-                    print(f"OK    {file_path}  ({entity_counts})")
+                # @trace #AC-PARSER-006-03
+                # Status messages go to stderr to keep stdout clean for JSON data
+                if args.ast_output:
+                    print(f"OK Passed: {file_path} (Exported to {args.ast_output})", file=sys.stderr)
+                else:
+                    print(f"OK Passed: {file_path}", file=sys.stderr)
                 success_count += 1
 
     if args.json:
@@ -185,11 +216,21 @@ def main():
             "failureCount": failure_count,
             "reports": all_reports
         }
+        if (args.ast or args.ast_sem) and collected_asts:
+            if args.ast_sem:
+                combined["asts"] = [a.to_dict() for a in collected_asts if a is not None]
+            else:
+                exporter = ASTExporter()
+                combined["asts"] = [exporter._to_dict(a) for a in collected_asts if a is not None]
         print(json.dumps(combined, indent=2))
     
     # === AST Export (Combined) ===
-    if args.ast and args.ast_combine and collected_asts:
+    if (args.ast or args.ast_sem) and args.ast_combine and collected_asts:
         exporter = ASTExporter()
+        if args.ast_sem:
+            from .semantic.SemanticASTExporter import SemanticASTExporter
+            exporter = SemanticASTExporter()
+            
         combined_ast_json = exporter.to_json(collected_asts)
         if args.ast_output:
             try:
@@ -198,15 +239,20 @@ def main():
             except Exception as e:
                 print(f"Error writing combined AST to {args.ast_output}: {e}", file=sys.stderr)
                 failure_count += 1
-        else:
+        elif not args.json:
+            # Output combined AST JSON to console if not saving to file and not producing full --json report
             print(combined_ast_json)
+        else:
+            # Combined AST is output via the main JSON reporting block
+            pass
 
-    elif len(target_files) > 1 and not args.ast:
-        # @trace #AC-PARSER-006-03
-        print("\n--- Summary ---")
-        print(f"Processed: {len(target_files)} files")
-        print(f"Success: {success_count}")
-        print(f"Failed:    {failure_count}")
+    if not args.json:
+        # Summary is always shown in non-json mode
+        if True:
+            print("\n--- Summary ---", file=sys.stderr)
+            print(f"Files Validated: {len(target_files)}", file=sys.stderr)
+            print(f"Pass:            {success_count}", file=sys.stderr)
+            print(f"Failed:          {failure_count}", file=sys.stderr)
 
     sys.exit(1 if failure_count > 0 else 0)  # @trace #AC-PARSER-006-03
 

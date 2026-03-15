@@ -23,13 +23,29 @@ class ReferenceResolutionPass(ValidationPass):
         declared_constructs.update({s.name for s in ast.strategies})
         declared_constructs.update({d.name for d in ast.decisions})
         
-        primitive_types = {"String", "Integer", "Boolean", "Float", "Optional", "List", "Map", "Enum"}
+        primitive_types = {"String", "Integer", "Int", "Float", "Decimal", "Boolean", "Bytes", "UUID", "DateTime", "List", "Map", "Optional", "Result", "Any", "Void", "Enum"}
         
+        from ...semantic.SymbolTable import BuiltinTypeRegistry
+
         def check_type_expr(expr, location_node, context_name):
             if not expr: return
             # GASD 1.1: Literal types (baseType == "literal") are self-resolving; skip resolution.
             if expr.literalValue is not None:
                 return
+                
+            # Built-in Generic Argument Validation @trace #AC-SEMAST-019-03
+            if expr.baseType in primitive_types:
+                arg_count = len(expr.genericArgs or [])
+                err_msg = BuiltinTypeRegistry.validateGenerics(expr.baseType, arg_count)
+                if err_msg:
+                    errors.append(SemanticError(
+                        code='V008',
+                        severity='ERROR',
+                        message=err_msg,
+                        line=location_node.line, column=location_node.column,
+                        context=context_name
+                    ))
+
             if expr.baseType and expr.baseType not in primitive_types and expr.baseType not in declared_types:
                 errors.append(SemanticError(
                     code='V008',
@@ -87,7 +103,7 @@ class ReferenceResolutionPass(ValidationPass):
                             line=step.line, column=step.column,
                             context=context_name
                         ))
-                    elif step.typePath not in declared_types:
+                    elif step.typePath not in declared_types and step.typePath not in primitive_types:
                          errors.append(SemanticError(
                             code='V011',
                             severity='ERROR',

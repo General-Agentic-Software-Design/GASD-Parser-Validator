@@ -1,0 +1,48 @@
+/*
+   Validation: Semantic AST — Decision Resolution Tests
+   ====================================================
+   Verifies architectural decision records, rationales, and impact graphs.
+   Based on Design/decision_resolution_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Decision Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-008"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_decision_node():
+    @trace #AT-SEMAST-008-01, #AC-SEMAST-008-01
+    1. ACHIEVE "Parse DECISION definition block"
+    2. ENSURE "Produces complete ResolvedDecisionNode"
+
+FLOW test_semast_decision_trace():
+    @trace #AT-SEMAST-008-02, #AC-SEMAST-008-02
+    1. ACHIEVE "Analyze DECISION affecting COMPONENT 'X'"
+    2. ENSURE "Impact matrix correctly hooks DECISION to SymbolLink of 'X'"
+
+FLOW test_semast_decision_verify_choice():
+    @trace #AT-SEMAST-008-03, #AC-SEMAST-008-03
+    1. ACHIEVE "Create DECISION where CHOSEN is not in ALTERNATIVES"
+    2. ENSURE "DecisionResolver flags mismatch error"
+
+FLOW test_semast_decision_affected_components():
+    @trace #AT-SEMAST-008-04, #AC-SEMAST-008-07
+    1. ACHIEVE "Create DECISION with empty AFFECTS block"
+    2. ENSURE "Constraint failure raised for missing target"
+
+FLOW test_semast_decision_rationale_requirement():
+    @trace #AT-SEMAST-008-05, #AC-SEMAST-008-08
+    1. ACHIEVE "Create DECISION with 3 alternatives but no RATIONALE"
+    2. ENSURE "Constraint failure raised requiring rationale"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_decision_regression_duplicate_names():
+    @trace #RT-SEMAST-008-01
+    1. ACHIEVE "Create two DECISIONS with identical names globally"
+    2. ENSURE "CollisionDetector identifies and rejects duplication"

@@ -1,0 +1,39 @@
+/*
+   Design: Resource Block Resolution
+   =================================
+   Resolves RESOURCES blocks (§18) and links them to COMPONENT
+   architectural requirements.
+
+   Output: Impl/semantic/resources/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Resource Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-015"
+
+// ===================================================================
+// Resource Model
+// ===================================================================
+
+TYPE ResolvedResourceNode @trace #AC-SEMAST-015-01:
+    name: String
+    kind: Enum(DB, API, CACHE, STORAGE, AUTH)
+    uri: String @optional
+    permissions: List<String>
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT ResourceResolver @trace #AC-SEMAST-015-02:
+    INTERFACE:
+        /// Resolve resource definitions and verify URI formats.
+        resolve(node: ResourceNode) -> ResolvedResourceNode @trace #AC-SEMAST-015-03
+        /// Verify that a COMPONENT has all required resources linked.
+        verifyLinks(comp: ResolvedComponentNode) -> Void
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "RESOURCES MUST specify a valid resource kind (DB, API, etc.)." @trace #AC-SEMAST-015-04

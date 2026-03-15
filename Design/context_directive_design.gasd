@@ -1,0 +1,39 @@
+/*
+   Design: Context & Directive Resolution
+   ======================================
+   Handles CONTEXT, TARGET, and TRACE directives (§1.1.0) and
+   resolves them into system-level metadata.
+
+   Output: Impl/semantic/directives/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Directive Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-013"
+
+// ===================================================================
+// Directive Model
+// ===================================================================
+
+TYPE ResolvedDirective @trace #AC-SEMAST-013-01:
+    kind: Enum(CONTEXT, TARGET, TRACE)
+    values: List<String>
+    scope: Enum(Global, Local)
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT DirectiveResolver @trace #AC-SEMAST-013-04:
+    INTERFACE:
+        /// Resolve syntactic directives into system metadata.
+        resolve(directives: List<Directive>) -> Map<String, List<String>> @trace #AC-SEMAST-013-02
+        /// Verify trace IDs exist and are valid.
+        verifyTraceIds(ids: List<String>) -> Void @trace #AC-SEMAST-013-03
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "CONTEXT and TARGET MUST be defined at the global level (§1.1.0)." @trace #AC-SEMAST-013-05
+CONSTRAINT: "TRACE values MUST be alphanumeric strings." @trace #AC-SEMAST-013-06
