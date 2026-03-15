@@ -1,6 +1,6 @@
 # GASD Parser & Validator
 
-The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.2.0**).
+The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1**).
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
