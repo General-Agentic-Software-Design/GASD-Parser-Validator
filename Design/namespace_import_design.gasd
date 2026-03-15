@@ -1,0 +1,52 @@
+/*
+   Design: Namespace & Import Resolution
+   =====================================
+   Resolves NAMESPACE (§3) and IMPORT (§3) directives to manage
+   large-scale system decomposition.
+
+   Output: Impl/semantic/namespaces/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Namespace Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-009"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Import Loading Strategy":
+    CHOSEN: "Lazy Recursive Loading"
+    RATIONALE: "Only load and parse imported files when a symbol from that namespace is referenced, reducing memory overhead for large systems."
+    ALTERNATIVES: ["Eager Full Load", "Lazy Recursive Loading"]
+    AFFECTS: [ImportResolver]
+
+// ===================================================================
+// Namespace Model
+// ===================================================================
+
+TYPE ResolvedNamespace @trace #AC-SEMAST-009-01:
+    fqn: String // Fully Qualified Name
+    alias: String @optional
+    exportedSymbols: Map<String, SymbolEntry>
+    subNamespaces: Map<String, SymbolLink>
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT ImportResolver @trace #AC-SEMAST-009-04:
+    INTERFACE:
+        /// Resolve an import path to a fully qualified namespace.
+        resolveImport(path: String, alias: String) -> ResolvedNamespace @trace #AC-SEMAST-009-02
+        /// Populate exported symbols from a remote file.
+        exportSymbols(file: GASDFile) -> Map<String, SymbolEntry> @trace #AC-SEMAST-009-03
+        /// Verify no circular imports exist.
+        detectCircularImports(stack: List<String>) -> Void
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Namespace aliases MUST be unique within the current file scope." @trace #AC-SEMAST-009-05
+CONSTRAINT: "Only symbols defined in a file's NAMESPACE block are exported." @trace #AC-SEMAST-009-01

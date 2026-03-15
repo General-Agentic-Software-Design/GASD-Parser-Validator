@@ -1,0 +1,84 @@
+/*
+   Design: Symbol Resolution Engine
+   ================================
+   Defines the mechanism for resolving identifiers to semantic nodes
+   across nested scopes, namespaces, and imported files.
+
+   Output: Impl/semantic/resolution/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Symbol Resolution"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-002"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Scope Hierarchy Model":
+    CHOSEN: "Parent-Linked Tree"
+    RATIONALE: "Each scope holds a reference to its parent. Lookup climbs the tree until the identifier is found or the global scope is exhausted."
+    ALTERNATIVES: ["Parent-Linked Tree", "Flattened Symbol Map"]
+    AFFECTS: [SymbolScope]
+
+DECISION "Shadowing Policy":
+    CHOSEN: "Prohibit Local-to-Global Shadowing"
+    RATIONALE: "For stability and predictability in large-scale system designs, GASD prohibits shadowing common system-level types or components."
+    ALTERNATIVES: ["Allow Full Shadowing", "Prohibit Local-to-Global Shadowing"]
+    AFFECTS: [CollisionDetector]
+
+// ===================================================================
+// Symbol Table Data Structures
+// ===================================================================
+
+/// Represents a single entry in the symbol table.
+TYPE SymbolEntry @trace #AC-SEMAST-002-01:
+    name: String
+    kind: Enum(Type, Component, Flow, Parameter, Variable, Namespace, Resource)
+    scope: SymbolScope
+    nodeLink: SemanticNodeBase // The actual semantic node
+    isPublic: Boolean
+    isResolved: Boolean
+
+/// A nested scope for symbol lookups.
+TYPE SymbolScope @trace #AC-SEMAST-002-02:
+    id: String
+    parent: SymbolScope @optional
+    symbols: Map<String, SymbolEntry>
+    children: List<SymbolScope>
+
+// ===================================================================
+// Resolution logic
+// ===================================================================
+
+COMPONENT SymbolTable @trace #AC-SEMAST-002-05:
+    INTERFACE:
+        /// Enter a new child scope.
+        enterScope(name: String) -> SymbolScope
+        /// Exit current scope and return to parent.
+        exitScope() -> SymbolScope
+        /// Define a new symbol in current scope.
+        define(symbol: SymbolEntry) -> Void @trace #AC-SEMAST-002-03
+        /// Resolve a name starting from current scope.
+        resolve(name: String) -> SymbolEntry @trace #AC-SEMAST-002-04
+        /// Check for circular references in current resolution path.
+        checkRecursion(symbol: SymbolEntry) -> Boolean
+
+// ===================================================================
+// Analysis Passes
+// ===================================================================
+
+COMPONENT CollisionDetector @trace #AC-SEMAST-002-06:
+    INTERFACE:
+        /// Detect name collisions within the same scope.
+        detectCollisions(scope: SymbolScope) -> List<SemanticError>
+        /// Detect ambiguity when multiple namespaces are imported.
+        detectAmbiguity(name: String, activeScopes: List<SymbolScope>) -> SymbolEntry
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Symbol resolution MUST be case-sensitive as per GASD 1.1.0 §4." @trace #AC-SEMAST-002-07
+CONSTRAINT: "Circular dependencies between TYPES or COMPONENTS MUST be detected and reported." @trace #AC-SEMAST-002-08
+CONSTRAINT: "Symbol definitions MUST be immutable once resolved." @trace #AC-SEMAST-002-01

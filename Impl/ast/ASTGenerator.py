@@ -117,6 +117,8 @@ class ASTGenerator(GASDParserVisitor):
             if idx != -1:
                 alt_node = ctx.getChild(idx)
                 alternatives = [v.getText().strip('"') for v in alt_node.value()]
+                if "*" in alt_node.getText():
+                    alternatives.append("*")
 
         affects = []
         if ctx.AFFECTS_KW():
@@ -133,6 +135,8 @@ class ASTGenerator(GASDParserVisitor):
             if idx != -1:
                 affects_node = ctx.getChild(idx)
                 affects = [v.getText().strip('"') for v in affects_node.value()]
+                if "*" in affects_node.getText():
+                    affects.append("*")
 
         return Decision(name=name, chosen=chosen, rationale=rationale, alternatives=alternatives, affects=affects, **loc)
 
@@ -217,6 +221,8 @@ class ASTGenerator(GASDParserVisitor):
         elif ctx.DEPENDENCIES_KW():
             list_node = ctx.list_literal()
             self._current_component["dependencies"] = [v.getText().strip('"') for v in list_node.value()]
+            if "*" in list_node.getText():
+                self._current_component["dependencies"].append("*")
         elif ctx.INTERFACE_KW():
             for m in ctx.method_sig():
                 self._current_component["methods"].append(self.visit(m))

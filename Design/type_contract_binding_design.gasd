@@ -1,0 +1,68 @@
+/*
+   Design: Type Contract & Binding
+   ===============================
+   Implement structural validation and binding for GASD 1.1.0.
+   Handles the mapping of raw expressions to formal TYPE definitions
+   via §12 and §13 rules.
+
+   Output: Impl/semantic/binding/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Type Binding"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-003"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Binding Validation Strategy":
+    CHOSEN: "Structural Compatibility"
+    RATIONALE: "GASD uses structural typing. A binding is valid if the source expression yields a structure that satisfies all required fields and constraints of the target TYPE."
+    ALTERNATIVES: ["Nominal Typing", "Structural Compatibility"]
+    AFFECTS: [BinderEngine]
+
+DECISION "Bound Property Visibility":
+    CHOSEN: "Merged Semantic Object"
+    RATIONALE: "Bound properties (e.g., constants from a validated type) are merged into the local symbol scope for the remainder of the FLOW."
+    ALTERNATIVES: ["Scoped Property Access", "Merged Semantic Object"]
+    AFFECTS: [SymbolTable]
+
+// ===================================================================
+// Type Contracts
+// ===================================================================
+
+/// A resolved union of constraints and structure.
+TYPE TypeContract @trace #AC-SEMAST-003-01:
+    targetType: String // Name of the target TYPE
+    boundProperties: Map<String, BoundValue>
+    missingFields: List<String>
+    extraFields: List<String>
+    isValid: Boolean
+
+TYPE BoundValue:
+    originalExpr: ResolvedExpression
+    resolvedValue: Any
+    typeReference: String
+
+// ===================================================================
+// Binder Components
+// =================================================)
+// ===================================================================
+
+COMPONENT BinderEngine @trace #AC-SEMAST-003-05:
+    INTERFACE:
+        /// Bind a raw expression to a target TYPE.
+        bind(expr: ResolvedExpression, target: String) -> TypeContract @trace #AC-SEMAST-003-02
+        /// Verify field-level mapping.
+        verifyFields(source: Map<String, Any>, schema: ResolvedTypeNode) -> TypeContract @trace #AC-SEMAST-003-03
+        /// Propagate bound properties into symbol table.
+        propagate(contract: TypeContract, scope: SymbolScope) -> Void @trace #AC-SEMAST-003-04
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Binding MUST fail if any non-optional field is missing from the source." @trace #AC-SEMAST-003-06
+CONSTRAINT: "Binding MUST detect type mismatches in nested structures." @trace #AC-SEMAST-003-07
+CONSTRAINT: "Recursive bindings MUST be handled via lazy resolution to prevent stack overflow." @trace #AC-SEMAST-003-08

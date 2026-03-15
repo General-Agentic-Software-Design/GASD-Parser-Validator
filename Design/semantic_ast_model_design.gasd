@@ -1,0 +1,155 @@
+/*
+   Design: Semantic AST — Core Node Model
+   ======================================
+   Defines the unified semantic graph model for GASD 1.1.0.
+   Unlike the syntactic AST, this model represents resolved symbols,
+   bound types, and architectural dependencies.
+
+   Output: Impl/semantic/nodes/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-001"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Semantic Node Representation":
+    CHOSEN: "Immutable Graph Nodes"
+    RATIONALE: "The semantic AST is effectively a directed acyclic graph (DAG) where nodes reference each other via resolved symbols. Immutability ensures thread-safety and simplifies incremental analysis."
+    ALTERNATIVES: ["Mutable Tree Nodes", "Immutable Graph Nodes"]
+    AFFECTS: [SemanticNodeBase, SymbolLink]
+
+DECISION "Symbol Linking Strategy":
+    CHOSEN: "Weak GUID-based References"
+    RATIONALE: "Using GUIDs allows nodes to reference remote symbols (imports/namespaces) without requiring direct object pointers which can cause serialization cycles."
+    ALTERNATIVES: ["Direct Object Pointers", "Weak GUID-based References"]
+    AFFECTS: [SymbolLink]
+
+// ===================================================================
+// Base Semantic Model
+// ===================================================================
+
+/// Base interface for all semantic nodes.
+TYPE SemanticNodeBase @trace #AC-SEMAST-001-01:
+    kind: String
+    id: String // Unique ID for semantic hashing
+    symbolId: String @optional // Link to SymbolTable entry
+    sourceMap: SourceRange // Precise source location
+    hash: String // SHA-256 semantic fingerprint
+    annotations: List<ResolvedAnnotation>
+    documentation: String @optional
+
+TYPE SourceRange:
+    file: String
+    startLine: Integer
+    startCol: Integer
+    endLine: Integer
+    endCol: Integer
+
+TYPE ResolvedAnnotation:
+    name: String
+    scope: Enum(GLOBAL, TYPE, FIELD, COMPONENT, FLOW, STEP)
+    arguments: Map<String, Any>
+
+// ===================================================================
+// Root Semantic Model
+// ===================================================================
+
+/// Resolved root node of a GASD system.
+TYPE SemanticSystem @trace #AC-SEMAST-001-02:
+    kind: "SemanticSystem"
+    namespaces: Map<String, NamespaceNode>
+    globalConstraints: List<ResolvedConstraintNode>
+    metadata: SystemMetadata
+
+TYPE NamespaceNode:
+    kind: "Namespace"
+    name: String
+    types: Map<String, ResolvedTypeNode>
+    components: Map<String, ResolvedComponentNode>
+    flows: Map<String, ResolvedFlowNode>
+    strategies: Map<String, ResolvedStrategyNode>
+    decisions: Map<String, ResolvedDecisionNode>
+
+// ===================================================================
+// Core Semantic Constructs
+// ===================================================================
+
+/// Resolved Type Definition with cross-reference support.
+TYPE ResolvedTypeNode @trace #AC-SEMAST-001-03:
+    kind: "ResolvedType"
+    name: String
+    fields: Map<String, ResolvedFieldNode>
+    isEnum: Boolean
+    enumValues: List<String> @optional
+    validationBinding: String @optional // Linked to VALIDATE AS TYPE target
+
+TYPE ResolvedFieldNode:
+    name: String
+    typeRef: TypeContract // Resolved type contract
+    isOptional: Boolean
+
+/// Type Contract representing §12 and §13 requirements.
+TYPE TypeContract:
+    baseType: String
+    args: List<TypeContract> @optional
+    constraints: List<String> @optional
+
+// ===================================================================
+// Flow & Step Semantics
+// ===================================================================
+
+TYPE ResolvedFlowNode @trace #AC-SEMAST-001-04:
+    kind: "ResolvedFlow"
+    name: String
+    inputs: List<ResolvedParameter>
+    output: TypeContract @optional
+    pipeline: List<SemanticFlowStep>
+
+TYPE SemanticFlowStep @trace #AC-SEMAST-001-10:
+    kind: "SemanticFlowStep"
+    operation: String
+    targetExpression: ResolvedExpression
+    bindings: Map<String, SymbolLink>
+    errorPath: SemanticFlowStep @optional
+    otherwisePath: SemanticFlowStep @optional
+    subSteps: List<SemanticFlowStep> @optional
+
+TYPE ResolvedExpression:
+    kind: String
+    type: TypeContract
+    value: Any @optional
+    dependencies: List<SymbolLink>
+
+// ===================================================================
+// Component & Architecture
+// ===================================================================
+
+TYPE ResolvedComponentNode @trace #AC-SEMAST-001-05:
+    kind: "ResolvedComponent"
+    name: String
+    pattern: String
+    dependencies: List<SymbolLink>
+    resources: List<ResolvedResourceNode>
+    methods: Map<String, ResolvedMethodNode>
+
+// ===================================================================
+// Symbol Table Design
+// ===================================================================
+
+COMPONENT SemanticModelBuilder @trace #AC-SEMAST-001-11:
+    INTERFACE:
+        /// Build a semantic system from a set of syntactic ASTs.
+        build(asts: List<GASDFile>) -> SemanticSystem
+        /// Perform incremental update for specific file.
+        update(system: SemanticSystem, fileAst: GASDFile) -> SemanticSystem
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every SemanticNode MUST yield a deterministic hash for CI/CD comparison." @trace #AC-SEMAST-001-08
+CONSTRAINT: "Semantic AST MUST be self-contained for offline validation." @trace #AC-SEMAST-001-09

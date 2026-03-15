@@ -1,0 +1,58 @@
+/*
+   Validation: Semantic AST — CLI Integration Tests
+   ================================================
+   Verifies the --ast-sem flag and legacy AST option interoperability.
+   Based on Design/cli_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — CLI Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-016", "US-SEMAST-018"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_cli_activation():
+    @trace #AT-SEMAST-016-01, #AC-SEMAST-016-01
+    1. ACHIEVE "Run CLI with valid file and --ast-sem flag"
+    2. ENSURE "CLI initiates semantic analysis pipeline and outputs .semAST.json"
+
+FLOW test_semast_cli_dual_output():
+    @trace #AT-SEMAST-016-02, #AC-SEMAST-016-02
+    1. ACHIEVE "Run CLI with both --ast and --ast-sem flags"
+    2. ENSURE "CLI outputs both syntactic (.ast.json) and semantic representations"
+
+FLOW test_semast_cli_output_dir():
+    @trace #AT-SEMAST-016-03, #AC-SEMAST-016-03
+    1. ACHIEVE "Run CLI with --ast-sem and --ast-out ./custom-dir"
+    2. ENSURE "Semantic output is correctly placed in specified remote directory"
+
+FLOW test_semast_cli_combine():
+    @trace #AT-SEMAST-016-04, #AC-SEMAST-016-04, #AC-SEMAST-018-04
+    1. ACHIEVE "Run CLI on directory with --ast-sem and --ast-combine single.json"
+    2. ENSURE "Output is a single .semAST.json containing array of SemanticSystems"
+
+FLOW test_semast_cli_errors():
+    @trace #AT-SEMAST-016-05, #AC-SEMAST-016-05
+    1. ACHIEVE "Run CLI with --ast-sem on file with validation errors"
+    2. ENSURE "Semantic errors are printed to stdout and exit code is 1"
+
+FLOW test_semast_cli_default_behavior():
+    @trace #AT-SEMAST-016-06, #AC-SEMAST-016-06
+    1. ACHIEVE "Run CLI without any AST flags"
+    2. ENSURE "Only syntactic validation occurs; no semantic structures are built"
+
+FLOW test_semast_cli_combined_opts():
+    @trace #AT-SEMAST-018-01, #AC-SEMAST-018-05
+    1. ACHIEVE "Run CLI with --ast, --ast-sem, and --ast-combine together"
+    2. ENSURE "Tool generates combined syntactic AND combined semantic artifacts"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_cli_regression_missing_file():
+    @trace #RT-SEMAST-016-01
+    1. ACHIEVE "Run CLI with --ast-sem on non-existent file"
+    2. ENSURE "Standard missing file error triggers before AST pipeline activates"

@@ -1,0 +1,54 @@
+/*
+   Design: FLOW Semantic Analysis
+   ==============================
+   Defines the analysis of FLOW logic, including step sequences,
+   control flow (§16, §19, §20), and error handling (§15).
+
+   Output: Impl/semantic/flow/
+*/
+
+CONTEXT: "Compiler / Language Tooling — FLOW Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-006"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Control Flow Representation":
+    CHOSEN: "Control Flow Graph (CFG)"
+    RATIONALE: "Converting nested FLOW steps into a CFG simplifies validation of reachability, return paths, and error propagation."
+    ALTERNATIVES: ["Nested Step Objects", "Control Flow Graph (CFG)"]
+    AFFECTS: [FlowAnalyzer]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT FlowAnalyzer @trace #AC-SEMAST-006-03:
+    INTERFACE:
+        /// Convert syntactic flow into semantic CFG.
+        analyze(flow: FlowDefinition) -> ResolvedFlowNode @trace #AC-SEMAST-006-01
+        /// Validate step compatibility (§10, §11).
+        validateSteps(steps: List<SemanticFlowStep>) -> Void @trace #AC-SEMAST-006-02
+        /// Verify reachability and return path completeness.
+        checkConsistency(flowNode: ResolvedFlowNode) -> Void
+
+// ===================================================================
+// Control Flow Analysis (§16, §19, §20)
+// ===================================================================
+
+TYPE FlowControlBlock:
+    kind: Enum(MATCH, IF_ELSE, ON_ERROR, ENSURE_OTHERWISE)
+    mainPath: SemanticFlowStep
+    branches: Map<String, SemanticFlowStep>
+    recoveryPath: SemanticFlowStep @optional
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "ACHIEVE steps MUST be verified for target reachability." @trace #AC-SEMAST-006-07
+CONSTRAINT: "MATCH blocks MUST be validated for exhaustiveness or have a DEFAULT case." @trace #AC-SEMAST-006-08
+CONSTRAINT: "ENSURE blocks MUST have an OTHERWISE clause for recovery (§20)." @trace #AC-SEMAST-006-11
+CONSTRAINT: "ON_ERROR logic MUST be validated for scope-level exception handling (§15)." @trace #AC-SEMAST-006-12

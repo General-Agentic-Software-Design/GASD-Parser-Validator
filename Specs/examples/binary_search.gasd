@@ -1,0 +1,28 @@
+CONTEXT: "Algorithms Library"
+TARGET: "Java / Python"
+TRACE: "SRS-050 (Search Optimization)"
+
+/*
+   --- Step-by-Step Breakdown ---
+   1. Strategy Definition: The STRATEGY block names the algorithm ("binary_search") and defines its constraints (O(log n) complexity).
+   2. Precondition: PRECONDITION: input IS_SORTED tells the AI that this algorithm *only* works if the input is already sorted.
+   3. Flow Application: In FLOW execute_search, we first ENSURE the list is sorted (a safety check), then APPLY the strategy.
+      This tells the agent: "Write a standard binary search implementation here."
+*/
+STRATEGY binary_search:
+    ALGORITHM: "Iterative binary search"
+    PRECONDITION: input IS_SORTED "Binary search requires sorted input"
+    COMPLEXITY: O(log n)
+    INPUT:
+        sorted_list: List<Integer>
+        target: Integer
+    OUTPUT: Integer // Index or -1
+
+FLOW execute_search(list, target):
+    // Pre-condition check ensures algorithm validity
+    // Transpiler should generate assertion or early return
+    ENSURE list IS_SORTED
+    
+    // Delegate to the pure logic strategy defined above
+    APPLY STRATEGY binary_search(list, target)
+    RETURN result

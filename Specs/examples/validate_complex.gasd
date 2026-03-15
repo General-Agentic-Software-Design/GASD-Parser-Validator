@@ -1,0 +1,177 @@
+CONTEXT: "Order Processing Platform"
+TARGET: "Java 17"
+TRACE: "SRS-305 (Order Validation and Fulfillment)"
+
+/*
+   --- Complex VALIDATE AS Example ---
+   Demonstrates advanced VALIDATE AS TYPE binding patterns (GEP-5):
+
+   1. Multi-TYPE validation — separate bindings for each TYPE
+   2. Transform-then-validate — binding after data transformation
+   3. Conditional validation — VALIDATE within control flow
+   4. Multiple FLOWs validating the same TYPE (specialized enforcers)
+*/
+
+// --- Types with rich @annotation contracts ---
+
+TYPE Customer:
+    id: UUID
+    email: String @format("email") @unique(scope: CustomerRepository)
+    name: String @min_length(1) @max_length(200)
+    credit_score: Integer @range(300, 850)
+
+TYPE OrderItem:
+    product_id: UUID
+    quantity: Integer @range(1, 999)
+    unit_price: Decimal @range(0.01, 99999.99)
+
+TYPE Order:
+    id: UUID
+    customer: Customer
+    items: List<OrderItem> @min_length(1)
+    total: Decimal @range(0.01, 999999.99)
+    status: Enum(PENDING, VALIDATED, PROCESSING, SHIPPED, DELIVERED)
+
+TYPE ShippingAddress:
+    street: String @min_length(5) @max_length(200)
+    city: String @min_length(1) @max_length(100)
+    postal_code: String @format("postal_code")
+    country: String @min_length(2) @max_length(2)
+
+TYPE PaymentInfo:
+    method: Enum(CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER)
+    token: String @min_length(10)
+    amount: Decimal @range(0.01, 999999.99)
+
+// --- Decisions ---
+
+DECISION "Payment Provider":
+    CHOSEN: "Stripe"
+    RATIONALE: "Supports all required payment methods per SRS-305"
+    ALTERNATIVES: ["Braintree", "Adyen"]
+    AFFECTS: [PaymentService]
+
+
+
+DECISION "Inventory Strategy":
+    CHOSEN: "Optimistic Reservation"
+    RATIONALE: "Reduces lock contention for high-throughput order processing"
+    ALTERNATIVES: ["Pessimistic Locking", "No Reservation"]
+    AFFECTS: [InventoryService, OrderProcessingService]
+
+COMPONENT InventoryService:
+    INTERFACE:
+        check(id: UUID) -> Boolean
+COMPONENT CustomerRepository:
+    INTERFACE:
+        find(id: UUID) -> Customer
+COMPONENT OrderRepository:
+    INTERFACE:
+        save(order: Order) -> Void
+
+
+// --- Components ---
+
+COMPONENT OrderProcessingService:
+    PATTERN: "Service"
+    DEPENDENCIES: [CustomerRepository, InventoryService, PaymentService]
+    INTERFACE:
+        submit_order(customer: Customer, items: List<OrderItem>, address: ShippingAddress) -> Result<Order>
+        validate_order_details(order: Order) -> Result<Order>
+
+COMPONENT PaymentService @external:
+    PATTERN: "Adapter"
+    INTERFACE:
+        process_payment(payment: PaymentInfo) -> Result<String>
+
+// --- Pattern 1: Multi-TYPE validation in a single FLOW ---
+
+FLOW submit_order(customer: Customer, items: List<OrderItem>, address: ShippingAddress) -> Result<Order>:
+    @error_strategy("Exception-based")
+    @trace("SRS-305.1")
+
+    // Each VALIDATE has its own AS TYPE binding
+    1. VALIDATE customer AS TYPE.Customer
+    2. VALIDATE items AS TYPE.OrderItem
+    3. VALIDATE address AS TYPE.ShippingAddress
+
+    // Business logic after all types are validated
+    4. ENSURE customer.credit_score > 500
+        OTHERWISE THROW CreditCheckException("Customer credit score too low")
+
+    5. ACHIEVE "Reserve Inventory" @external
+        ON_ERROR: THROW InventoryException("Items unavailable")
+
+    6. CREATE Order:
+        customer = customer
+        items = items
+        total = SUM(items.unit_price * items.quantity)
+        status = "PENDING"
+
+    7. PERSIST Order via OrderRepository
+    8. RETURN Order
+
+// --- Pattern 2: Transform-then-validate ---
+// The validated expression is not a FLOW parameter — it's a computed result
+
+FLOW validate_order_details(order: Order) -> Result<Order>:
+    @trace("SRS-305.2")
+
+    // Validate the order itself
+    1. VALIDATE order AS TYPE.Order
+
+    // Recompute total from items, then validate computed value
+    2. ACHIEVE "Recalculate order total from line items"
+    3. VALIDATE recalculated_total AS TYPE.Decimal
+
+    // Cross-check
+    4. ENSURE recalculated_total == order.total
+        OTHERWISE THROW OrderIntegrityException("Total mismatch")
+
+    5. RETURN order
+
+// --- Pattern 3: Conditional validation ---
+// VALIDATE used within control flow branches
+
+FLOW process_payment_for_order(order: Order, payment: PaymentInfo) -> Result<String>:
+    @error_strategy("Exception-based")
+    @trace("SRS-305.3")
+
+    1. VALIDATE order AS TYPE.Order
+    2. VALIDATE payment AS TYPE.PaymentInfo
+
+    3. ENSURE order.status == "PENDING"
+        OTHERWISE THROW InvalidStateException("Order is not in PENDING state")
+
+    4. MATCH payment.method:
+        "CREDIT_CARD" | "DEBIT_CARD" -> ACHIEVE "Process card payment via Stripe" @external
+        "BANK_TRANSFER" -> ACHIEVE "Initiate bank transfer" @external
+        DEFAULT -> THROW UnsupportedPaymentException("Unknown payment method")
+
+    5. UPDATE Order SET status = "PROCESSING"
+    6. PERSIST Order via OrderRepository
+    7. LOG "Payment processed" @trace_id(order.id)
+    8. RETURN payment_confirmation_id
+
+// --- Pattern 4: Multiple FLOWs validating the same TYPE ---
+// Each FLOW is a specialized enforcer of Customer
+
+FLOW validate_customer_identity(customer: Customer) -> Result<Customer>:
+    @trace("SRS-305.4a")
+    1. VALIDATE customer AS TYPE.Customer
+    2. ACHIEVE "Verify identity via external KYC service" @external
+        ON_ERROR: THROW IdentityVerificationException("KYC check failed")
+    3. RETURN customer
+
+FLOW validate_customer_creditworthiness(customer: Customer) -> Result<Customer>:
+    @trace("SRS-305.4b")
+    1. VALIDATE customer AS TYPE.Customer
+    2. ENSURE customer.credit_score >= 600
+        OTHERWISE THROW CreditException("Insufficient credit score")
+    3. RETURN customer
+
+// --- Constraints ---
+
+CONSTRAINT: "All monetary calculations MUST use Decimal type"
+CONSTRAINT: "All external service calls MUST have ON_ERROR handling"
+INVARIANT: "Order total MUST equal SUM of (item.unit_price * item.quantity)"

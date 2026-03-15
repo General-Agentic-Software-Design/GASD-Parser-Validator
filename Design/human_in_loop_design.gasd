@@ -1,0 +1,44 @@
+/*
+   Design: Human-in-the-Loop Resolvers
+   ====================================
+   Resolves QUESTION, APPROVE, TODO, and REVIEW constructs (§17).
+
+   Output: Impl/semantic/human_in_loop/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Human-in-the-Loop Design"
+TARGET: "TypeScript"
+TRACE: "US-SEMAST-014"
+
+// ===================================================================
+// Human-in-the-Loop Model
+// ===================================================================
+
+TYPE ResolvedQuestionNode @trace #AC-SEMAST-014-01:
+    text: String
+    isBlocking: Boolean
+    context: String @optional
+
+TYPE ResolvedApprovalNode @trace #AC-SEMAST-014-02:
+    target: SymbolLink
+    status: Enum(APPROVED, REJECTED)
+    approver: String
+    timestamp: String
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT HumanInLoopResolver @trace #AC-SEMAST-014-04:
+    INTERFACE:
+        /// Resolve human interaction points.
+        resolve(node: SemanticNodeBase) -> SemanticNodeBase @trace #AC-SEMAST-014-03
+        /// Track approval status across system lifecycle.
+        trackApproval(target: SymbolLink) -> ResolvedApprovalNode
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Blocking QUESTIONS MUST prevent system deployment if unresolved." @trace #AC-SEMAST-014-05
+CONSTRAINT: "APPROVALS MUST be linked to a valid COMPONENT or FLOW." @trace #AC-SEMAST-014-06

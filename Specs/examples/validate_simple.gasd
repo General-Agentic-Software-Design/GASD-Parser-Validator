@@ -1,0 +1,40 @@
+CONTEXT: "User Profile Service"
+TARGET: "TypeScript"
+TRACE: "SRS-201"
+NAMESPACE: "examples.validation"
+
+/*
+   --- Simple VALIDATE AS Example ---
+   Demonstrates mandatory explicit VALIDATE AS TYPE binding (GEP-5).
+
+   Key Concepts:
+   - Every VALIDATE step MUST include AS TYPE.TypeName
+   - This establishes the TYPE→FLOW binding for annotation enforcement
+   - The transpiler generates runtime guards for all @annotations on the bound TYPE
+*/
+
+// --- Core Types ---
+
+
+TYPE Email:
+    value: String @format("email") @min_length(5) @max_length(254)
+
+TYPE UserProfile:
+    name: String @min_length(1) @max_length(100)
+    email: Email
+    age: Integer @range(13, 150)
+
+// --- Component ---
+
+COMPONENT ProfileService:
+    PATTERN: "Service"
+    INTERFACE:
+        validate_profile(profile: UserProfile) -> Result<UserProfile>
+
+// --- Flow with explicit VALIDATE AS binding ---
+
+FLOW validate_profile(profile: UserProfile) -> Result<UserProfile>:
+    // VALIDATE with explicit AS TYPE binding
+    // Transpiler generates guards for @min_length, @max_length, @range
+    1. VALIDATE profile AS TYPE.UserProfile
+    2. RETURN profile

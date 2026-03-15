@@ -1,0 +1,68 @@
+/*
+   Validation: Semantic AST — Flow Logic Analysis Tests
+   ====================================================
+   Verifies CFG generation, reachability, and error handling checks.
+   Based on Design/flow_semantic_analysis_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Flow Semantic Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-006"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_cfg_generation():
+    @trace #AT-SEMAST-006-01, #AC-SEMAST-006-01
+    1. ACHIEVE "Parse FLOW definition with steps"
+    2. ENSURE "Converts to ResolvedFlowNode with linear CFG"
+
+FLOW test_semast_step_compatibility():
+    @trace #AT-SEMAST-006-02, #AC-SEMAST-006-02
+    1. ACHIEVE "Validate sequenced steps where output matches next input"
+    2. ENSURE "FlowAnalyzer confirms parameter type compatibility"
+
+FLOW test_semast_unreachable_code():
+    @trace #AT-SEMAST-006-03, #AC-SEMAST-006-03
+    1. ACHIEVE "Place step after RETURN action"
+    2. ENSURE "checkConsistency flags unreachable step"
+
+FLOW test_semast_achieve_reachability():
+    @trace #AT-SEMAST-006-04, #AC-SEMAST-006-07
+    1. ACHIEVE "Analyze ACHIEVE step target"
+    2. ENSURE "Target string resolves logically or generates warning"
+
+FLOW test_semast_match_exhaustiveness():
+    @trace #AT-SEMAST-006-05, #AC-SEMAST-006-08
+    1. ACHIEVE "Create MATCH block over ENUM missing one case"
+    2. ENSURE "Analyzer flags non-exhaustive MATCH block"
+
+FLOW test_semast_ensure_otherwise():
+    @trace #AT-SEMAST-006-06, #AC-SEMAST-006-11
+    1. ACHIEVE "Create ENSURE block without OTHERWISE"
+    2. ENSURE "Analyzer flags missing error recovery path"
+
+FLOW test_semast_on_error_scope():
+    @trace #AT-SEMAST-006-07, #AC-SEMAST-006-12
+    1. ACHIEVE "Define ON_ERROR block at FLOW scope"
+    2. ENSURE "Exception handling wraps all inner block executions"
+
+FLOW test_semast_cfg_branching():
+    @trace #AT-SEMAST-006-08
+    1. ACHIEVE "Parse IF/ELSE nested logic"
+    2. ENSURE "Branches correctly fork and merge in CFG model"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_flow_regression_empty_flow():
+    @trace #RT-SEMAST-006-01
+    1. ACHIEVE "Analyze FLOW with zero steps"
+    2. ENSURE "FlowAnalyzer gracefully accepts or warns based on contract"
+
+FLOW test_semast_flow_regression_infinite_loop():
+    @trace #RT-SEMAST-006-02
+    1. ACHIEVE "Create looping logic reference"
+    2. ENSURE "Static analysis halts execution projection safely"

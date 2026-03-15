@@ -1,0 +1,49 @@
+/*
+   Validation: Semantic AST — Backward Compatibility Tests
+   =======================================================
+    Verifies parser stability, syntactic integrity, and zero-impact
+    defaults for both Semantic AST and Built-in Types.
+    Based on Design/backward_compatibility_design.gasd.
+ */
+
+CONTEXT: "Compiler / Language Tooling — Compatibility Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-017", "US-SEMAST-020"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_compat_no_flag_impact():
+    @trace #AT-SEMAST-017-01, #AC-SEMAST-017-01, #AC-SEMAST-017-08, #AC-SEMAST-020-02
+    1. ACHIEVE "Generate original AST for complex spec file"
+    2. ENSURE "AST JSON fingerprint matches perfectly with v1.1.0 output" @trace #AT-SEMAST-020-03
+
+FLOW test_semast_compat_zero_overhead():
+    @trace #AT-SEMAST-017-02, #AC-SEMAST-017-09
+    1. ACHIEVE "Run performance benchmark on syntactic validation without --ast-sem"
+    2. ENSURE "Parse time is statistically equivalent to baseline (no regressions)"
+
+FLOW test_semast_compat_pipeline_isolation():
+    @trace #AT-SEMAST-017-03, #AC-SEMAST-017-02
+    1. ACHIEVE "Inspect runtime call stack during standard execution"
+    2. ENSURE "SemanticPipeline boundaries are never crossed unless --ast-sem is active"
+
+FLOW test_semast_compat_legacy_flags():
+    @trace #AT-SEMAST-017-04, #AC-SEMAST-017-07, #AC-SEMAST-020-04
+    1. ACHIEVE "Invoke generic validation commands used in existing CI"
+    2. ENSURE "Exit codes and CLI prompts remain 100% unchanged"
+
+FLOW test_semast_compat_test_suite_integrity():
+    @trace #AT-SEMAST-017-05, #AC-SEMAST-017-05, #AT-SEMAST-020-01, #AC-SEMAST-020-01
+    1. ACHIEVE "Run existing PyTest regression and acceptance suites"
+    2. ENSURE "All original PARSER tests pass without modification" @trace #AT-SEMAST-020-02
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_compat_regression_ast_generation():
+    @trace #RT-SEMAST-017-01, #RT-SEMAST-020-01
+    1. ACHIEVE "Run --ast flag independently after adding semantic module"
+    2. ENSURE "Original AST Generator classes behavior is identical"
