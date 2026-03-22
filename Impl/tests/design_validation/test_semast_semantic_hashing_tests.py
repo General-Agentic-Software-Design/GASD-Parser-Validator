@@ -16,3 +16,17 @@ def test_semast_hash_drift_detection_requirement():
     # Change content
     n3 = SemanticNodeBase("T2", sr)
     assert n1.hash != n3.hash
+
+# ===================================================================
+# Cross-File Design Validation
+# ===================================================================
+
+def test_semast_hash_cross_file_sorting_design():
+    """Validates AC-X-SEMAST-008-01: Alphabetical sorting of cross-file symbols before hashing."""
+    from Impl.semantic.SemanticHasher import SemanticHasher
+    assert hasattr(SemanticHasher, "sort_symbols")
+
+def test_semast_hash_global_graph_design():
+    """Validates AC-X-SEMAST-008-02: Hashing of the entire cross-file dependency graph."""
+    from Impl.semantic.SemanticHasher import SemanticHasher
+    assert hasattr(SemanticHasher, "hash_system")

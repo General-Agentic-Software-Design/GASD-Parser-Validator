@@ -2,8 +2,8 @@
 
 ## GASD Specification References
 
-- [GASD_Specification-1.1.md](Requirements/GASD-Specs/GASD_Specification-1.1.md)
-- [gasd-1.1.0.gasd](Requirements/GASD-Specs/gasd-1.1.0.gasd)
+- [GASD_Specification-1.1.md](Specs/GASD_Specification-1.1.md)
+- [gasd-1.1.0.gasd](Specs/gasd-1.1.0.gasd)
 
 ---
 

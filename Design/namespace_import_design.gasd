@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Namespace Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-009"
+TRACE: "US-SEMAST-009", "US-X-SEMAST-002"
 
 // ===================================================================
 // Decisions
@@ -19,30 +19,44 @@ DECISION "Import Loading Strategy":
     CHOSEN: "Lazy Recursive Loading"
     RATIONALE: "Only load and parse imported files when a symbol from that namespace is referenced, reducing memory overhead for large systems."
     ALTERNATIVES: ["Eager Full Load", "Lazy Recursive Loading"]
+    AFFECTS: [ImportResolver, DependencyGraph]
+
+DECISION "Circular Import Detection":
+    CHOSEN: "Depth-First Search (DFS) with Detection Stack"
+    RATIONALE: "DFS naturally tracks the current path. If a file is encountered that is already on the stack, a cycle is detected."
+    ALTERNATIVES: ["DFS with Stack", "Recursive Ascent"]
     AFFECTS: [ImportResolver]
 
 // ===================================================================
 // Namespace Model
 // ===================================================================
 
-TYPE ResolvedNamespace @trace #AC-SEMAST-009-01:
+TYPE ResolvedNamespace @trace #AC-SEMAST-009-01, #AC-X-SEMAST-002-02:
     fqn: String // Fully Qualified Name
     alias: String @optional
+    sourceFile: String // Path to the file defining this namespace
     exportedSymbols: Map<String, SymbolEntry>
     subNamespaces: Map<String, SymbolLink>
+
+TYPE DependencyGraph @trace #AC-X-SEMAST-002-03:
+    nodes: List<String> // Canonical file paths
+    edges: List<Edge> // (from, to)
+    processingOrder: List<String> // Topologically sorted paths
 
 // ===================================================================
 // Components
 // ===================================================================
 
-COMPONENT ImportResolver @trace #AC-SEMAST-009-04:
+COMPONENT ImportResolver @trace #AC-SEMAST-009-04, #AC-X-SEMAST-002-01:
     INTERFACE:
         /// Resolve an import path to a fully qualified namespace.
-        resolveImport(path: String, alias: String) -> ResolvedNamespace @trace #AC-SEMAST-009-02
+        resolveImport(path: String, alias: String) -> ResolvedNamespace @trace #AC-SEMAST-009-02, #AC-X-SEMAST-002-02
         /// Populate exported symbols from a remote file.
         exportSymbols(file: GASDFile) -> Map<String, SymbolEntry> @trace #AC-SEMAST-009-03
+        /// Construct global dependency graph.
+        buildDependencyGraph(unit: CompilationUnit) -> DependencyGraph @trace #AC-X-SEMAST-002-03
         /// Verify no circular imports exist.
-        detectCircularImports(stack: List<String>) -> Void
+        detectCircularImports(graph: DependencyGraph) -> Void @trace #AC-X-SEMAST-002-04
 
 // ===================================================================
 // Constraints
@@ -50,3 +64,5 @@ COMPONENT ImportResolver @trace #AC-SEMAST-009-04:
 
 CONSTRAINT: "Namespace aliases MUST be unique within the current file scope." @trace #AC-SEMAST-009-05
 CONSTRAINT: "Only symbols defined in a file's NAMESPACE block are exported." @trace #AC-SEMAST-009-01
+CONSTRAINT: "Circular import dependencies MUST be detected and reported as fatal errors." @trace #AC-X-SEMAST-002-04
+CONSTRAINT: "Redundant imports MUST be handled gracefully without duplication." @trace #AC-X-SEMAST-002-05

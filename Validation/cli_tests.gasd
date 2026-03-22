@@ -16,7 +16,9 @@ FLOW test_cli_multiple_files():
     @trace #AC-PARSER-006-01, #AT-PARSER-006-01
     1. ACHIEVE "Run gasd-parser file1.gasd file2.gasd"
     2. ENSURE "Both files are processed sequentially"
+        OTHERWISE THROW "Validation Failed"
     3. ENSURE "Aggregate summary correctly counts successes/failures" @trace #AC-PARSER-006-03
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Recursive Directory Traversal
@@ -25,7 +27,9 @@ FLOW test_cli_recursive_traversal():
     @trace #AC-PARSER-006-02, #AT-PARSER-006-02
     1. ACHIEVE "Run gasd-parser MyProjectFolder/"
     2. ENSURE "CLI recursively finds and parses all .gasd files"
+        OTHERWISE THROW "Validation Failed"
     3. ENSURE "Non-.gasd files are ignored" @trace #RT-PARSER-006-01
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // AST Export Flags
@@ -34,8 +38,10 @@ FLOW test_cli_ast_flags():
     @trace #AC-PARSER-007-01, #AT-PARSER-007-02
     1. ACHIEVE "Run gasd-parser file.gasd --ast"
     2. ENSURE "CLI generates and prints JSON AST"
+        OTHERWISE THROW "Validation Failed"
     3. ACHIEVE "Run gasd-parser file1.gasd file2.gasd --ast-combine"
     4. ENSURE "CLI merges ASTs into a single output" @trace #AC-PARSER-007-06
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Exit Codes
@@ -44,8 +50,10 @@ FLOW test_cli_exit_codes():
     @trace #AC-PARSER-006-03
     1. ACHIEVE "Run CLI on directory with one invalid file"
     2. ENSURE "CLI exits with code 1"
+        OTHERWISE THROW "Validation Failed"
     3. ACHIEVE "Run CLI on valid files only"
     4. ENSURE "CLI exits with code 0"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Constraints

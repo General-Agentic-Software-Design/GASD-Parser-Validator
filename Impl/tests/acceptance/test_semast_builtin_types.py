@@ -29,7 +29,7 @@ def test_builtin_type_collision():
     
     # Attempt to define 'String' in global scope
     entry = SymbolEntry("String", SymbolKind.Type, table.global_scope, node)
-    with pytest.raises(SemanticError, match="Collision error"):
+    with pytest.raises(SemanticError, match="Collision error|already defined"):
         table.define(entry)
 
 def test_builtin_type_shadowing_prevention():

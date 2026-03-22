@@ -198,7 +198,7 @@ action_id
     ;
 
 control_flow
-    : ENSURE_KW expr annotations? (OTHERWISE_KW (THROW_KW | RETURN_KW | soft_id)? expr annotations?)?
+    : ENSURE_KW (expr | soft_id)+ annotations? (OTHERWISE_KW (THROW_KW | RETURN_KW | soft_id)? (expr | soft_id)+ annotations?)?
     | IF_KW expr COLON (NEWLINE INDENT (flow_step | NEWLINE)+ DEDENT | flow_step | action)
       (NEWLINE? ELSE_KW COLON? (NEWLINE INDENT (flow_step | NEWLINE)+ DEDENT | flow_step | action))?
     | ELSE_KW COLON? (NEWLINE INDENT (flow_step | NEWLINE)+ DEDENT | flow_step | action)
@@ -399,7 +399,6 @@ soft_id
     | RETURN_KW
     | LOG_KW
     | ENSURE_KW
-    | OTHERWISE_KW
     | THROW_KW
     | EXECUTE_KW
     | TRANSFORM_KW

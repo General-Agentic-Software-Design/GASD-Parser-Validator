@@ -32,8 +32,8 @@ class DirectiveResolver:
                 self.traces.update(ids)
                 
         return SystemMetadata(
-            context=self.context or "",
-            target=self.targets,
+            context=self.context or "global",
+            target=self.targets or ["Py"],
             trace=list(self.traces)
         )
 

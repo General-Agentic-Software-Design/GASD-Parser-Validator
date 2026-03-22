@@ -9,9 +9,9 @@ Acceptance Test for US-PARSER-006: Bulk Implementation Search
 
 def test_cli_multiple_files():
     """AT-PARSER-006-01: Multiple specific files can be passed."""
-    # Create temp files
-    with open("temp1.gasd", "w") as f: f.write('CONTEXT: "T1"\nTARGET: "P"\nTYPE Dummy: f: String\n')
-    with open("temp2.gasd", "w") as f: f.write('CONTEXT: "T2"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    # Create temp files with unique symbols to avoid DuplicateSymbol errors in aggregate system
+    with open("temp1.gasd", "w") as f: f.write('CONTEXT: "T1"\nTARGET: "P"\nTYPE Dummy1: f: String\n')
+    with open("temp2.gasd", "w") as f: f.write('CONTEXT: "T2"\nTARGET: "P"\nTYPE Dummy2: f: String\n')
     
     try:
         result = subprocess.run(["python3", "-m", "Impl.cli", "temp1.gasd", "temp2.gasd"], capture_output=True, text=True, env={"PYTHONPATH": "."})
@@ -29,8 +29,8 @@ def test_cli_recursive_traversal():
     """AT-PARSER-006-02: Recursive folder traversal search."""
     # Using existing Specs/ folder if it exists, or creating a small structure
     os.makedirs("test_dir/sub", exist_ok=True)
-    with open("test_dir/f1.gasd", "w") as f: f.write('CONTEXT: "D1"\nTARGET: "P"\nTYPE Dummy: f: String\n')
-    with open("test_dir/sub/f2.gasd", "w") as f: f.write('CONTEXT: "D2"\nTARGET: "P"\nTYPE Dummy: f: String\n')
+    with open("test_dir/f1.gasd", "w") as f: f.write('CONTEXT: "D1"\nTARGET: "P"\nTYPE Dummy1: f: String\n')
+    with open("test_dir/sub/f2.gasd", "w") as f: f.write('CONTEXT: "D2"\nTARGET: "P"\nTYPE Dummy2: f: String\n')
     
     try:
         result = subprocess.run(["python3", "-m", "Impl.cli", "test_dir/"], capture_output=True, text=True, env={"PYTHONPATH": "."})

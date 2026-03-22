@@ -1,5 +1,6 @@
 CONTEXT: "Pricing Engine"
 TARGET: "TypeScript"
+NAMESPACE: "example.discount_calculation"
 TRACE: "SRS-120 (Pricing Logic)"
 
 /// Calculates the final price based on a discount code.

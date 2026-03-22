@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — STRATEGY Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-007"
+TRACE: "US-SEMAST-007", "US-X-SEMAST-008"
 
 // ===================================================================
 // Strategy Model
@@ -35,7 +35,7 @@ TYPE AlgorithmComplexity:
 COMPONENT StrategyResolver @trace #AC-SEMAST-007-05:
     INTERFACE:
         /// Resolve algorithm name and complexity.
-        resolve(strategy: StrategyDefinition) -> ResolvedStrategyNode @trace #AC-SEMAST-007-02
+        resolve(strategy: StrategyDefinition) -> ResolvedStrategyNode @trace #AC-SEMAST-007-02, #AC-X-SEMAST-008-05
         /// Verify inputs/outputs against strategy contract.
         verifyContract(strategy: ResolvedStrategyNode) -> Void @trace #AC-SEMAST-007-03
         /// Rank strategies based on complexity classification.

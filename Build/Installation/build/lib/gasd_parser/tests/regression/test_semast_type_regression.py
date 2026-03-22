@@ -86,3 +86,34 @@ def test_semast_binding_regression_extra_fields():
     contract = engine.bind(expr, "User")
     assert contract.isValid is True
     assert "age" in contract.extraFields
+
+# ===================================================================
+# Cross-File Regression Tests
+# ===================================================================
+
+def test_semast_type_regression_qualified_resolution():
+    # RT-X-SEMAST-004-01
+    engine, _, _, table = scaffold()
+    
+    # Mock a remote type in different namespace
+    remote_type = ResolvedTypeNode(SourceRange("r.gasd", 0,0,0,0), "RemoteType", {}, False)
+    table.define(SymbolEntry("RemoteNS.RemoteType", SymbolKind.Type, table.global_scope, remote_type))
+    
+    # Resolve qualified name
+    resolved = table.resolve("RemoteNS.RemoteType")
+    assert resolved is not None
+    assert resolved.nodeLink.name == "RemoteType"
+
+def test_semast_type_regression_cross_file_generics():
+    # RT-X-SEMAST-004-02
+    engine, _, _, table = scaffold()
+    
+    # Register remote type in different namespace
+    remote_type = ResolvedTypeNode(SourceRange("r.gasd", 0,0,0,0), "RemoteType", {}, False)
+    table.define(SymbolEntry("RemoteNS.RemoteType", SymbolKind.Type, table.global_scope, remote_type))
+    
+    # Map<String, RemoteNS.RemoteType>
+    contract = TypeContract("Map", ["String", "RemoteNS.RemoteType"])
+    
+    # Resolution should be possible via SymbolTable
+    assert table.resolve("RemoteNS.RemoteType") is not None

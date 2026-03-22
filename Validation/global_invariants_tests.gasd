@@ -1,0 +1,43 @@
+/*
+   Validation: Semantic AST — Global Invariants & Constraints Tests
+   ================================================================
+   Verifies multi-file invariant enforcement and conflict detection.
+   Based on Design/global_invariants_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Global Constraints Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-X-SEMAST-009"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_global_invariant_enforcement():
+    @trace #AT-X-SEMAST-009-01, #AC-X-SEMAST-009-01
+    1. ACHIEVE "Define a global CONSTRAINT in File A"
+    2. ACHIEVE "Create a construct in File B that violates it"
+    3. ENSURE "ConstraintValidator detects the violation across the compilation unit"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_constraint_conflict_detection():
+    @trace #AT-X-SEMAST-009-02, #AC-X-SEMAST-009-02
+    1. ACHIEVE "Define conflicting global constraints in File A and File B"
+    2. ENSURE "Registry detects the conflict and raises a configuration error"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_deterministic_validation_order():
+    @trace #AT-X-SEMAST-009-03, #AC-X-SEMAST-009-03
+    1. ACHIEVE "Run validation on a project with multiple interdependent constraints"
+    2. ENSURE "Validation errors are reported in a stable, deterministic order regardless of file input sequence"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_invariant_regression_wildcard():
+    @trace #RT-X-SEMAST-009-01
+    1. ACHIEVE "Apply global invariant using a namespace wildcard (Core.*)"
+    2. ENSURE "Correctly applies to all sub-namespaces across all files"
+        OTHERWISE THROW "Validation Failed"

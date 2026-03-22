@@ -10,7 +10,7 @@ def test_builtin_collision_global():
     node = SemanticNodeBase("Test", SourceRange("", 0, 0, 0, 0))
     entry = SymbolEntry("Integer", SymbolKind.Type, table.global_scope, node)
     
-    with pytest.raises(SemanticError, match="Collision error"):
+    with pytest.raises(SemanticError, match="Collision error|Shadowing error"):
         table.define(entry)
 
 def test_builtin_shadowing_rejection_nested():

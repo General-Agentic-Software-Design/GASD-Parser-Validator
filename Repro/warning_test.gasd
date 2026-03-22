@@ -1,0 +1,11 @@
+CONTEXT: "Reproduction for missing warnings"
+TARGET: "Any"
+NAMESPACE: "repro"
+
+COMPONENT TestComponent:
+    INTERFACE:
+        test_method() -> String
+
+FLOW test_method() -> String:
+    1. ENSURE "Some condition"
+    2. RETURN "Done"

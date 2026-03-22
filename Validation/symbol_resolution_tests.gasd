@@ -7,7 +7,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Symbol Resolution Validation"
 TARGET: "TypeScript", "Python3"
-TRACE: "US-SEMAST-002"
+TRACE: "US-SEMAST-002", "US-X-SEMAST-003"
 
 // ===================================================================
 // Acceptance Tests
@@ -17,41 +17,67 @@ FLOW test_semast_symbol_immutability():
     @trace #AT-SEMAST-002-01, #AC-SEMAST-002-01
     1. ACHIEVE "Define a symbol"
     2. ENSURE "It cannot be overwritten in the same scope"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_scope_hierarchy():
-    @trace #AT-SEMAST-002-02, #AC-SEMAST-002-02
+    @trace #AT-SEMAST-002-02, #AC-SEMAST-002-02, #AC-X-SEMAST-003-01
     1. ACHIEVE "Create nested blocks (FLOW inside NAMESPACE)"
-    2. ENSURE "Child resolves names from parent scope"
+    2. ENSURE "Child resolves names from parent scope including containing namespace"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_symbol_definition():
     @trace #AT-SEMAST-002-03, #AC-SEMAST-002-03
     1. ACHIEVE "Declare multiple types and components"
     2. ENSURE "All exist in the local symbol table"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_symbol_lookup():
     @trace #AT-SEMAST-002-04, #AC-SEMAST-002-04
     1. ACHIEVE "Reference variable defined in outer scope"
     2. ENSURE "Resolution climbs scope tree and returns correct SymbolEntry"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_scope_isolation():
     @trace #AT-SEMAST-002-05, #AC-SEMAST-002-05
     1. ACHIEVE "Exit current scope"
     2. ENSURE "Local variables from exited scope are no longer resolvable"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_name_collision():
     @trace #AT-SEMAST-002-06, #AC-SEMAST-002-06
     1. ACHIEVE "Define same name twice in SAME scope"
     2. ENSURE "CollisionDetector raises semantic error constraint"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_case_sensitivity():
     @trace #AT-SEMAST-002-07, #AC-SEMAST-002-07
     1. ACHIEVE "Define 'User' and 'user'"
     2. ENSURE "Resolution treats them as two separate symbols"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_circular_resolution():
     @trace #AT-SEMAST-002-08, #AC-SEMAST-002-08
     1. ACHIEVE "Create type A dependent on B, and B dependent on A"
     2. ENSURE "SymbolTable identifies recursion cycle error"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cross_file_define_resolve():
+    @trace #AT-X-SEMAST-003-01, #AC-X-SEMAST-003-02
+    1. ACHIEVE "Define symbol in File A, resolve in File B via import"
+    2. ENSURE "SymbolTable returns correct SymbolEntry across boundary"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cross_file_collision():
+    @trace #AT-X-SEMAST-003-02, #AC-X-SEMAST-003-03
+    1. ACHIEVE "Define same symbol in SAME namespace in two different files"
+    2. ENSURE "Global Symbol Table detects collision during merge"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_built_in_shadowing():
+    @trace #AT-X-SEMAST-003-03, #AC-X-SEMAST-003-05
+    1. ACHIEVE "Define a local TYPE 'String'"
+    2. ENSURE "SymbolTable rejects or warns if shadowing a protected built-in type"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Regression Tests
@@ -61,8 +87,10 @@ FLOW test_semast_symbol_regression_shadowing():
     @trace #RT-SEMAST-002-01
     1. ACHIEVE "Local variable shadows global TYPE"
     2. ENSURE "Detected and rejected per Shadowing Policy decision"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_symbol_regression_missing():
     @trace #RT-SEMAST-002-02
     1. ACHIEVE "Resolve undefined symbol"
     2. ENSURE "Returns null or semantic error cleanly"
+        OTHERWISE THROW "Validation Failed"

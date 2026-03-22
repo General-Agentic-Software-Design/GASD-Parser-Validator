@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Architecture Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-005"
+TRACE: "US-SEMAST-005", "US-X-SEMAST-005"
 
 // ===================================================================
 // Decisions
@@ -25,7 +25,7 @@ DECISION "Dependency Tracking":
 // Architectural Model
 // ===================================================================
 
-TYPE DependencyGraph @trace #AC-SEMAST-005-01:
+TYPE DependencyGraph @trace #AC-SEMAST-005-01, #AC-X-SEMAST-002-03:
     nodes: Map<String, ComponentNode>
     edges: List<DependencyEdge>
 
@@ -44,19 +44,21 @@ TYPE ComponentNode:
 // Components
 // ===================================================================
 
-COMPONENT DependencyAnalyzer @trace #AC-SEMAST-005-05:
+COMPONENT DependencyAnalyzer @trace #AC-SEMAST-005-05, #AC-X-SEMAST-005-03:
     INTERFACE:
         /// Build dependency graph from resolved components.
-        analyze(components: List<ResolvedComponentNode>) -> DependencyGraph @trace #AC-SEMAST-005-02
+        analyze(components: List<ResolvedComponentNode>) -> DependencyGraph @trace #AC-SEMAST-005-02, #AC-X-SEMAST-005-01
         /// Verify interface compliance (Liskov substitution).
-        verifyInterface(comp: ResolvedComponentNode, interface: SymbolLink) -> Void @trace #AC-SEMAST-005-03
+        verifyInterface(comp: ResolvedComponentNode, interface: SymbolLink) -> Void @trace #AC-SEMAST-005-03, #AC-X-SEMAST-005-04
         /// Detect circular dependencies in the system.
-        detectCycles(graph: DependencyGraph) -> List<CyclePath> @trace #AC-SEMAST-005-04
+        detectCycles(graph: DependencyGraph) -> List<CyclePath> @trace #AC-SEMAST-005-04, #AC-X-SEMAST-005-03
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Component dependencies MUST be resolved via SymbolTable." @trace #AC-SEMAST-005-06
+CONSTRAINT: "Component dependencies MUST be resolved via SymbolTable." @trace #AC-SEMAST-005-06, #AC-X-SEMAST-005-02
 CONSTRAINT: "Resource blocks (§18) MUST be treated as architectural nodes in the graph." @trace #AC-SEMAST-005-07
 CONSTRAINT: "Interface mismatches (missing methods) MUST be reported as semantic errors." @trace #AC-SEMAST-005-08
+CONSTRAINT: "Circular dependencies between components MUST be detected across file boundaries." @trace #AC-X-SEMAST-005-03
+CONSTRAINT: "REQUIRES vs PROVIDES MUST be validated globally." @trace #AC-X-SEMAST-005-04

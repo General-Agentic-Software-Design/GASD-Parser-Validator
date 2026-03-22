@@ -94,7 +94,7 @@ def test_semast_cli_combine():
 
     try:
         result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--json"],
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast", "--ast-combine", "--json"],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
             cwd=PROJECT_ROOT
@@ -152,3 +152,75 @@ def test_semast_cli_regression_missing_file():
     )
     assert result.returncode == 1
     assert "not found" in result.stderr.lower() or "error" in result.stderr.lower()
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cli_multi_file():
+    # AT-X-SEMAST-010-01, AC-X-SEMAST-010-01
+    tmp1 = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
+    tmp1.write('CONTEXT: "Multi"\nTARGET: "Py"\nTYPE T1: f: String\n')
+    tmp1.close()
+    tmp2 = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
+    tmp2.write('CONTEXT: "Multi"\nTARGET: "Py"\nTYPE T2: g: Integer\n')
+    tmp2.close()
+
+    try:
+        # ENSURE "The CLI accepts a list of files and produces a single unified Semantic AST"
+        result = subprocess.run(
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--json"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+            cwd=PROJECT_ROOT
+        )
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        # In unified mode (without --ast-combine), it should return 1 SemanticSystem
+        assert len(data["asts"]) == 1
+        system = data["asts"][0]
+        assert "global" in system["namespaces"]
+    finally:
+        os.unlink(tmp1.name)
+        os.unlink(tmp2.name)
+
+def test_semast_cli_deterministic_errors():
+    # AT-X-SEMAST-010-02, AC-X-SEMAST-010-02
+    # Create two files that both have semantic errors
+    tmp1 = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
+    tmp1.write('CONTEXT: "Err"\nTARGET: "Py"\nTYPE T1: f: MissingType\n')
+    tmp1.close()
+    tmp2 = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
+    tmp2.write('CONTEXT: "Err"\nTARGET: "Py"\nTYPE T2: g: AnotherMissingType\n')
+    tmp2.close()
+
+    try:
+        results = []
+        for _ in range(3):
+            result = subprocess.run(
+                ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem"],
+                capture_output=True, text=True,
+                env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+                cwd=PROJECT_ROOT
+            )
+            results.append(result.stderr)
+        
+        # ENSURE "Error reporting order is deterministic regardless of filesystem OS order"
+        assert results[0] == results[1] == results[2]
+    finally:
+        os.unlink(tmp1.name)
+        os.unlink(tmp2.name)
+
+def test_cli_version_build_time():
+    """ENSURE '--version' returns the version and build time string."""
+    # Note: When running from source, this will be "DEVELOPMENT"
+    result = subprocess.run(
+        ["python3", "-m", "Impl.cli", "--version"],
+        capture_output=True, text=True,
+        env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+        cwd=PROJECT_ROOT
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() != ""
+    # In development it should be "DEVELOPMENT"
+    assert "DEVELOPMENT" in result.stdout

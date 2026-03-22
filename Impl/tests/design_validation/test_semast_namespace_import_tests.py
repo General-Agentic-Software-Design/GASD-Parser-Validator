@@ -14,3 +14,19 @@ def test_semast_import_resolution_requirement():
     pipeline = SemanticPipeline()
     # Basic check for namespaces property in system metadata
     assert hasattr(pipeline, "build")
+
+# ===================================================================
+# Cross-File Design Validation
+# ===================================================================
+
+def test_semast_namespace_cross_file_import_design():
+    """Validates AC-X-SEMAST-002-01: IMPORT statements must resolve symbols from other files."""
+    from Impl.semantic.NamespaceResolver import NamespaceResolver
+    resolver = NamespaceResolver()
+    assert hasattr(resolver, "add_dependency")
+
+def test_semast_namespace_circular_dependency_design():
+    """Validates AC-X-SEMAST-002-02: Detection and reporting of circular imports."""
+    from Impl.semantic.NamespaceResolver import NamespaceResolver
+    resolver = NamespaceResolver()
+    assert hasattr(resolver, "get_processing_order")

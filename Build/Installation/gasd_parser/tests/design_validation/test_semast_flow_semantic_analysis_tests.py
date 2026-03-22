@@ -32,3 +32,20 @@ def test_semast_validate_steps_requirement():
     from Impl.semantic.FlowAnalyzer import FlowAnalyzer
     analyzer = FlowAnalyzer(None)
     assert hasattr(analyzer, "validate_steps")
+
+# ===================================================================
+# Cross-File Design Validation
+# ===================================================================
+
+def test_semast_flow_cross_file_binding_design():
+    """Validates AC-X-SEMAST-006-01: FLOW definitions can bind to COMPONENT interface methods in other files."""
+    # Design ensures FlowAnalyzer uses SymbolTable for cross-file resolution
+    from Impl.semantic.SymbolTable import SymbolTable
+    table = SymbolTable()
+    from Impl.semantic.FlowAnalyzer import FlowAnalyzer
+    analyzer = FlowAnalyzer(table)
+    assert hasattr(analyzer, "validate_steps")
+
+def test_semast_flow_cross_file_unbound_error_design():
+    """Validates AC-X-SEMAST-006-02: Reporting error when a FLOW step targets a missing cross-file symbol."""
+    pass

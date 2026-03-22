@@ -49,10 +49,9 @@ class SemanticErrorReporter:
     _instance = None
     
     def __new__(cls, *args, **kwargs):
-        # "Error reporter MUST be a singleton" 
-        if not cls._instance:
-            cls._instance = super(SemanticErrorReporter, cls).__new__(cls, *args, **kwargs)
-            cls._instance.reset()
+        if cls._instance is None:
+            cls._instance = super(SemanticErrorReporter, cls).__new__(cls)
+            cls._instance.errors: List[StructuredSemanticError] = []
         return cls._instance
 
     def report(self, error: StructuredSemanticError) -> None:

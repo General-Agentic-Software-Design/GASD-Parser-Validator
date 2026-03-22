@@ -32,7 +32,7 @@ def test_semast_resource_linkage():
 def test_semast_interface_compliance():
     table = SymbolTable()
     analyzer = DependencyAnalyzer(table)
-    intf = mock_comp("Runnable", methods={"run": ResolvedMethodNode("run", [], TypeContract("Boolean"))}, pattern="Interface")
+    intf = mock_comp("Runnable", methods={"run": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "run", [], TypeContract("Boolean"))}, pattern="Interface")
     table.define(SymbolEntry("Runnable", SymbolKind.Component, table.current_scope, intf))
     impl = mock_comp("MyJob")
     with pytest.raises(SemanticError, match="MissingMethod"):
@@ -41,5 +41,36 @@ def test_semast_interface_compliance():
 def test_semast_architecture_regression_self_dep():
     analyzer = DependencyAnalyzer(SymbolTable())
     graph = analyzer.analyze([mock_comp("A", deps=[SymbolLink("A")])])
+    cycles = analyzer.detect_cycles(graph)
+    assert len(cycles) == 1
+
+# ===================================================================
+# Cross-File Regression Tests
+# ===================================================================
+
+def test_semast_architecture_regression_cross_file_interface():
+    # RT-X-SEMAST-007-01
+    table = SymbolTable()
+    analyzer = DependencyAnalyzer(table)
+    
+    # Interface in File B
+    intf = mock_comp("RemoteIntf", methods={"run": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "run", [], TypeContract("Boolean"))}, pattern="Interface")
+    table.define(SymbolEntry("RemoteNS.RemoteIntf", SymbolKind.Component, table.global_scope, intf))
+    
+    # Component in File A implementing it
+    impl = mock_comp("LocalImpl")
+    
+    # Should fail if method missing
+    with pytest.raises(SemanticError, match="MissingMethod"):
+        analyzer.verify_interface(impl, SymbolLink("RemoteNS.RemoteIntf"))
+
+def test_semast_architecture_regression_cross_file_cycles():
+    # RT-X-SEMAST-007-02
+    analyzer = DependencyAnalyzer(SymbolTable())
+    # A (File1) -> B (File2) -> A (File1)
+    a = mock_comp("A", deps=[SymbolLink("B")])
+    b = mock_comp("B", deps=[SymbolLink("A")])
+    
+    graph = analyzer.analyze([a, b])
     cycles = analyzer.detect_cycles(graph)
     assert len(cycles) == 1

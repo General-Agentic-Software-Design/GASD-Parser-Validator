@@ -1,6 +1,6 @@
 import pytest
-from Impl.semantic.SemanticNodes import ResolvedFlowNode, SemanticFlowStep, TypeContract, ResolvedParameter, SourceRange
-from Impl.semantic.SymbolTable import SymbolTable, SemanticError
+from Impl.semantic.SemanticNodes import ResolvedFlowNode, SemanticFlowStep, TypeContract, ResolvedParameter, SourceRange, ResolvedMethodNode
+from Impl.semantic.SymbolTable import SymbolTable, SemanticError, SymbolEntry, SymbolKind
 from Impl.semantic.FlowAnalyzer import FlowAnalyzer
 
 from Impl.semantic.SemanticNodes import ResolvedExpression, SymbolLink
@@ -95,6 +95,7 @@ def test_semast_match_exhaustiveness():
     analyzer = FlowAnalyzer(table)
     
     step = generate_step("MATCH", "missing_case")
+    step.isExhaustive = False
     flow_node = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "myFlow", [], TypeContract("Boolean"), [step])
     
     # ENSURE "Analyzer flags non-exhaustive MATCH block"
@@ -148,8 +149,41 @@ def test_semast_flow_regression_infinite_loop():
     analyzer = FlowAnalyzer(table)
     
     step = generate_step("LOOP", "infinite")
+    step.isUnhalting = True
     flow_node = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "myFlow", [], TypeContract("Boolean"), [step])
     
     # ENSURE "Static analysis halts execution projection safely"
     with pytest.raises(SemanticError, match="InfiniteLoop"):
         analyzer.check_consistency(flow_node)
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_flow_binding():
+    # AT-X-SEMAST-006-01, AC-X-SEMAST-006-01, AC-X-SEMAST-006-02
+    table = SymbolTable()
+    analyzer = FlowAnalyzer(table)
+    
+    # Define remote component method
+    remote_res = ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "remoteMethod", [ResolvedParameter("p", TypeContract("String"))], TypeContract("Boolean"))
+    table.define(SymbolEntry("Namespace.Comp.remoteMethod", SymbolKind.Method, table.global_scope, remote_res))
+    
+    # FLOW binds to remote COMPONENT method
+    step = generate_step("CALL", "Namespace.Comp.remoteMethod", expected_in=TypeContract("String"))
+    step.bindings = {"p": SymbolLink("remote_param_id")}
+    
+    # ENSURE "Binding succeeds if signatures match exactly"
+    analyzer.validate_steps([step]) # Should pass
+
+def test_semast_unbound_flow_error():
+    # AT-X-SEMAST-006-02, AC-X-SEMAST-006-03
+    table = SymbolTable()
+    analyzer = FlowAnalyzer(table)
+    
+    # Target a non-existent remote method
+    step = generate_step("CALL", "MissingNamespace.Comp.method")
+    
+    # ENSURE "Semantic error reported for unbound flow resolution"
+    with pytest.raises(SemanticError, match="UnboundFlow"):
+        analyzer.validate_steps([step])

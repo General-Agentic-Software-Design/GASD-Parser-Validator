@@ -24,26 +24,34 @@ def run_sem_ast(gasd_content, *extra_args):
 
 def test_semast_cli_activation():
     """ENSURE 'Semantic AST output is deterministic across repeated runs'"""
-    result1, fp1 = run_sem_ast(VALID_GASD)
-    result2, fp2 = run_sem_ast(VALID_GASD)
+    with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as tmp:
+        tmp.write(VALID_GASD)
+        fp1 = tmp.name
     try:
+        result1 = subprocess.run(
+            ["python3", "-m", "Impl.cli", fp1, "--ast-sem", "--json"],
+            capture_output=True, text=True, env={**os.environ, "PYTHONPATH": PROJECT_ROOT}, cwd=PROJECT_ROOT
+        )
+        result2 = subprocess.run(
+            ["python3", "-m", "Impl.cli", fp1, "--ast-sem", "--json"],
+            capture_output=True, text=True, env={**os.environ, "PYTHONPATH": PROJECT_ROOT}, cwd=PROJECT_ROOT
+        )
         assert result1.returncode == 0, f"stderr: {result1.stderr}"
         assert result2.returncode == 0, f"stderr: {result2.stderr}"
         data1 = json.loads(result1.stdout)
         data2 = json.loads(result2.stdout)
         out1 = data1["asts"][0]
         out2 = data2["asts"][0]
-        # Remove non-deterministic fields (id) for comparison
+        # Remove non-deterministic fields (id, hash) and temporary paths for comparison
         def strip_ids(obj):
             if isinstance(obj, dict):
-                return {k: strip_ids(v) for k, v in obj.items() if k not in ("id", "hash", "sourceMap")}
+                return {k: strip_ids(v) for k, v in obj.items() if k not in ("id", "hash", "sourceMap", "filePath", "path")}
             elif isinstance(obj, list):
                 return [strip_ids(x) for x in obj]
             return obj
         assert strip_ids(out1) == strip_ids(out2)
     finally:
         os.unlink(fp1)
-        os.unlink(fp2)
 
 
 def test_semast_cli_dual_output():
@@ -107,7 +115,7 @@ def test_semast_cli_combine():
     
     try:
         result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--json"],
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast", "--ast-combine", "--json"],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
             cwd=PROJECT_ROOT
@@ -117,7 +125,7 @@ def test_semast_cli_combine():
         output = data["asts"]
         assert isinstance(output, list)
         assert len(output) == 2
-        assert all(o["kind"] == "SemanticSystem" for o in output)
+        assert all(o["kind"] == "GASDFile" for o in output)
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)

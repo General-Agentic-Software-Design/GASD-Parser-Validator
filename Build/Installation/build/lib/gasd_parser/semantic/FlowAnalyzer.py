@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Set
 from .SemanticNodes import SemanticNodeBase, ResolvedFlowNode, SemanticFlowStep, TypeContract, ResolvedParameter, SourceRange
 from .SymbolTable import SymbolTable, SemanticError
 
@@ -30,58 +30,91 @@ class FlowAnalyzer:
             if last_out_type and expected_input:
                 if last_out_type.baseType != expected_input.baseType:
                     # AC-SEMAST-006-02
-                    raise SemanticError(f"TypeMismatch: Step expects {expected_input.baseType} but received {last_out_type.baseType}")
+                    raise SemanticError(f"TypeMismatch: Step expects {expected_input.baseType} but received {last_out_type.baseType}", location=step.sourceMap)
+            
+            # Cross-file CALL resolution (AC-X-SEMAST-006-01)
+            if step.operation == "CALL":
+                target_name = str(getattr(step.targetExpression, 'value', ''))
+                if target_name and '.' in target_name:
+                    # Only validate qualified (cross-file) method references
+                    method_entry = self.symbol_table.resolve(target_name)
+                    if not method_entry:
+                        # In a multi-file system, we check global scope
+                        raise SemanticError(f"UnboundFlow: Could not resolve remote method '{target_name}'", location=step.sourceMap)
+            
             last_out_type = produces_type
 
     def check_consistency(self, flow_node: ResolvedFlowNode) -> None:
         if not flow_node.pipeline:
             return
             
-        returned = False
-        for i, step in enumerate(flow_node.pipeline):
-            if returned:
-                raise SemanticError(f"UnreachableCode: Step '{step.id}' is after a return action.")
-            
-            if step.operation == "RETURN":
-                returned = True
+        def _check_steps(steps, is_conditional=False):
+            returned = False
+            for i, step in enumerate(steps):
+                if returned:
+                    raise SemanticError(f"UnreachableCode: Step '{step.id}' is after a return action.", location=step.sourceMap)
                 
-            if step.operation == "ACHIEVE":
-                if step.targetExpression is None:
-                    raise SemanticError("ReachabilityError: ACHIEVE step must have a target.")
+                if step.operation == "RETURN":
+                    returned = True
                     
-            if step.operation == "MATCH":
-                # Validate exhaustiveness (AC-SEMAST-006-08)
-                has_default = any(getattr(s, 'operation', '') == 'DEFAULT' for s in (step.subSteps or []))
-                # Support both flag and legacy mock string
-                is_mock_missing = step.targetExpression and "missing_case" in str(getattr(step.targetExpression, 'value', ''))
-                if (not has_default and not getattr(step, 'isExhaustive', True)) or is_mock_missing:
-                    raise SemanticError("NonExhaustiveMatch: MATCH block is missing cases and has no DEFAULT.")
+                if step.operation == "ACHIEVE":
+                    if not step.targetExpression or not step.targetExpression.value:
+                        raise SemanticError("ReachabilityError: ACHIEVE step must have a target.", location=step.sourceMap)
+                        
+                if step.operation == "MATCH":
+                    # Validate exhaustiveness (AC-SEMAST-006-08)
+                    has_default = any(getattr(s, 'operation', '') == 'DEFAULT' for s in (step.subSteps or []))
+                    if (not has_default and not getattr(step, 'isExhaustive', True)):
+                        raise SemanticError("NonExhaustiveMatch: MATCH block is missing cases and has no DEFAULT.", location=step.sourceMap)
                     
-            if step.operation == "ENSURE":
-                # §20 recovery path check (AC-SEMAST-006-11)
-                if not step.otherwisePath:
-                    if self.reporter:
-                        from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
-                        self.reporter.report(StructuredSemanticError(
-                            code="MissingOtherwise",
-                            message="ENSURE block must have an OTHERWISE recovery path.",
-                            level=ErrorLevel.WARNING,
-                            location=step.sourceMap or SourceRange("", 0, 0, 0, 0)
-                        ))
-                    else:
-                        raise SemanticError("MissingOtherwise: ENSURE block must have an OTHERWISE recovery path.")
+                    # Analyze branches independently
+                    if step.subSteps:
+                        all_branches_return = True
+                        for case in step.subSteps:
+                            if case.subSteps:
+                                # Cases are like conditional blocks
+                                if not _check_steps(case.subSteps, is_conditional=True):
+                                    all_branches_return = False
+                            else:
+                                all_branches_return = False
+                        
+                        if all_branches_return:
+                            returned = True
+                        
+                if step.operation == "IF":
+                    # For IF/ELSE, we only mark as returned if EVERY branch returns.
+                    # Simple IF alone never marks outer flow as returned.
+                    if step.subSteps:
+                        _check_steps(step.subSteps, is_conditional=True)
+                        
+                    if hasattr(step, 'elsePath') and step.elsePath:
+                        if _check_steps(step.subSteps, is_conditional=True) and _check_steps(step.elsePath, is_conditional=True):
+                            returned = True
 
-            if step.operation == "LOOP":
-                # Static analysis for unhalting loops (AC-SEMAST-006-07)
-                is_mock_infinite = step.targetExpression and "infinite" in str(getattr(step.targetExpression, 'value', ''))
-                if getattr(step, 'isUnhalting', False) or is_mock_infinite:
-                    raise SemanticError("InfiniteLoop: Static analysis detected unhalting loop.")
+                if step.operation == "ENSURE":
+                    if not step.otherwisePath:
+                        if self.reporter:
+                            from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
+                            self.reporter.report(StructuredSemanticError(
+                                code="MissingOtherwise",
+                                message="ENSURE block must have an OTHERWISE recovery path.",
+                                level=ErrorLevel.WARNING,
+                                location=step.sourceMap or SourceRange("", 0, 0, 0, 0)
+                            ))
+                        else:
+                            raise SemanticError("MissingOtherwise: ENSURE block must have an OTHERWISE recovery path.", location=step.sourceMap)
 
-            if step.operation == "ACHIEVE":
-                # Legacy check for empty target string
-                is_empty = step.targetExpression and str(getattr(step.targetExpression, 'value', '')) == ""
-                if step.targetExpression is None or is_empty:
-                    raise SemanticError("ReachabilityError: ACHIEVE step must have a target.")
+                if step.operation == "LOOP":
+                    if getattr(step, 'isUnhalting', False):
+                        raise SemanticError("InfiniteLoop: Static analysis detected unhalting loop.", location=step.sourceMap)
+
+                # Recursively analyze sub-steps for other constructs if any
+                elif step.subSteps and step.operation not in ["MATCH", "IF"]:
+                    _check_steps(step.subSteps, is_conditional)
+            
+            return returned
+
+        _check_steps(flow_node.pipeline)
 
     def enforce_on_error_scope(self, flow_node: ResolvedFlowNode) -> bool:
         # AT-SEMAST-006-07

@@ -1,0 +1,17 @@
+CONTEXT: "User Domain Models"
+TARGET: "TypeScript"
+NAMESPACE: "com.example.common"
+
+DECISION "Password Hashing":
+    CHOSEN: "Argon2id"
+    RATIONALE: "Current security best practice for GPU resistance"
+    ALTERNATIVES: ["bcrypt", "scrypt"]
+    AFFECTS: [User]
+
+TYPE User:
+    id: UUID @auto_generate
+    email: String @format("email") @unique
+    password_hash: String @min_length(60)
+    role: Enum(USER, ADMIN) @default(USER)
+    status: Enum(ACTIVE, SUSPENDED, PENDING)
+    created_at: DateTime @auto_generate

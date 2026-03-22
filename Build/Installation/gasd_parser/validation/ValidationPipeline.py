@@ -27,19 +27,23 @@ class ValidationPipeline:
     def __init__(self):
         self.passes = []
 
-    def validate(self, ast: GASDFile) -> List[SemanticError]:
+    def validate(self, ast: GASDFile, skip_passes: Optional[List[str]] = None) -> List[SemanticError]:
         from .passes.DuplicateNamesPass import DuplicateNamesPass
         from .passes.RequiredSectionsPass import RequiredSectionsPass
         from .passes.ReferenceResolutionPass import ReferenceResolutionPass
         from .passes.LocationEnrichmentPass import LocationEnrichmentPass
         
-        self.passes = [
+        all_possible_passes = [
             DuplicateNamesPass(),
             RequiredSectionsPass(),
             ReferenceResolutionPass(),
             LocationEnrichmentPass()
         ]
+        
+        self.passes = [p for p in all_possible_passes if p.name not in (skip_passes or [])]
+        
         all_errors = []
         for vpass in self.passes:
             all_errors.extend(vpass.validate(ast))
         return all_errors
+

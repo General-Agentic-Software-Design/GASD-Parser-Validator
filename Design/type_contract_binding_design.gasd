@@ -10,7 +10,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Type Binding"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-003"
+TRACE: "US-SEMAST-003", "US-X-SEMAST-004", "US-X-SEMAST-007"
 
 // ===================================================================
 // Decisions
@@ -33,8 +33,10 @@ DECISION "Bound Property Visibility":
 // ===================================================================
 
 /// A resolved union of constraints and structure.
-TYPE TypeContract @trace #AC-SEMAST-003-01:
-    targetType: String // Name of the target TYPE
+TYPE TypeContract @trace #AC-SEMAST-003-01, #AC-X-SEMAST-004-01:
+    targetType: String // Name of the target TYPE (can be qualified)
+    targetNamespace: String @optional @trace #AC-X-SEMAST-004-02
+    genericArgs: List<TypeContract> @optional @trace #AC-X-SEMAST-004-03
     boundProperties: Map<String, BoundValue>
     missingFields: List<String>
     extraFields: List<String>
@@ -50,12 +52,12 @@ TYPE BoundValue:
 // =================================================)
 // ===================================================================
 
-COMPONENT BinderEngine @trace #AC-SEMAST-003-05:
+COMPONENT BinderEngine @trace #AC-SEMAST-003-05, #AC-X-SEMAST-007-01:
     INTERFACE:
         /// Bind a raw expression to a target TYPE.
-        bind(expr: ResolvedExpression, target: String) -> TypeContract @trace #AC-SEMAST-003-02
+        bind(expr: ResolvedExpression, target: String) -> TypeContract @trace #AC-SEMAST-003-02, #AC-X-SEMAST-007-01
         /// Verify field-level mapping.
-        verifyFields(source: Map<String, Any>, schema: ResolvedTypeNode) -> TypeContract @trace #AC-SEMAST-003-03
+        verifyFields(source: Map<String, Any>, schema: ResolvedTypeNode) -> TypeContract @trace #AC-SEMAST-003-03, #AC-X-SEMAST-007-02
         /// Propagate bound properties into symbol table.
         propagate(contract: TypeContract, scope: SymbolScope) -> Void @trace #AC-SEMAST-003-04
 
@@ -66,3 +68,6 @@ COMPONENT BinderEngine @trace #AC-SEMAST-003-05:
 CONSTRAINT: "Binding MUST fail if any non-optional field is missing from the source." @trace #AC-SEMAST-003-06
 CONSTRAINT: "Binding MUST detect type mismatches in nested structures." @trace #AC-SEMAST-003-07
 CONSTRAINT: "Recursive bindings MUST be handled via lazy resolution to prevent stack overflow." @trace #AC-SEMAST-003-08
+CONSTRAINT: "Unresolved type references across files MUST produce an UnknownTypeError." @trace #AC-X-SEMAST-004-04
+CONSTRAINT: "Recursive generic depth (up to 10 levels) MUST be supported." @trace #AC-X-SEMAST-004-05
+CONSTRAINT: "Missing TYPE definitions in VALIDATE steps MUST be reported as semantic errors." @trace #AC-X-SEMAST-007-03

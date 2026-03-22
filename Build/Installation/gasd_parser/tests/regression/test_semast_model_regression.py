@@ -4,14 +4,23 @@ from Impl.parser.ParseTreeAPI import ParseTreeAPI
 from Impl.ast.ASTGenerator import ASTGenerator
 from Impl.semantic.SemanticPipeline import SemanticPipeline
 
-def get_semantic_ast(content: str) -> SemanticSystem:
+def get_semantic_system(files: dict) -> SemanticSystem:
     api = ParseTreeAPI()
-    tree, reporter = api.parse(content)
-    assert not reporter.has_errors(), f"Parse errors: {reporter.to_console()}"
     generator = ASTGenerator()
-    ast = generator.visit(tree)
     pipeline = SemanticPipeline()
-    return pipeline.run(ast)
+    
+    asts = []
+    for path, content in files.items():
+        tree, reporter = api.parse(content)
+        assert not reporter.has_errors(), f"Parse errors in {path}: {reporter.to_console()}"
+        ast = generator.visit(tree)
+        ast.sourcePath = path
+        asts.append(ast)
+        
+    return pipeline.build(asts)
+
+def get_semantic_ast(content: str) -> SemanticSystem:
+    return get_semantic_system({"global.gasd": content})
 
 def test_semast_core_generation():
     content = 'CONTEXT: "Test"\nTARGET: "Py"\nTYPE T:\n  f: String\n'
@@ -102,3 +111,28 @@ def test_semast_model_regression_empty():
     # 16 built-in types are always registered
     assert len(ns.types) == 16
     assert len(ns.components) == 0
+
+# ===================================================================
+# Cross-File Regression Tests
+# ===================================================================
+
+def test_semast_model_regression_path_normalization():
+    # RT-X-SEMAST-001-01 (similar)
+    files = {
+        "./a.gasd": 'CONTEXT: "A"\nTARGET: "Py"\n',
+        "b.gasd": 'CONTEXT: "B"\nTARGET: "Py"\n'
+    }
+    sem = get_semantic_system(files)
+    # Normalized paths should be used as keys or in metadata
+    assert len(sem.metadata.files) == 2
+
+def test_semast_model_regression_deterministic_order():
+    # RT-X-SEMAST-001-02 (similar)
+    f1 = {"a.gasd": 'CONTEXT: "A"\n', "b.gasd": 'CONTEXT: "B"\n'}
+    f2 = {"b.gasd": 'CONTEXT: "B"\n', "a.gasd": 'CONTEXT: "A"\n'}
+    
+    sem1 = get_semantic_system(f1)
+    sem2 = get_semantic_system(f2)
+    
+    # Internal order of files in metadata should be sorted
+    assert [f.path for f in sem1.metadata.files] == [f.path for f in sem2.metadata.files]

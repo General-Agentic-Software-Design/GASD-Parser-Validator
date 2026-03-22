@@ -16,17 +16,21 @@ FLOW test_parse_tree_root():
     @trace #AT-PARSER-002-01
     1. ACHIEVE "Parse any valid GASD file"
     2. ENSURE "The root node is of type GasdFileContext"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_parse_tree_hierarchy():
     @trace #AT-PARSER-002-02
     1. ACHIEVE "Parse file with COMPONENT and FLOW"
     2. ENSURE "Component nodes exist as children of the file root"
+        OTHERWISE THROW "Validation Failed"
     3. ENSURE "Flow nodes exist as children of the file root"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_parse_tree_constraints():
     @trace #AT-PARSER-002-03
     1. ACHIEVE "Parse file with CONSTRAINT attached to a TYPE"
     2. ENSURE "Constraint node is a child of the respective TypeDef node"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Order Preservation Tests
@@ -35,6 +39,7 @@ FLOW test_parse_tree_order():
     @trace #AC-PARSER-002-03
     1. ACHIEVE "Parse file with specific declaration order: A, B, C"
     2. ENSURE "Parse tree children appear in order: A, B, C"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // API Tests
@@ -43,8 +48,10 @@ FLOW test_parse_tree_api():
     @trace #AC-PARSER-002-04
     1. ACHIEVE "Invoke ParseTreeAPI.parseFile()"
     2. ENSURE "Returns valid ParserRuleContext"
+        OTHERWISE THROW "Validation Failed"
     3. ACHIEVE "Invoke ParseTreeAPI.isValid() on correct input"
     4. ENSURE "Returns true"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Constraints

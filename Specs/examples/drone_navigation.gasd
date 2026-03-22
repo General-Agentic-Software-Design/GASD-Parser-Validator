@@ -1,5 +1,6 @@
 CONTEXT: "Embedded Flight Control"
 TARGET: "C++ 20"
+NAMESPACE: "example.drone_navigation"
 TRACE: "SRS-501 (Safety Critical)", "SRS-505 (Human Override)"
 
 /*
@@ -12,20 +13,22 @@ TRACE: "SRS-501 (Safety Critical)", "SRS-505 (Human Override)"
    4. Danger Case: If high-confidence hazard, aborts landing automatically.
 */
 
-// --- Decisions ---
-DECISION "Computer Vision Model":
-    CHOSEN: "YOLOv8-Tiny"
-    RATIONALE: "Low latency inference required on edge hardware"
-    ALTERNATIVES: ["YOLOv8-Medium", "MobileNetV3"]
-    AFFECTS: [VisionSystem]
 
-TYPE VisionSystem:
-    id: UUID
-    model: String
+COMPONENT VisionSystem:
+    INTERFACE:
+        detect_hazards() -> List<Hazard>
 
-TYPE MotorMixer: id: UUID
-TYPE BatteryManager: id: UUID
-TYPE CommLink: id: UUID
+COMPONENT MotorMixer:
+    INTERFACE:
+        mix(thrust: Float, pitch: Float, roll: Float, yaw: Float) -> Void
+
+COMPONENT BatteryManager:
+    INTERFACE:
+        get_level() -> Float
+
+COMPONENT CommLink:
+    INTERFACE:
+        send_telemetry(data: Any) -> Void
 
 // --- Types ---
 TYPE Waypoint:
@@ -79,3 +82,10 @@ FLOW autonomous_landing(current_loc: Waypoint):
 // --- Global Constraints ---
 CONSTRAINT: "Motor cutoff must trigger within 50ms of tilt > 90 degrees"
 INVARIANT: "Battery level must never drop below 10% in flight"
+
+// --- Decisions ---
+DECISION "Computer Vision Model":
+    CHOSEN: "YOLOv8-Tiny"
+    RATIONALE: "Low latency inference required on edge hardware"
+    ALTERNATIVES: ["YOLOv8-Medium", "MobileNetV3"]
+    AFFECTS: [VisionSystem]

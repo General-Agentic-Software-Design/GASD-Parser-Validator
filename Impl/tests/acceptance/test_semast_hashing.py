@@ -91,3 +91,33 @@ def test_semast_hash_regression_order_independence():
     
     # "Hash remains identical since structural semantics are unchanged"
     assert hasher.compute_hash(sys1) == hasher.compute_hash(sys2)
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_symbol_sorting():
+    # AT-X-SEMAST-011-01, AC-X-SEMAST-011-01
+    hasher = SemanticHasher()
+    
+    # File A with symbols in one order
+    ns_a1 = NamespaceNode(SourceRange("a.gasd", 0,0,0,0), "A", {}, {"B": None, "A": None}, {}, {}, {})
+    # File A with symbols in another order
+    ns_a2 = NamespaceNode(SourceRange("a.gasd", 0,0,0,0), "A", {}, {"A": None, "B": None}, {}, {}, {})
+    
+    # ENSURE "The global semantic hash remains identical due to deterministic sorting"
+    assert hasher.compute_hash(ns_a1) == hasher.compute_hash(ns_a2)
+
+def test_semast_global_graph_hashing():
+    # AT-X-SEMAST-011-02, AC-X-SEMAST-011-03
+    hasher = SemanticHasher()
+    
+    # CompilationUnit represented by SemanticSystem with multiple namespaces
+    ns_a = NamespaceNode(SourceRange("a.gasd", 0,0,0,0), "A", {}, {}, {}, {}, {})
+    ns_b = NamespaceNode(SourceRange("b.gasd", 0,0,0,0), "B", {}, {}, {}, {}, {})
+    
+    sys1 = SemanticSystem({"A": ns_a, "B": ns_b}, [], SystemMetadata("Ctx", [], []))
+    sys2 = SemanticSystem({"B": ns_b, "A": ns_a}, [], SystemMetadata("Ctx", [], []))
+    
+    # ENSURE "Includes all interconnected files and dependency links in a stable order"
+    assert hasher.compute_hash(sys1) == hasher.compute_hash(sys2)

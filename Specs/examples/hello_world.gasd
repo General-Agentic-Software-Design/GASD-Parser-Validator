@@ -1,5 +1,6 @@
 CONTEXT: "General Software"
 TARGET: "Any"
+NAMESPACE: "example.hello_world"
 TRACE: "SRS-000 (Hello World)"
 
 /* 
@@ -16,5 +17,5 @@ COMPONENT Greeter:
     INTERFACE:
         say_hello() -> String
 
-FLOW say_hello():
+FLOW say_hello() -> String:
     1. RETURN "Hello, World!"

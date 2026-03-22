@@ -122,7 +122,7 @@ def test_semast_cli_combine():
     tmp2.close()
     try:
         result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--json"],
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast", "--ast-combine", "--json"],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
             cwd=PROJECT_ROOT
@@ -156,3 +156,49 @@ def test_semast_cli_regression_missing_file():
     )
     assert result.returncode == 1
     assert "Error: Path not found" in result.stderr
+
+# ===================================================================
+# Cross-File Regression Tests
+# ===================================================================
+
+def test_semast_cli_regression_multi_file():
+    # RT-X-SEMAST-011-01
+    with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as f1:
+        f1.write('CONTEXT: "A"\nTARGET: "P"\nTYPE T1: f: String\n')
+        fp1 = f1.name
+    with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as f2:
+        f2.write('CONTEXT: "A"\nTARGET: "P"\nTYPE T2: g: Integer\n')
+        fp2 = f2.name
+        
+    try:
+        result = subprocess.run(
+            ["python3", "-m", "Impl.cli", fp1, fp2, "--ast-sem", "--json"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+            cwd=PROJECT_ROOT
+        )
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        # Should have a single SemanticSystem if --ast-combine (default or implied)
+        assert data["asts"][0]["kind"] == "SemanticSystem"
+    finally:
+        os.unlink(fp1)
+        os.unlink(fp2)
+
+def test_semast_cli_regression_deterministic_errors():
+    # RT-X-SEMAST-011-02
+    with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as f1:
+        f1.write('CONTEXT: "A"\nTARGET: "P"\nINVALID')
+        fp1 = f1.name
+    with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as f2:
+        f2.write('CONTEXT: "A"\nTARGET: "P"\nINVALID')
+        fp2 = f2.name
+        
+    try:
+        r1 = subprocess.run(["python3", "-m", "Impl.cli", fp1, fp2], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": PROJECT_ROOT}, cwd=PROJECT_ROOT)
+        r2 = subprocess.run(["python3", "-m", "Impl.cli", fp2, fp1], capture_output=True, text=True, env={**os.environ, "PYTHONPATH": PROJECT_ROOT}, cwd=PROJECT_ROOT)
+        # Errors should be in the same order regardless of input order (if sorted by file path)
+        assert r1.stderr == r2.stderr
+    finally:
+        os.unlink(fp1)
+        os.unlink(fp2)

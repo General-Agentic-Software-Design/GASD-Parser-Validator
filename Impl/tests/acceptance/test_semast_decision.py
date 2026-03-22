@@ -86,7 +86,8 @@ def test_semast_decision_rationale_requirement():
         resolver.resolve(decision)
 
 
-    from Impl.semantic.SymbolTable import SymbolTable, SymbolEntry, SymbolKind, SymbolScope
+def test_semast_decision_collision_manual():
+    from Impl.semantic.SymbolTable import SymbolTable, SymbolEntry, SymbolKind
     from Impl.semantic.SemanticNodes import SemanticNodeBase
     table = SymbolTable()
     
@@ -101,3 +102,39 @@ def test_semast_decision_rationale_requirement():
     entry2 = SymbolEntry("D1", SymbolKind.Variable, table.current_scope, dummy_node)
     with pytest.raises(SemanticError, match="Collision error"):
         table.define(entry2)
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_decision_impact():
+    # AT-X-SEMAST-008-01, AC-X-SEMAST-008-01
+    resolver = DecisionResolver()
+    
+    # Decision in File1 affects Type in File2
+    decision = ResolvedDecisionNode(
+        source_map=SourceRange("file1.gasd", 5, 0, 5, 10),
+        name="SecurityChoice",
+        chosen="OAuth2",
+        alternatives=["OAuth2", "SAML"],
+        affected_components=[SymbolLink("RemoteNS.LocalUser")]
+    )
+    
+    resolver.resolve(decision)
+    matrix = resolver.generate_impact_matrix()
+    
+    # ENSURE "A decision in file1.gasd correctly affects a TYPE defined in RemoteNS"
+    assert "RemoteNS.LocalUser" in matrix
+
+def test_semast_cross_file_decision_conflict():
+    # AT-X-SEMAST-008-03, AC-X-SEMAST-008-04
+    resolver = DecisionResolver()
+    
+    # Two decisions affecting the same remote symbol
+    d1 = ResolvedDecisionNode(SourceRange("f1.gasd", 1, 0, 1, 1), "Dec1", chosen="V1", alternatives=["V1"], affected_components=[SymbolLink("Global.Comp")])
+    d2 = ResolvedDecisionNode(SourceRange("f2.gasd", 1, 0, 1, 1), "Dec2", chosen="V2", alternatives=["V2"], affected_components=[SymbolLink("Global.Comp")])
+    
+    resolver.resolve(d1)
+    # ENSURE "Conflicting decisions affecting the same symbol across files are detected"
+    with pytest.raises(SemanticError, match="DecisionConflict"):
+        resolver.resolve(d2)

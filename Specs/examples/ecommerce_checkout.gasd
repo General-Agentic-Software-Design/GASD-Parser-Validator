@@ -1,5 +1,6 @@
 CONTEXT: "E-commerce Checkout Microservice"
 TARGET: "TypeScript / Node.js"
+NAMESPACE: "example.ecommerce_checkout"
 TRACE: "SRS-001 (Checkout Flow)", "SRS-005 (Payment Security)"
 
 /*
@@ -12,37 +13,39 @@ TRACE: "SRS-001 (Checkout Flow)", "SRS-005 (Payment Security)"
    5. Persistence: PERSIST Order saves the object to the database using the injected OrderRepository.
 */
 
-// 1. Design Decisions
-DECISION "ID Generation" @status("APPROVED"):
-    CHOSEN: "UUID v4"
-    ALTERNATIVES: ["Snowflake ID", "Atomic Counter"]
-    AFFECTS: [Order.id]
-
-DECISION "Payment Integration":
-    CHOSEN: "Stripe API"
-    ALTERNATIVES: ["PayPal SDK", "Adyen API"]
-    AFFECTS: [CheckoutService.process]
 
 // 2. Type Contracts
 /// Core request payload for checkout processing.
 TYPE OrderRequest:
     customer_id: UUID
-    items: List<OrderItem> @min_length(1)
+    items: List<OrderProduct> @min_length(1)
     coupon_code: String @optional
 
 /// Represents a single line item in the order.
-TYPE OrderItem:
+TYPE OrderProduct:
     product_id: UUID
     quantity: Integer @range(1, 99)
+
+COMPONENT OrderRepository:
+    INTERFACE:
+        save(order: OrderItem) -> Void
+
+COMPONENT PaymentGateway:
+    INTERFACE:
+        execute_checkout_payment(amount: Decimal) -> Result<String>
+
+COMPONENT InventoryClient:
+    INTERFACE:
+        check_stock(product_id: UUID, quantity: Integer) -> Boolean
 
 // 3. Component Interface
 COMPONENT CheckoutService:
     DEPENDENCIES: [OrderRepository, PaymentGateway, InventoryClient]
     INTERFACE:
-        process(request: OrderRequest) -> Result<Order>
+        process_checkout(request: OrderRequest) -> Result<OrderProduct>
 
 // 4. Design Flow (Deterministic Constraints)
-FLOW process(request: OrderRequest):
+FLOW process_checkout(request: OrderRequest) -> Result<OrderProduct>:
     @error_strategy("Fail-Fast")
 
     1. VALIDATE request AS TYPE.OrderRequest
@@ -56,12 +59,23 @@ FLOW process(request: OrderRequest):
     // External call to Stripe. Failures here are safe to just throw.
     3. ACHIEVE "Process Stripe Payment" @external
         ON_ERROR: THROW PaymentFailedException
-    4. CREATE Order:
+    4. CREATE OrderItem:
         id: TRANSFORM(@generate("UUID"))
         status: "PAID"
-    5. PERSIST Order via OrderRepository
-    6. RETURN Result.success(Order)
+    5. PERSIST OrderItem via OrderRepository
+    6. RETURN Result.success(OrderItem)
 
-TYPE Order:
+TYPE OrderItem:
     id: UUID
     status: String
+
+// 5. Design Decisions
+DECISION "ID Generation" @status("APPROVED"):
+    CHOSEN: "UUID v4"
+    ALTERNATIVES: ["Snowflake ID", "Atomic Counter"]
+    AFFECTS: [OrderItem]
+
+DECISION "Payment Integration":
+    CHOSEN: "Stripe API"
+    ALTERNATIVES: ["PayPal SDK", "Adyen API"]
+    AFFECTS: [CheckoutService]

@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import Dict, List, Optional
-from .SemanticNodes import SemanticNodeBase, ResolvedTypeNode, SourceRange
+from typing import Dict, List, Optional, Any, Set
+from .SemanticNodes import SemanticNodeBase, ResolvedTypeNode, SourceRange, CompilationUnit, ProjectFileNode
 
 class SymbolKind(str, Enum):
     Type = "Type"
@@ -12,6 +12,7 @@ class SymbolKind(str, Enum):
     Resource = "Resource"
     Strategy = "Strategy"
     Decision = "Decision"
+    Method = "Method"
 
 
 class SymbolEntry:
@@ -35,7 +36,9 @@ class SymbolScope:
 
 
 class SemanticError(Exception):
-    pass
+    def __init__(self, message: str, location: Optional[SourceRange] = None):
+        super().__init__(message)
+        self.location = location
 
 
 class CollisionDetector:
@@ -76,9 +79,9 @@ class BuiltinTypeRegistry:
         for b in builtins:
             # Register as ResolvedTypeNodes with no fields (template markers)
             node = ResolvedTypeNode(dummy_range, b, {}, False)
-            symbol_table.global_scope.symbols[b] = SymbolEntry(
-                b, SymbolKind.Type, symbol_table.global_scope, node
-            )
+            entry = SymbolEntry(b, SymbolKind.Type, symbol_table.global_scope, node)
+            entry._builtin = True
+            symbol_table.global_scope.symbols[b] = entry
 
     @staticmethod
     def validateGenerics(type_name: str, arg_count: int) -> Optional[str]:
@@ -102,11 +105,18 @@ class SymbolTable:
         BuiltinTypeRegistry.initializeBuiltins(self)
 
     def enter_scope(self, name: Optional[str] = None) -> SymbolScope:
+        if name:
+            for child in self.current_scope.children:
+                if child.id == name:
+                    self.current_scope = child
+                    return child
+                    
         self._scope_counter += 1
         scope_name = name or f"scope_{self._scope_counter}"
         new_scope = SymbolScope(scope_name, parent=self.current_scope)
         self.current_scope = new_scope
         return new_scope
+
 
     def exit_scope(self) -> SymbolScope:
         parent = self.current_scope.parent
@@ -116,29 +126,59 @@ class SymbolTable:
         return self.current_scope
 
     def define(self, symbol: SymbolEntry) -> None:
-        if symbol.name in self.current_scope.symbols:
-            raise SemanticError(f"Collision error: Symbol '{symbol.name}' is already defined in the current scope.")
+        target_scope = symbol.scope or self.current_scope
+        loc = symbol.nodeLink.sourceMap if symbol.nodeLink else None
+        
+        if symbol.name in target_scope.symbols:
+            raise SemanticError(f"DuplicateSymbol: Collision error: Symbol '{symbol.name}' is already defined in scope '{target_scope.id}'.", location=loc)
             
         # Shadowing Policy: Prohibit Local-to-Global Shadowing
-        # GASD prohibits shadowing common system-level types or components.
+        # GASD prohibits shadowing built-in types and parent-scope symbols.
+        # AC-X-SEMAST-003-05
         lookup = self.resolve(symbol.name)
-        if lookup and lookup.scope != self.current_scope:
-            raise SemanticError(f"Shadowing error: Symbol '{symbol.name}' shadows an existing definition in an outer scope.")
+        if lookup and lookup.scope != target_scope:
+            raise SemanticError(f"Shadowing error: Symbol '{symbol.name}' shadows a definition in scope '{lookup.scope.id}'", location=loc)
             
-        self.current_scope.symbols[symbol.name] = symbol
+        target_scope.symbols[symbol.name] = symbol
 
     def resolve(self, name: str, resolution_path: Optional[List[str]] = None) -> Optional[SymbolEntry]:
         path = resolution_path or []
-        if name in path:
+        path_tuple = tuple(path)
+        if path_tuple and path_tuple[0] == path_tuple[-1]:
             raise SemanticError(f"CircularReference: Circular dependency detected in resolution path: {' -> '.join(path + [name])}")
         
         scope = self.current_scope
         while scope is not None:
             if name in scope.symbols:
-                symbol = scope.symbols[name]
-                # If we are resolving a type that might contain other types, we could add to path here if needed.
-                return symbol
+                return scope.symbols[name]
             scope = scope.parent
+            
+        # Cross-file dotted resolution: "Namespace.Symbol"
+        if "." in name:
+            parts = name.split(".")
+            # Try to resolve the first part as a namespace or alias
+            prefix = parts[0]
+            ns_symbol = self.resolve(prefix)
+            if ns_symbol and (ns_symbol.kind == SymbolKind.Namespace or ns_symbol.kind == SymbolKind.Component):
+                remainder = ".".join(parts[1:])
+                # If we have a link to the actual node, we can look deeper
+                node = ns_symbol.nodeLink
+                
+                # AC-SEMAST-009: Aliased Dotted Resolution
+                # 1. Try to resolve via FQN (if it's a namespace with an FQN)
+                target_fqn = None
+                if hasattr(node, "fqn"):
+                    target_fqn = f"{node.fqn}.{remainder}"
+                elif hasattr(node, "name") and ns_symbol.kind == SymbolKind.Component:
+                    # Components can also have nested symbols (e.g. Methods, which are registered as Comp.Method)
+                    target_fqn = f"{node.name}.{remainder}"
+                
+                if target_fqn and target_fqn in self.global_scope.symbols:
+                    return self.global_scope.symbols[target_fqn]
+                
+                # 2. Fallback: check if the literal remains exist in global (absolute resolution)
+                return self.global_scope.symbols.get(name)
+
         return None
 
     def check_recursion(self, symbol: SymbolEntry, resolution_path: List[SymbolEntry]) -> bool:

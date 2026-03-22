@@ -223,17 +223,19 @@ class ResolvedTypeNode(SemanticNodeBase):
         return d
 
 
-class ResolvedMethodNode:
-    def __init__(self, name: str, inputs: List[ResolvedParameter], output: Optional[TypeContract]):
+class ResolvedMethodNode(SemanticNodeBase):
+    def __init__(self, source_map: SourceRange, name: str, inputs: List[ResolvedParameter], output: Optional[TypeContract]):
+        super().__init__("ResolvedMethod", source_map)
         self.name = name
         self.inputs = inputs
         self.output = output
 
     def to_dict(self):
-        d = {
+        d = super().to_dict()
+        d.update({
             "name": self.name,
             "inputs": [i.to_dict() for i in self.inputs]
-        }
+        })
         if self.output:
             d["output"] = self.output.to_dict()
         return d
@@ -268,13 +270,16 @@ class ResolvedResourceNode(SemanticNodeBase):
 
 class ResolvedComponentNode(SemanticNodeBase):
     def __init__(self, source_map: SourceRange, name: str, pattern: str, dependencies: List[SymbolLink],
-                 resources: List[ResolvedResourceNode], methods: Dict[str, ResolvedMethodNode]):
+                 resources: List[ResolvedResourceNode], methods: Dict[str, ResolvedMethodNode],
+                 provides: Optional[List[str]] = None, requires: Optional[List[str]] = None):
         super().__init__("ResolvedComponent", source_map)
         self.name = name
         self.pattern = pattern
         self.dependencies = dependencies
         self.resources = resources
         self.methods = methods
+        self.provides = provides or []
+        self.requires = requires or []
 
     def to_dict(self):
         d = super().to_dict()
@@ -283,7 +288,9 @@ class ResolvedComponentNode(SemanticNodeBase):
             "pattern": self.pattern,
             "dependencies": [dep.to_dict() for dep in self.dependencies],
             "resources": [r.to_dict() for r in self.resources],
-            "methods": {k: v.to_dict() for k, v in self.methods.items()}
+            "methods": {k: v.to_dict() for k, v in self.methods.items()},
+            "provides": self.provides,
+            "requires": self.requires
         })
         return d
 
@@ -341,11 +348,12 @@ class ResolvedDecisionNode(SemanticNodeBase):
         return d
 
 
-class ResolvedNamespace:
-    def __init__(self, fqn: str, alias: Optional[str] = None):
+class ResolvedNamespace(SemanticNodeBase):
+    def __init__(self, fqn: str, alias: Optional[str] = None, source_map: Optional[SourceRange] = None):
+        super().__init__("ResolvedNamespace", source_map or SourceRange("builtin", 0, 0, 0, 0))
         self.fqn = fqn
         self.alias = alias
-        self.exportedSymbols: Dict[str, Any] = {} # SymbolEntry
+        self.exportedSymbols: Dict[str, Any] = {}  # SymbolEntry
         self.subNamespaces: Dict[str, SymbolLink] = {}
 
     def to_dict(self):
@@ -371,11 +379,11 @@ class NamespaceNode(SemanticNodeBase):
         d = super().to_dict()
         d.update({
             "name": self.name,
-            "types": {k: v.to_dict() for k, v in self.types.items()},
-            "components": {k: v.to_dict() for k, v in self.components.items()},
-            "flows": {k: v.to_dict() for k, v in self.flows.items()},
-            "strategies": {k: v.to_dict() for k, v in self.strategies.items()},
-            "decisions": {k: v.to_dict() for k, v in self.decisions.items()}
+            "types": {k: (v.to_dict() if v is not None else None) for k, v in self.types.items()},
+            "components": {k: (v.to_dict() if v is not None else None) for k, v in self.components.items()},
+            "flows": {k: (v.to_dict() if v is not None else None) for k, v in self.flows.items()},
+            "strategies": {k: (v.to_dict() if v is not None else None) for k, v in self.strategies.items()},
+            "decisions": {k: (v.to_dict() if v is not None else None) for k, v in self.decisions.items()}
         })
         return d
 
@@ -392,33 +400,85 @@ class ResolvedConstraintNode(SemanticNodeBase):
 
 
 class SystemMetadata:
-    def __init__(self, context: str, target: List[str], trace: List[str]):
+    def __init__(self, context: str, target: List[str], trace: List[str], files: Optional[List[Any]] = None):
         self.context = context
         self.target = target
         self.trace = trace
+        self.files = files or []
 
     def to_dict(self):
-        return {
+        d = {
             "context": self.context,
             "target": self.target,
             "trace": self.trace
         }
+        if self.files:
+            sorted_files = sorted(self.files, key=lambda f: getattr(f, 'filePath', '') if hasattr(f, 'filePath') else str(f))
+            file_dicts = []
+            for f in sorted_files:
+                if hasattr(f, 'to_dict'):
+                    fd = f.to_dict()
+                    # Remove non-deterministic fields for consistent hashing
+                    fd.pop("id", None)
+                    fd.pop("hash", None)
+                    fd.pop("sourceMap", None)
+                    file_dicts.append(fd)
+                else:
+                    file_dicts.append(str(f))
+            d["files"] = file_dicts
+        return d
+
+
+class ProjectFileNode(SemanticNodeBase):
+    def __init__(self, file_path: str, namespace: str, imports: List[Dict[str, str]], syntactic_root: Any):
+        super().__init__("ProjectFileNode", SourceRange(file_path, 0, 0, 0, 0))
+        self.filePath = file_path
+        self.path = file_path  # Alias for compatibility
+        self.namespace = namespace
+        self.imports = imports # List of {"path": str, "alias": str}
+        self.syntacticRoot = syntactic_root
+
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "filePath": self.filePath,
+            "namespace": self.namespace,
+            "imports": self.imports
+        })
+        return d
+
+
+class CompilationUnit(SemanticNodeBase):
+    def __init__(self, file_nodes: Dict[str, ProjectFileNode], deterministic_order: List[str]):
+        super().__init__("CompilationUnit", SourceRange("", 0, 0, 0, 0))
+        self.files = file_nodes
+        self.deterministicOrder = deterministic_order
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "fileNodes": {k: v.to_dict() for k, v in self.files.items()},
+            "deterministicOrder": self.deterministicOrder
+        })
+        return d
 
 
 class SemanticSystem(SemanticNodeBase):
-    def __init__(self, namespaces: Dict[str, NamespaceNode], global_constraints: List[ResolvedConstraintNode], metadata: SystemMetadata):
-        # We use a dummy source map for the overall system for now.
+    def __init__(self, namespaces: Dict[str, NamespaceNode], global_constraints: List[ResolvedConstraintNode], metadata: SystemMetadata, comp_unit: Optional[CompilationUnit] = None):
         super().__init__("SemanticSystem", SourceRange("", 0, 0, 0, 0))
         self.namespaces = namespaces
         self.global_constraints = global_constraints
         self.metadata = metadata
+        self.compilationUnit = comp_unit
 
     def to_dict(self):
         d = super().to_dict()
         d.update({
             "namespaces": {k: v.to_dict() for k, v in self.namespaces.items()},
             "globalConstraints": [c.to_dict() for c in self.global_constraints],
-            "metadata": self.metadata.to_dict()
+            "metadata": self.metadata.to_dict(),
+            "compilationUnit": self.compilationUnit.to_dict() if self.compilationUnit else None
         })
         return d
 

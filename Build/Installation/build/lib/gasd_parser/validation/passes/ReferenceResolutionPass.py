@@ -34,7 +34,8 @@ class ReferenceResolutionPass(ValidationPass):
                 return
                 
             # Built-in Generic Argument Validation @trace #AC-SEMAST-019-03
-            if expr.baseType in primitive_types:
+            # GASD: Primitives can be shadowed by local types (e.g. TYPE Result in examples)
+            if expr.baseType in primitive_types and expr.baseType not in declared_types:
                 arg_count = len(expr.genericArgs or [])
                 err_msg = BuiltinTypeRegistry.validateGenerics(expr.baseType, arg_count)
                 if err_msg:
@@ -46,7 +47,7 @@ class ReferenceResolutionPass(ValidationPass):
                         context=context_name
                     ))
 
-            if expr.baseType and expr.baseType not in primitive_types and expr.baseType not in declared_types:
+            if expr.baseType and expr.baseType not in primitive_types and expr.baseType not in declared_types and "." not in expr.baseType:
                 errors.append(SemanticError(
                     code='V008',
                     severity='WARNING',
@@ -80,7 +81,7 @@ class ReferenceResolutionPass(ValidationPass):
         for dec in ast.decisions:
             if dec.affects:
                 for affect in dec.affects:
-                    if affect not in declared_constructs:
+                    if affect != "*" and affect not in declared_constructs:
                         errors.append(SemanticError(
                             code='V010',
                             severity='WARNING',

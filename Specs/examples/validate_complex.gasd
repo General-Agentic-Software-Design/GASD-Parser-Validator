@@ -1,5 +1,6 @@
 CONTEXT: "Order Processing Platform"
 TARGET: "Java 17"
+NAMESPACE: "example.validate_complex"
 TRACE: "SRS-305 (Order Validation and Fulfillment)"
 
 /*
@@ -57,7 +58,7 @@ DECISION "Inventory Strategy":
     CHOSEN: "Optimistic Reservation"
     RATIONALE: "Reduces lock contention for high-throughput order processing"
     ALTERNATIVES: ["Pessimistic Locking", "No Reservation"]
-    AFFECTS: [InventoryService, OrderProcessingService]
+    AFFECTS: [InventoryService, OrderService]
 
 COMPONENT InventoryService:
     INTERFACE:
@@ -72,7 +73,7 @@ COMPONENT OrderRepository:
 
 // --- Components ---
 
-COMPONENT OrderProcessingService:
+COMPONENT OrderService:
     PATTERN: "Service"
     DEPENDENCIES: [CustomerRepository, InventoryService, PaymentService]
     INTERFACE:
@@ -82,7 +83,7 @@ COMPONENT OrderProcessingService:
 COMPONENT PaymentService @external:
     PATTERN: "Adapter"
     INTERFACE:
-        process_payment(payment: PaymentInfo) -> Result<String>
+        execute_complex_payment(payment: PaymentInfo) -> Result<String>
 
 // --- Pattern 1: Multi-TYPE validation in a single FLOW ---
 
