@@ -98,10 +98,11 @@ class BuiltinTypeRegistry:
 
 
 class SymbolTable:
-    def __init__(self):
+    def __init__(self, validate_built_in_types: bool = True):
         self.global_scope = SymbolScope("global")
         self.current_scope = self.global_scope
         self._scope_counter = 0
+        self.validate_built_in_types = validate_built_in_types
         BuiltinTypeRegistry.initializeBuiltins(self)
 
     def enter_scope(self, name: Optional[str] = None) -> SymbolScope:
@@ -129,15 +130,20 @@ class SymbolTable:
         target_scope = symbol.scope or self.current_scope
         loc = symbol.nodeLink.sourceMap if symbol.nodeLink else None
         
-        if symbol.name in target_scope.symbols:
-            raise SemanticError(f"DuplicateSymbol: Collision error: Symbol '{symbol.name}' is already defined in scope '{target_scope.id}'.", location=loc)
+        existing = target_scope.symbols.get(symbol.name)
+        if existing:
+            if getattr(existing, '_builtin', False) and not getattr(self, 'validate_built_in_types', True):
+                pass
+            else:
+                raise SemanticError(f"DuplicateSymbol: Collision error: Symbol '{symbol.name}' is already defined in scope '{target_scope.id}'.", location=loc)
             
         # Shadowing Policy: Prohibit Local-to-Global Shadowing
-        # GASD prohibits shadowing built-in types and parent-scope symbols.
-        # AC-X-SEMAST-003-05
         lookup = self.resolve(symbol.name)
         if lookup and lookup.scope != target_scope:
-            raise SemanticError(f"Shadowing error: Symbol '{symbol.name}' shadows a definition in scope '{lookup.scope.id}'", location=loc)
+            if getattr(lookup, '_builtin', False) and not getattr(self, 'validate_built_in_types', True):
+                pass
+            else:
+                raise SemanticError(f"Shadowing error: Symbol '{symbol.name}' shadows a definition in scope '{lookup.scope.id}'", location=loc)
             
         target_scope.symbols[symbol.name] = symbol
 

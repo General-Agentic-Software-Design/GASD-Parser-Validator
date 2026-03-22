@@ -338,7 +338,8 @@ FLOW run_semantic_ast_full_quality_gate():
     4. ENSURE "Design/builtin_types_design.gasd is valid and fully implemented" @trace #AC-SEMAST-019-01
     5. ENSURE "gasd-parser file.gasd output is unchanged (no --ast-sem)" @trace #AC-SEMAST-017-08
     6. ENSURE "gasd-parser file.gasd --ast output is byte-identical to pre-semantic-AST version" @trace #AT-SEMAST-017-03
-    7. ENSURE "Fixing implementation till All tests pass"
+    7. ENSURE "gasd-parser with --no-validate allows shadowing built-in types" @trace #US-CLI-021
+    8. ENSURE "Fixing implementation till All tests pass"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================
@@ -361,22 +362,23 @@ FLOW phase10_final_packaging():
     // --- Installation Validation ---
     8. ENSURE "pip install -e Build/Installation succeeds"
     9. ENSURE "gasd-parser --help shows all options (--ast, --ast-sem, --ast-output, --ast-combine)" @trace #AC-SEMAST-016-09
+    10. ENSURE "PYTHONPATH=Build/Installation python3 -m gasd_parser --version output does not contain 'DEVELOPMENT'"
     
     // --- Syntactic Functionality Validation ---
-    10. ENSURE "gasd-parser Specs/valid_sample.gasd exits 0"
-    11. ENSURE "gasd-parser Specs/invalid_duplicates.gasd exits non-zero"
-    12. ENSURE "gasd-parser parses multiple files and directories recursively" @trace #AC-PARSER-006-01, #AC-PARSER-006-02
-    13. ENSURE "gasd-parser --ast generates syntactic JSON output" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
-    14. ENSURE "gasd-parser --ast-combine merges multiple syntactic ASTs" @trace #AC-PARSER-007-06
+    11. ENSURE "gasd-parser Specs/valid_sample.gasd exits 0"
+    12. ENSURE "gasd-parser Specs/invalid_duplicates.gasd exits non-zero"
+    13. ENSURE "gasd-parser parses multiple files and directories recursively" @trace #AC-PARSER-006-01, #AC-PARSER-006-02
+    14. ENSURE "gasd-parser --ast generates syntactic JSON output" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
+    15. ENSURE "gasd-parser --ast-combine merges multiple syntactic ASTs" @trace #AC-PARSER-007-06
     
     // --- Semantic Functionality Validation ---
-    15. ENSURE "gasd-parser file.gasd --ast-sem outputs Semantic AST JSON" @trace #AT-SEMAST-016-01
-    16. ENSURE "gasd-parser file.gasd --ast-sem --ast-output out.json writes to file" @trace #AT-SEMAST-018-01
-    17. ENSURE "gasd-parser dir/ --ast-sem --ast-combine merges semantic ASTs" @trace #AT-SEMAST-018-03
+    16. ENSURE "gasd-parser file.gasd --ast-sem outputs Semantic AST JSON" @trace #AT-SEMAST-016-01
+    17. ENSURE "gasd-parser file.gasd --ast-sem --ast-output out.json writes to file" @trace #AT-SEMAST-018-01
+    18. ENSURE "gasd-parser dir/ --ast-sem --ast-combine merges semantic ASTs" @trace #AT-SEMAST-018-03
     
     // --- Backward Compatibility & Regression Gate ---
-    18. ENSURE "gasd-parser file.gasd --ast still outputs syntactic AST (unchanged)" @trace #AC-SEMAST-016-04
-    19. ENSURE "All existing and new packaging tests remain valid" @trace #US-SEMAST-017
+    19. ENSURE "gasd-parser file.gasd --ast still outputs syntactic AST (unchanged)" @trace #AC-SEMAST-016-04
+    20. ENSURE "All existing and new packaging tests remain valid" @trace #US-SEMAST-017
 
 
 

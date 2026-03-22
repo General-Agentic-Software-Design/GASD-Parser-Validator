@@ -27,9 +27,10 @@ from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticErro
 from .NamespaceResolver import DependencyError
 
 class SemanticPipeline:
-    def __init__(self):
+    def __init__(self, validate_built_in_types: bool = True):
+        self.validate_built_in_types = validate_built_in_types
         self.reporter = None
-        self.symbol_table = SymbolTable()
+        self.symbol_table = SymbolTable(validate_built_in_types=validate_built_in_types)
         self.annotation_resolver = AnnotationResolver()
         self.type_binder = BinderEngine(self.symbol_table)
         self.flow_analyzer = FlowAnalyzer(self.symbol_table, None)
@@ -64,6 +65,11 @@ class SemanticPipeline:
         
         args = [self._res_type_expr(a) for a in (expr.genericArgs or [])]
         
+        # GASD 1.1: Literal types (baseType == "literal") are self-resolving; skip resolution.
+        # @trace #AC-X-SEMAST-004-05
+        if expr.baseType == "literal":
+            return TypeContract("literal", args=args)
+
         # AC-X-SEMAST-004-04: Resolve type reference
         symbol = self.symbol_table.resolve(expr.baseType)
         if not symbol:
@@ -280,7 +286,7 @@ class SemanticPipeline:
             # Types
             for t in ast.types:
                 fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
-                if t.name in ["String", "Integer", "Boolean", "List", "Map", "Result"]:
+                if self.validate_built_in_types and t.name in ["String", "Integer", "Boolean", "List", "Map", "Result"]:
                     raise SemanticError(f"BuiltinShadowingError: Cannot redefine built-in type '{t.name}'")
                 
                 res = ResolvedTypeNode(self._get_range(t, fpath), t.name, {}, False)

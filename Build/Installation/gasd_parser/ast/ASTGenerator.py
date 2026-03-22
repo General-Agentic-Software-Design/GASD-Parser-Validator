@@ -160,23 +160,62 @@ class ASTGenerator(GASDParserVisitor):
     def visitType_expr(self, ctx: GASDParser.Type_exprContext):
         loc = self._get_loc(ctx)
         
-        # Unified Generics: (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
-        if ctx.soft_id():
+        # 1. Special case: ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
+        if ctx.ENUM_KW():
+            # Collect all identifiers and string literals from the enum list
+            values = []
+            for i in range(ctx.getChildCount()):
+                child = ctx.getChild(i)
+                # Check for either soft_id (identifier) or STRING_LITERAL
+                if isinstance(child, GASDParser.Soft_idContext):
+                    values.append(child.getText())
+                elif hasattr(child, 'getSymbol') and child.getSymbol().type == GASDParser.STRING_LITERAL:
+                    values.append(child.getText())
+                elif hasattr(child, 'getText') and child.getText().startswith('"'):
+                    # Fallback for string literals if getSymbol() is not available or mismatch
+                    values.append(child.getText())
+            
+            return TypeExpression(baseType="Enum", enumValues=values, **loc)
+            
+        # 2. Special case: OPTIONAL_KW LANGLE type_expr RANGLE
+        if ctx.OPTIONAL_KW():
+            args = [self.visit(a) for a in ctx.type_expr() if a]
+            if args:
+                # Wrap the inner type as optional, preserving all its attributes
+                inner = args[0]
+                return TypeExpression(
+                    baseType=inner.baseType, 
+                    genericArgs=inner.genericArgs, 
+                    isOptional=True, 
+                    literalValue=inner.literalValue,
+                    enumValues=inner.enumValues,
+                    **loc
+                )
+            return TypeExpression(baseType="Any", isOptional=True, **loc)
+
+        # 3. Unified Generics branch: (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
+        if ctx.soft_id() or (ctx.STRING_LITERAL() and ctx.LANGLE()):
             segments = [id.getText() for id in ctx.soft_id() if id]
             base = ".".join(segments)
             args = [self.visit(a) for a in ctx.type_expr() if a]
             
-            # Special case for Enum
-            if ctx.ENUM_KW():
-                return TypeExpression(baseType="Enum", enumValues=segments, **loc)
-                
-            is_optional = ctx.OPTIONAL_KW() is not None or base == "Optional"
+            is_optional = base == "Optional"
             if is_optional and args:
-                return TypeExpression(baseType=args[0].baseType, genericArgs=args[0].genericArgs, isOptional=True, **loc)
+                inner = args[0]
+                return TypeExpression(
+                    baseType=inner.baseType, 
+                    genericArgs=inner.genericArgs, 
+                    isOptional=True, 
+                    literalValue=inner.literalValue,
+                    enumValues=inner.enumValues,
+                    **loc
+                )
+            
+            # For List and Map, we should also propagate something if relevant, 
+            # but usually they are containers for other types.
             return TypeExpression(baseType=base, genericArgs=args, isOptional=is_optional, **loc)
 
-        # Literal types
-        literal_value = None
+        # 4. Literal types
         if ctx.STRING_LITERAL():
             literal_value = ctx.STRING_LITERAL(0).getText()
             return TypeExpression(baseType="literal", literalValue=literal_value, **loc)

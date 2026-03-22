@@ -182,7 +182,7 @@ def main():
         from .semantic.SymbolTable import SemanticError
         from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
         
-        sem_pipeline = SemanticPipeline()
+        sem_pipeline = SemanticPipeline(validate_built_in_types=not args.no_validate)
         try:
             # Pass only the GASDFile ast objects
             semantic_system = sem_pipeline.run([ast for _, ast in valid_asts])
