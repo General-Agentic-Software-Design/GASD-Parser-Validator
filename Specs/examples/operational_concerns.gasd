@@ -13,6 +13,7 @@
 
 CONTEXT: "Cloud-Native Microservice Architecture (AWS/Kubernetes)"
 TARGET: "Go 1.21"
+NAMESPACE: "example.operational_concerns"
 TRACE: "SRS-OBJ-001 (Production Readiness)"
 
 // --- 1. Infrastructure Design & 3. Deployment Strategy ---
@@ -20,7 +21,7 @@ DECISION "Infrastructure Provider" @status("APPROVED"):
     CHOSEN: "AWS EKS (Elastic Kubernetes Service)"
     RATIONALE: "Requirement for high availability and auto-scaling"
     ALTERNATIVES: ["GCP GKE", "Azure AKS"]
-    AFFECTS: [*]
+    AFFECTS: []
 
 DECISION "Deployment Rollout":
     CHOSEN: "Canary Release"
@@ -34,24 +35,15 @@ TYPE UserCredentials @sensitive:
     password_hash: String @mask
     totp_secret: String @mask @encrypted
 
-TYPE UUID:
-    val: String
-
-TYPE Result:
-    success: Boolean
-
-TYPE Void:
-    done: Boolean
-
 TYPE SystemStatus:
     code: String
 
 // --- 4. Error Handling, 5. Logging, & 6. Monitoring ---
 COMPONENT OrderProcessingService:
     INTERFACE:
-        process_order(order_id: UUID, user_id: UUID) -> Result
+        process_order(order_id: UUID, user_id: UUID) -> Result<Boolean>
 
-FLOW process_order(order_id, user_id) -> Result:
+FLOW process_order(order_id: UUID, user_id: UUID) -> Result<Boolean>:
     @authorized("ROLE_USER")
     @trace_id(order_id)
     
@@ -63,9 +55,9 @@ FLOW process_order(order_id, user_id) -> Result:
         ON_ERROR:
             LOG "Inventory validation failed" @severity("ERROR")
             UPDATE Metric "order_failures" @increment @labels(reason="inventory")
-            RETURN Result.failure
+            THROW "Inventory validation failed"
             
-    3. ACHIEVE "Execute Payment"
+    5. ACHIEVE "Execute Payment"
         @retry(3)
         @circuit_breaker
         @timeout(2000) // 2 seconds
@@ -73,24 +65,24 @@ FLOW process_order(order_id, user_id) -> Result:
             LOG "Payment gateway timed out after retries" @severity("CRITICAL")
             UPDATE Metric "order_failures" @increment @labels(reason="payment_timeout")
             ACHIEVE "Notify Operations"
-            RETURN Result.failure
+            THROW "Payment gateway timed out"
             
-    4. ACHIEVE "Update Order Status"
+    6. ACHIEVE "Update Order Status"
     
-    5. LOG "Order processed successfully" @severity("INFO")
-    6. UPDATE Metric "orders_completed" @increment
-    7. RETURN Result.success
+    7. LOG "Order processed successfully" @severity("INFO")
+    8. UPDATE Metric "orders_completed" @increment
+    9. RETURN Result.success(TRUE)
 
 COMPONENT HealthMonitor:
     INTERFACE:
-        check_system_health() -> SystemStatus
+        check_system_health() -> String
 
-FLOW check_system_health():
+FLOW check_system_health() -> String:
     1. ACHIEVE "Check DB Connectivity"
     2. ACHIEVE "Check Cache Connectivity"
-    3. IF all_ok:
-        RETURN "HEALTHY"
-    4. ELSE:
-        LOG "System unhealthy" @severity("CRITICAL")
-        UPDATE Metric "system_health" @set(0)
-        RETURN "UNHEALTHY"
+    3. MATCH all_ok:
+        TRUE -> RETURN "HEALTHY"
+        FALSE -> 
+            LOG "System unhealthy" @severity("CRITICAL")
+            UPDATE Metric "system_health" @set(0)
+            RETURN "UNHEALTHY"

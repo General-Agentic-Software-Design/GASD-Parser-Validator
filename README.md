@@ -9,7 +9,7 @@ This parser is built using **ANTLR4** with a **Python 3** target, designed to be
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
 - **[Design/](Design/)**: GASD-level specifications for each parser component.
 - **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
-  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 84 acceptance and regression tests.
+  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 512 acceptance and regression tests.
 - **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria.
 - **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo.
 
@@ -127,8 +127,8 @@ The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Buil
 
 1. **Design**: User stories mapped to formal designs.
 2. **Implementation**: Code generated from designs.
-3. **Testing**: Acceptance and regression verification.
-4. **Packaging**: Standalone distributable creation.
+3. **Testing**: Acceptance and regression verification (512 tests).
+4. **Packaging**: Standalone distributable creation (v1.2.2).
 
 ## License
 

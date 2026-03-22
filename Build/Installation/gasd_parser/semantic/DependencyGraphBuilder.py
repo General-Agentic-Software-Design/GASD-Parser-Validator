@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set
 from .SemanticNodes import SemanticNodeBase, ResolvedComponentNode, SymbolLink
 from .SymbolTable import SemanticError, SymbolTable, SymbolKind
 
@@ -130,3 +130,18 @@ class DependencyAnalyzer:
                 dfs(node)
                 
         return cycles
+
+    def validate_balance(self, components: List[ResolvedComponentNode]) -> bool:
+        # AT-X-SEMAST-005-01 / AC-X-SEMAST-005-01
+        all_provides = set()
+        all_requires = set()
+        for comp in components:
+            all_provides.update(comp.provides)
+            all_requires.update(comp.requires)
+        
+        # Ensure all required services/interfaces are provided somewhere in the system
+        unsatisfied = all_requires - all_provides
+        if unsatisfied:
+            # In a full impl we'd report which component has the missing req
+            return False
+        return True

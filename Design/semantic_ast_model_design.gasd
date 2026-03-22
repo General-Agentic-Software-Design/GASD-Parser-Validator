@@ -10,7 +10,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Semantic Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-001"
+TRACE: "US-SEMAST-001", "US-X-SEMAST-001"
 
 // ===================================================================
 // Decisions
@@ -61,9 +61,23 @@ TYPE ResolvedAnnotation:
 /// Resolved root node of a GASD system.
 TYPE SemanticSystem @trace #AC-SEMAST-001-02:
     kind: "SemanticSystem"
+    compilationUnit: CompilationUnit
     namespaces: Map<String, NamespaceNode>
     globalConstraints: List<ResolvedConstraintNode>
     metadata: SystemMetadata
+
+/// Multi-File Compilation Unit representing the entire system scope.
+TYPE CompilationUnit @trace #AC-X-SEMAST-001-03:
+    kind: "CompilationUnit"
+    files: Map<String, ProjectFileNode> // Canonical path -> File node
+    deterministicOrder: List<String> // Sorted canonical paths
+
+TYPE ProjectFileNode:
+    path: String @trace #AC-X-SEMAST-001-01
+    canonicalPath: String @trace #AC-X-SEMAST-001-02
+    namespace: String
+    imports: List<ImportLink>
+    syntacticAst: GASDFile // Root of the syntactic AST
 
 TYPE NamespaceNode:
     kind: "Namespace"
@@ -153,3 +167,5 @@ COMPONENT SemanticModelBuilder @trace #AC-SEMAST-001-11:
 
 CONSTRAINT: "Every SemanticNode MUST yield a deterministic hash for CI/CD comparison." @trace #AC-SEMAST-001-08
 CONSTRAINT: "Semantic AST MUST be self-contained for offline validation." @trace #AC-SEMAST-001-09
+CONSTRAINT: "File paths MUST be normalized across different OS environments." @trace #AC-X-SEMAST-001-01
+CONSTRAINT: "Input files MUST be sorted by canonical path for deterministic processing." @trace #AC-X-SEMAST-001-02

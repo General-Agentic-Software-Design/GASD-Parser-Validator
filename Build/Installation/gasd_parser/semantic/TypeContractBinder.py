@@ -24,16 +24,26 @@ class BinderEngine:
         self.symbol_table = symbol_table
 
     def bind(self, expr: ResolvedExpression, target: str) -> BoundTypeContract:
+        from .SymbolTable import SemanticError
+        # Strip generic arguments for resolution (e.g. "List<User>" → "List")
+        base_target = target.split('<')[0] if '<' in target else target
         # Resolve target type
-        target_entry = self.symbol_table.resolve(target)
+        target_entry = self.symbol_table.resolve(base_target)
         if not target_entry or target_entry.kind != SymbolKind.Type:
+            if '.' in target:
+                # Qualified cross-file type reference that cannot be resolved
+                raise SemanticError(f"Unknown type reference: '{target}' could not be resolved across files.")
             return BoundTypeContract(target, {}, [], [], False)
             
         target_type: ResolvedTypeNode = target_entry.nodeLink
         
         # We assume expr.value is a Dictionary representation for structural binding
         source_data = expr.value if isinstance(expr.value, dict) else {}
-        return self.verify_fields(source_data, target_type)
+        result = self.verify_fields(source_data, target_type)
+        # For qualified types, preserve the full qualified name
+        if '.' in target:
+            result.targetType = target
+        return result
 
     def verify_fields(self, source: Dict[str, Any], schema: ResolvedTypeNode, visited_types: Optional[Set[str]] = None) -> BoundTypeContract:
         visited = visited_types or set()

@@ -1,14 +1,15 @@
+import os
 from typing import List, Dict, Optional, Any, Union
 from ..ast.ASTNodes import (
     GASDFile, TypeDefinition, ComponentDefinition, FlowDefinition, StrategyDefinition, Decision, 
     QuestionNode, ApprovalNode, ReviewNode, FlowStepNode, TypeExpression, Parameter, MatchNode
 )
 from .SemanticNodes import (
-    SemanticSystem, NamespaceNode, SystemMetadata, SourceRange,
+    SemanticSystem, NamespaceNode, SystemMetadata, SourceRange, CompilationUnit, ProjectFileNode,
     ResolvedTypeNode, ResolvedComponentNode, ResolvedFlowNode, ResolvedStrategyNode, ResolvedDecisionNode,
     ResolvedConstraintNode, ResolvedFieldNode, TypeContract, ScopeEnum, ResolvedParameter,
     ResolvedQuestionNode, ResolvedApprovalNode, ResolvedReviewNode, SymbolLink, SemanticFlowStep,
-    ResolvedExpression, ResolvedMethodNode
+    ResolvedExpression, ResolvedMethodNode, SemanticNodeBase
 )
 from .SymbolTable import SymbolTable, SymbolEntry, SymbolKind, SemanticError
 from .AnnotationResolver import AnnotationResolver
@@ -23,6 +24,7 @@ from .ResourceResolver import ResourceResolver
 from .HumanInLoopResolver import HumanInLoopResolver
 from .SemanticHasher import SemanticHasher
 from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticError, ErrorLevel
+from .NamespaceResolver import DependencyError
 
 class SemanticPipeline:
     def __init__(self):
@@ -41,6 +43,9 @@ class SemanticPipeline:
         self.hasher = SemanticHasher()
         self.reporter = SemanticErrorReporter() # Reset per run
         self.flow_analyzer.reporter = self.reporter
+        from .ConstraintValidator import ConstraintValidator
+        from .DependencyGraphBuilder import DependencyAnalyzer
+        self.constraint_validator = ConstraintValidator(DependencyAnalyzer(self.symbol_table))
 
     def get_reporter(self) -> SemanticErrorReporter:
         return self.reporter
@@ -50,8 +55,23 @@ class SemanticPipeline:
 
     def _res_type_expr(self, expr: Optional[TypeExpression]) -> Optional[TypeContract]:
         if not expr: return None
+        if expr.baseType == "List":
+            if len(expr.genericArgs or []) != 1:
+                raise SemanticError(f"GenericArityMismatch: 'List' requires exactly 1 type argument, got {len(expr.genericArgs or [])}")
+        elif expr.baseType == "Map":
+            if len(expr.genericArgs or []) != 2:
+                raise SemanticError(f"GenericArityMismatch: 'Map' requires exactly 2 type arguments, got {len(expr.genericArgs or [])}")
+        
         args = [self._res_type_expr(a) for a in (expr.genericArgs or [])]
-        return TypeContract(expr.baseType, args=args)
+        
+        # AC-X-SEMAST-004-04: Resolve type reference
+        symbol = self.symbol_table.resolve(expr.baseType)
+        if not symbol:
+             # Builtins are already registered in global_scope, so if not found, it's truly unknown
+             raise SemanticError(f"UnknownType: Unknown type reference: '{expr.baseType}'")
+             
+        # Use the canonical name (FQN) for the type reference
+        return TypeContract(symbol.name, args=args)
 
     def _res_params(self, params: List[Parameter]) -> List[ResolvedParameter]:
         return [ResolvedParameter(p.name, self._res_type_expr(p.type)) for p in params]
@@ -152,14 +172,33 @@ class SemanticPipeline:
             sub_steps=subs
         )
 
-    def run(self, ast: GASDFile) -> SemanticSystem:
+    def _signatures_match(self, flow: ResolvedFlowNode, method: ResolvedMethodNode) -> bool:
+        if len(flow.inputs) != len(method.inputs):
+            return False
+        for p1, p2 in zip(flow.inputs, method.inputs):
+            if p1.typeRef.baseType != p2.typeRef.baseType:
+                return False
+        
+        # Also check return type if both exist
+        if flow.output and method.output:
+            if flow.output.baseType != method.output.baseType:
+                return False
+        elif flow.output or method.output:
+            # One has return type and the other doesn't
+            return False
+            
+        return True
+
+    def run(self, ast: Union[GASDFile, List[GASDFile]]) -> SemanticSystem:
         """§13. Execute the full semantic pipeline and return the enriched system AST"""
         if self.reporter is None:
             self.reporter = SemanticErrorReporter()
         self.reporter.reset()
         self.flow_analyzer.reporter = self.reporter
+        
+        asts = [ast] if isinstance(ast, GASDFile) else ast
         try:
-            return self.build([ast])
+            return self.build(asts)
         except SemanticError as e:
             # Errors are already in reporter if raised during build analysis
             raise
@@ -167,110 +206,258 @@ class SemanticPipeline:
     def build(self, asts: List[GASDFile]) -> SemanticSystem:
         self.reporter.reset()
         
-        # Pass 1: Discovery & Registration
+        # AC-X-SEMAST-001-03: Create CompilationUnit
+        file_nodes = {}
+        unknown_counter = 0
         for ast in asts:
-            file_name = ast.sourceFile or ""
+            if ast.sourceFile and ast.sourceFile != "unknown":
+                fpath = os.path.abspath(ast.sourceFile)
+            else:
+                fpath = f"unknown_{unknown_counter}"
+                unknown_counter += 1
+            # Ensure unique path keys
+            while fpath in file_nodes:
+                fpath = f"{fpath}_{unknown_counter}"
+                unknown_counter += 1
+            ns_directive = next((d for d in ast.directives if d.directiveType == "NAMESPACE"), None)
+            ns_raw = ns_directive.values[0] if ns_directive and ns_directive.values else "global"
+            ns_name = ns_raw.strip('"\' ').lower()
+            imports = []
+            for d in ast.directives:
+                if d.directiveType == "IMPORT":
+                    val_clean = d.values[0].strip('"\' ') if d.values else ""
+                    if val_clean.endswith(".gasd") and fpath and not fpath.startswith("unknown"):
+                        # Resolve relative path to absolute
+                        abs_import = os.path.abspath(os.path.join(os.path.dirname(fpath), val_clean))
+                        imports.append({"path": abs_import, "alias": d.alias})
+                    else:
+                        imports.append({"path": val_clean, "alias": d.alias})
+            file_nodes[fpath] = ProjectFileNode(fpath, ns_name, imports, ast)
+
+        
+        comp_unit = CompilationUnit(file_nodes, sorted(file_nodes.keys()))
+        
+        # AC-X-SEMAST-002-03: Topological Sort
+        dep_graph = self.namespace_resolver.build_dependency_graph(comp_unit)
+        try:
+            processing_order = self.namespace_resolver.topological_sort(dep_graph)
+        except DependencyError as e:
+            raise SemanticError(str(e))
+            
+        comp_unit.deterministicOrder = processing_order
+        
+        # AC-X-SEMAST-002: Filter processing order to only include provided files
+        # Imported files not in the compilation unit will be handled by ImportResolver later
+        processing_order = [f for f in processing_order if f in file_nodes]
+
+        # Global directives aggregation
+        all_directives = []
+        for ast in asts:
+            for d in ast.directives:
+                all_directives.append({
+                    "kind": d.directiveType,
+                    "value": ",".join(d.values) if d.values else "",
+                    "scope": "Global"
+                })
+        
+        metadata = self.directive_resolver.resolve(all_directives)
+        
+        # Pass 1: Global Symbol Collection (Discovery)
+        for fpath in processing_order:
+            ast = file_nodes[fpath].syntacticRoot
+            node = file_nodes[fpath]
+            
+            # Enter namespace scope
+            self.symbol_table.enter_scope(node.namespace)
+            # AC-X-SEMAST-003-01: Symbol Table Population
+            # Define namespace in global scope if not already there
+            if node.namespace not in self.symbol_table.global_scope.symbols:
+                ns_res = NamespaceNode(SourceRange("", 0, 0, 0, 0), node.namespace, {}, {}, {}, {}, {})
+                self.symbol_table.global_scope.symbols[node.namespace] = SymbolEntry(
+                    node.namespace, SymbolKind.Namespace, self.symbol_table.global_scope, ns_res
+                )
+            
             # Types
             for t in ast.types:
-                res = ResolvedTypeNode(self._get_range(t, file_name), t.name, {}, False)
-                self.symbol_table.define(SymbolEntry(t.name, SymbolKind.Type, self.symbol_table.global_scope, res))
+                fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
+                if t.name in ["String", "Integer", "Boolean", "List", "Map", "Result"]:
+                    raise SemanticError(f"BuiltinShadowingError: Cannot redefine built-in type '{t.name}'")
+                
+                res = ResolvedTypeNode(self._get_range(t, fpath), t.name, {}, False)
+                res.fqn = fqn
+                self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Type, self.symbol_table.global_scope, res))
+                # Local alias
+                if node.namespace != "global":
+                    self.symbol_table.define(SymbolEntry(t.name, SymbolKind.Type, self.symbol_table.current_scope, res))
+            
             # Components
             for c in ast.components:
-                res = ResolvedComponentNode(self._get_range(c, file_name), c.name, c.pattern or "", [], [], {})
-                self.symbol_table.define(SymbolEntry(c.name, SymbolKind.Component, self.symbol_table.global_scope, res))
-            # Flows
+                fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
+                res_comp = ResolvedComponentNode(self._get_range(c, fpath), c.name, c.pattern or "", [], [], {})
+                res_comp.fqn = fqn
+                self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Component, self.symbol_table.global_scope, res_comp))
+                if node.namespace != "global":
+                    self.symbol_table.define(SymbolEntry(c.name, SymbolKind.Component, self.symbol_table.current_scope, res_comp))
+
+            # Flows, Strategies, Decisions similarly...
             for f in ast.flows:
-                res = ResolvedFlowNode(self._get_range(f, file_name), f.name, [], None, [])
-                self.symbol_table.define(SymbolEntry(f.name, SymbolKind.Flow, self.symbol_table.global_scope, res))
-            # Strategies
+                fqn = f"{node.namespace}.{f.name}" if node.namespace != "global" else f.name
+                res = ResolvedFlowNode(self._get_range(f, fpath), f.name, [], None, [])
+                res.fqn = fqn
+                self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Flow, self.symbol_table.global_scope, res))
+
             for s in ast.strategies:
-                res = ResolvedStrategyNode(self._get_range(s, file_name), s.name)
-                self.symbol_table.define(SymbolEntry(s.name, SymbolKind.Strategy, self.symbol_table.global_scope, res))
-            # Decisions
+                fqn = f"{node.namespace}.{s.name}" if node.namespace != "global" else s.name
+                res = ResolvedStrategyNode(self._get_range(s, fpath), s.name)
+                res.fqn = fqn
+                self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Strategy, self.symbol_table.global_scope, res))
+
             for d in ast.decisions:
-                res = ResolvedDecisionNode(self._get_range(d, file_name), d.name, d.chosen or "", [], None, [])
-                self.symbol_table.define(SymbolEntry(d.name, SymbolKind.Decision, self.symbol_table.global_scope, res))
+                fqn = f"{node.namespace}.{d.name}" if node.namespace != "global" else d.name
+                res = ResolvedDecisionNode(self._get_range(d, fpath), d.name, d.chosen, [], [], "")
+                res.fqn = fqn
+                self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Decision, self.symbol_table.global_scope, res))
+                self.decision_resolver.resolve(res)
+
+            # Register symbols in ImportResolver for cross-file access
+            file_symbols = []
+            prefix = node.namespace + "." if node.namespace != "global" else ""
+            for sym_name, sym in self.symbol_table.global_scope.symbols.items():
+                if sym_name.startswith(prefix) or (node.namespace == "global" and "." not in sym_name):
+                    file_symbols.append(sym)
+            self.import_resolver.export_symbols(node.namespace, file_symbols, fpath)
+
+            self.symbol_table.exit_scope()
 
         # Pass 2: Resolution & Cross-linking
-        for ast in asts:
-            fpath = ast.sourceFile or ""
-            for d in ast.directives:
-                self.directive_resolver.resolve([{"kind": d.directiveType, "value": ", ".join(d.values)}])
-
+        for fpath in processing_order:
+            node = file_nodes[fpath]
+            ast = node.syntacticRoot
+            self.symbol_table.enter_scope(node.namespace)
+            
+            # AC-X-SEMAST-002: Resolve imports
+            for imp in node.imports:
+                res_ns = self.import_resolver.resolve_import(imp["path"], imp["alias"])
+                if imp["alias"]:
+                    # Define alias in current scope to support Dotted Resolution: Alias.Symbol
+                    self.symbol_table.define(SymbolEntry(imp["alias"], SymbolKind.Namespace, self.symbol_table.current_scope, res_ns))
+            
             for t in ast.types:
-                res_t: ResolvedTypeNode = self.symbol_table.resolve(t.name).nodeLink
+                fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
+                res_t: ResolvedTypeNode = self.symbol_table.resolve(fqn).nodeLink
                 res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.typeExpr), f.typeExpr.isOptional) for f in t.fields}
-                res_t.annotations = self.annotation_resolver.resolve(t.annotations, ScopeEnum.TYPE)
-
+                
             for c in ast.components:
-                res_c: ResolvedComponentNode = self.symbol_table.resolve(c.name).nodeLink
-                res_c.annotations = self.annotation_resolver.resolve(c.annotations, ScopeEnum.COMPONENT)
-                res_c.methods = {m.name: ResolvedMethodNode(m.name, self._res_params(m.parameters), self._res_type_expr(m.returnType)) for m in c.methods}
-                res_c.dependencies = [SymbolLink(d) for d in (c.dependencies or [])]
+                fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
+                res_c: ResolvedComponentNode = self.symbol_table.resolve(fqn).nodeLink
+                res_c.methods = {m.name: ResolvedMethodNode(self._get_range(m, fpath), m.name, self._res_params(m.parameters), self._res_type_expr(m.returnType)) for m in c.methods}
+                
+                # US-X-SEMAST-005 / AT-X-SEMAST-005-03: Dependency Resolution
+                res_deps = []
+                for dep_name in (c.dependencies or []):
+                    if dep_name == "*":
+                        res_deps.append(SymbolLink("*"))
+                        continue
+                    dep_sym = self.symbol_table.resolve(dep_name)
+                    if not dep_sym or dep_sym.kind != SymbolKind.Component:
+                        raise SemanticError(f"UnknownComponent: Unknown component dependency: '{dep_name}'")
+                    res_deps.append(SymbolLink(dep_name))
+                res_c.dependencies = res_deps
+            
+            for d_node in ast.decisions:
+                fqn = f"{node.namespace}.{d_node.name}" if node.namespace != "global" else d_node.name
+                res_d: ResolvedDecisionNode = self.symbol_table.resolve(fqn).nodeLink
+                res_affects = []
+                for aff in d_node.affects:
+                    if aff == "*":
+                        res_affects.append(SymbolLink("*"))
+                        continue
+                    aff_sym = self.symbol_table.resolve(aff)
+                    if not aff_sym and node.namespace != "global":
+                        aff_sym = self.symbol_table.resolve(f"{node.namespace}.{aff}")
+                        
+                    if aff_sym:
+                        # SymbolLink only takes symbol_id (the FQN or name)
+                        res_affects.append(SymbolLink(aff_sym.name))
+                    else:
+                        raise SemanticError(f"DecisionTargetError: Unknown symbol '{aff}' in DECISION {d_node.name}")
+                res_d.affectedComponents = res_affects
 
             for f in ast.flows:
-                res_f: ResolvedFlowNode = self.symbol_table.resolve(f.name).nodeLink
+                fqn = f"{node.namespace}.{f.name}" if node.namespace != "global" else f.name
+                res_f: ResolvedFlowNode = self.symbol_table.resolve(fqn).nodeLink
                 res_f.inputs = self._res_params(f.parameters)
                 res_f.output = self._res_type_expr(f.returnType)
                 res_f.pipeline = [self._res_step(s, fpath) for s in f.steps]
-                res_f.annotations = self.annotation_resolver.resolve(f.annotations, ScopeEnum.FLOW)
 
             for s in ast.strategies:
-                res_s: ResolvedStrategyNode = self.symbol_table.resolve(s.name).nodeLink
-                res_s.algorithm = s.algorithm
+                fqn = f"{node.namespace}.{s.name}" if node.namespace != "global" else s.name
+                res_s: ResolvedStrategyNode = self.symbol_table.resolve(fqn).nodeLink
                 res_s.inputs = self._res_params(s.inputs)
                 res_s.output = self._res_type_expr(s.output)
 
-            for d in ast.decisions:
-                res_d: ResolvedDecisionNode = self.symbol_table.resolve(d.name).nodeLink
-                res_d.alternatives = d.alternatives or []
-                res_d.rationale = d.rationale
-                res_d.affectedComponents = [SymbolLink(a) for a in (d.affects or [])]
+            self.symbol_table.exit_scope()
 
-        # Pass 3: semantic Validation passes
-        metadata = self.directive_resolver.resolve([])
+        # Pass 3: Global Validation
+        all_flows = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Flow and s.nodeLink]
+        all_decs = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Decision and s.nodeLink]
+        all_comps = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Component and s.nodeLink]
         
-        try:
-            # Flow Analysis
-            all_flows = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Flow]
-            for f in all_flows:
+        for f in all_flows:
+            for c in all_comps:
+                if f and c and hasattr(c, 'methods') and f.name in c.methods:
+                    m = c.methods[f.name]
+                    if not self._signatures_match(f, m):
+                        raise SemanticError(f"SignatureMismatch: Flow '{f.name}' signature doesn't match component method in '{c.name}'")
+
+        for f in all_flows:
+            if f:
                 self.flow_analyzer.analyze(f)
                 self.flow_analyzer.check_consistency(f)
             
-            # Architecture Analysis
-            from .DependencyGraphBuilder import DependencyAnalyzer
-            analyzer = DependencyAnalyzer(self.symbol_table)
-            all_comps = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Component]
-            graph = analyzer.analyze(all_comps)
-            cycles = analyzer.detect_cycles(graph)
-            if cycles:
-                 raise SemanticError(f"CircularDependency: {cycles[0].path}")
-                 
-            # Strategy Analysis
-            all_strats = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Strategy]
-            for s in all_strats:
-                self.strategy_resolver.resolve(s)
-                
-            # Decision Analysis
-            all_decs = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Decision]
-            for d in all_decs:
+        for d in all_decs:
+            if d:
                 self.decision_resolver.resolve(d)
+        self.decision_resolver.detect_conflicts()
 
-        except SemanticError as e:
-            # Report and optionally re-raise depending on policy
-            # For current tests we raise to match existing logic
-            self.reporter.report(StructuredSemanticError(
-                code="SEMAST-ERR", message=str(e), level=ErrorLevel.ERROR, 
-                location=SourceRange("", 0, 0, 0, 0)
-            ))
-            raise
-
-        # Package System
-        types = {s.name: s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Type}
-        components = {s.name: s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Component}
-        flows = {s.name: s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Flow}
-        strategies = {s.name: s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Strategy}
-        decisions = {s.name: s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Decision}
+        # Constraints - use metadata from directives
+        all_constraints = []
+        for fnode in file_nodes.values():
+            if not fnode or not fnode.syntacticRoot: continue
+            for c_ast in fnode.syntacticRoot.constraints:
+                # Resolve constraint to semantic node
+                res_c = ResolvedConstraintNode(SourceRange(fnode.filePath, c_ast.line, c_ast.column, c_ast.line, c_ast.column), c_ast.text)
+                all_constraints.append(res_c)
         
-        global_ns = NamespaceNode(SourceRange("", 0, 0, 0, 0), "global", types, components, flows, strategies, decisions)
-        return SemanticSystem({"global": global_ns}, [], metadata)
+        # Build NamespaceNodes for ConstraintValidator/System
+        # Collect all unique namespaces from file nodes
+        all_ns_names = set()
+        for fn in file_nodes.values():
+            all_ns_names.add(fn.namespace)
+        all_ns_names.add("global")  # Always ensure global is present
+
+        ns_nodes = {}
+        for ns_name in all_ns_names:
+             # Find symbols for this namespace in global_scope
+             prefix = ns_name + "." if ns_name != "global" else ""
+             ns_types = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Type and (s.name.startswith(prefix) if prefix else "." not in s.name)}
+             ns_comps = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Component and (s.name.startswith(prefix) if prefix else "." not in s.name)}
+             ns_flows = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Flow and (s.name.startswith(prefix) if prefix else "." not in s.name)}
+             ns_decs = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Decision and (s.name.startswith(prefix) if prefix else "." not in s.name)}
+             
+             source_range = SourceRange("",0,0,0,0) # Placeholder
+             ns_nodes[ns_name] = NamespaceNode(source_range, ns_name, ns_types, ns_comps, ns_flows, {}, ns_decs)
+
+        metadata.files = list(file_nodes.values())
+        system = SemanticSystem(ns_nodes, all_constraints, metadata, comp_unit)
+        from .SemanticErrorReporter import ErrorLevel
+        constraint_errors = self.constraint_validator.validate_system(system)
+        for msg in constraint_errors:
+            self.reporter.report(StructuredSemanticError("CONSTRAINT-ERR", msg, ErrorLevel.ERROR, SourceRange("",0,0,0,0)))
+
+        has_critical = any(e.level in [ErrorLevel.ERROR, ErrorLevel.FATAL] for e in self.reporter.errors)
+        if has_critical:
+            err = next((e for e in self.reporter.errors if e.level in [ErrorLevel.ERROR, ErrorLevel.FATAL]), self.reporter.errors[0])
+            raise SemanticError(f"{err.message}", location=err.location)
+            
+        return system

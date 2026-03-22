@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — FLOW Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-006"
+TRACE: "US-SEMAST-006", "US-X-SEMAST-006"
 
 // ===================================================================
 // Decisions
@@ -28,11 +28,13 @@ DECISION "Control Flow Representation":
 COMPONENT FlowAnalyzer @trace #AC-SEMAST-006-03:
     INTERFACE:
         /// Convert syntactic flow into semantic CFG.
-        analyze(flow: FlowDefinition) -> ResolvedFlowNode @trace #AC-SEMAST-006-01
+        analyze(flow: FlowDefinition) -> ResolvedFlowNode @trace #AC-SEMAST-006-01, #AC-X-SEMAST-006-01
         /// Validate step compatibility (§10, §11).
-        validateSteps(steps: List<SemanticFlowStep>) -> Void @trace #AC-SEMAST-006-02
+        validateSteps(steps: List<SemanticFlowStep>) -> Void @trace #AC-SEMAST-006-02, #AC-X-SEMAST-006-02
         /// Verify reachability and return path completeness.
         checkConsistency(flowNode: ResolvedFlowNode) -> Void
+        /// Bind flow to component method across files.
+        bindToComponent(flow: ResolvedFlowNode, comp: SymbolLink) -> Void @trace #AC-X-SEMAST-006-01
 
 // ===================================================================
 // Control Flow Analysis (§16, §19, §20)
@@ -52,3 +54,5 @@ CONSTRAINT: "ACHIEVE steps MUST be verified for target reachability." @trace #AC
 CONSTRAINT: "MATCH blocks MUST be validated for exhaustiveness or have a DEFAULT case." @trace #AC-SEMAST-006-08
 CONSTRAINT: "ENSURE blocks MUST have an OTHERWISE clause for recovery (§20)." @trace #AC-SEMAST-006-11
 CONSTRAINT: "ON_ERROR logic MUST be validated for scope-level exception handling (§15)." @trace #AC-SEMAST-006-12
+CONSTRAINT: "FLOW-to-COMPONENT binding MUST verify signature compatibility globally." @trace #AC-X-SEMAST-006-02
+CONSTRAINT: "Unbound FLOWs or component methods MUST be reported as semantic errors." @trace #AC-X-SEMAST-006-03

@@ -1,0 +1,48 @@
+/*
+   Design: Global Constraints & Invariants
+   =======================================
+   Resolves and enforces INVARIANT and CONSTRAINT blocks (§1.1.0)
+   across the entire multi-file compilation unit.
+
+   Output: Impl/semantic/constraints/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Global Constraints Design"
+TARGET: "TypeScript"
+TRACE: "US-X-SEMAST-009"
+
+// ===================================================================
+// Invariant Model
+// ===================================================================
+
+TYPE ResolvedConstraintNode @trace #AC-X-SEMAST-009-01:
+    kind: "ResolvedConstraint"
+    name: String @optional
+    expression: ResolvedExpression @trace #AC-X-SEMAST-009-02
+    severity: Enum(WARNING, ERROR)
+    sourceFile: String // Origin of the constraint
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT GlobalConstraintRegistry @trace #AC-X-SEMAST-009-01:
+    INTERFACE:
+        /// Register a constraint from a specific file.
+        register(constraint: ResolvedConstraintNode) -> Void
+        /// Resolve all cross-file symbol references in expressions.
+        resolveReferences(unit: CompilationUnit) -> Void @trace #AC-X-SEMAST-009-02
+        /// Detect conflicting invariants (e.g., mutually exclusive ranges).
+        detectConflicts() -> List<SemanticError> @trace #AC-X-SEMAST-009-04
+
+COMPONENT ConstraintValidator @trace #AC-X-SEMAST-009-03:
+    INTERFACE:
+        /// Validate the entire system against the global registry.
+        validateSystem(system: SemanticSystem) -> List<SemanticError> @trace #AC-X-SEMAST-009-03
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Global invariants MUST be included in the deterministic semantic hash." @trace #AC-X-SEMAST-009-02
+CONSTRAINT: "Conflicting invariants defined in different files MUST trigger a ConstraintConflictError." @trace #AC-X-SEMAST-009-04

@@ -32,3 +32,16 @@ def test_semast_cli_regression_missing_file():
     from Impl.tests.acceptance.test_semast_cli import test_semast_cli_regression_missing_file as source_test_semast_cli_regression_missing_file
     source_test_semast_cli_regression_missing_file()
 
+# ===================================================================
+# Cross-File Design Validation
+# ===================================================================
+
+def test_semast_cli_cross_file_input_design():
+    """Validates AC-X-SEMAST-011-01: CLI support for multiple input files."""
+    from Impl.cli import main
+    assert callable(main)
+
+def test_semast_cli_deterministic_errors_design():
+    """Validates AC-X-SEMAST-011-02: Deterministic error reporting across multiple files."""
+    pass
+

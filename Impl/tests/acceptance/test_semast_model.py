@@ -1,19 +1,26 @@
 import pytest
+from typing import Dict
 from Impl.parser.ParseTreeAPI import ParseTreeAPI
 from Impl.ast.ASTGenerator import ASTGenerator
 from Impl.semantic.SemanticPipeline import SemanticPipeline
 from Impl.semantic.SemanticNodes import SemanticSystem, ResolvedTypeNode, ResolvedComponentNode
 
-def get_semantic_ast(content: str) -> SemanticSystem:
+def get_semantic_system(contents: Dict[str, str]) -> SemanticSystem:
     api = ParseTreeAPI()
-    tree, reporter = api.parse(content)
-    assert not reporter.has_errors(), f"Parse errors: {reporter.to_console()}"
-    
-    generator = ASTGenerator()
-    ast = generator.visit(tree)
+    gen = ASTGenerator()
+    asts = []
+    for path, content in contents.items():
+        tree, reporter = api.parse(content)
+        assert not reporter.has_errors(), f"Parse errors in {path}: {reporter.to_console()}"
+        ast = gen.visit(tree)
+        ast.sourceFile = path
+        asts.append(ast)
     
     pipeline = SemanticPipeline()
-    return pipeline.run(ast)
+    return pipeline.build(asts)
+
+def get_semantic_ast(content: str) -> SemanticSystem:
+    return get_semantic_system({"file.gasd": content})
 
 def test_semast_core_generation():
     content = 'CONTEXT: "Test"\nTARGET: "Python3"\nTYPE T:\n  f: String\n'
@@ -151,3 +158,52 @@ def test_semast_model_regression_empty():
     # 16 built-in types are always registered
     assert len(ns.types) == 16
     assert len(ns.components) == 0
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_compilation_unit():
+    # AT-X-SEMAST-001-01, AC-X-SEMAST-001-03
+    contents = {
+        "file1.gasd": 'CONTEXT: "C1"\nTARGET: "Py"\nTYPE T1: f: String\n',
+        "file2.gasd": 'CONTEXT: "C1"\nTARGET: "Py"\nTYPE T2: f: Integer\n'
+    }
+    sem_ast = get_semantic_system(contents)
+    
+    # ENSURE "Root SemanticSystem contains a non-null CompilationUnit"
+    assert hasattr(sem_ast, "compilationUnit")
+    assert sem_ast.compilationUnit is not None
+    
+    # ENSURE "CompilationUnit contains a list of ProjectFileNode objects"
+    assert len(sem_ast.compilationUnit.files) == 2
+    assert any(f.endswith("file1.gasd") for f in sem_ast.compilationUnit.files)
+    assert any(f.endswith("file2.gasd") for f in sem_ast.compilationUnit.files)
+
+def test_semast_path_normalization():
+    # AT-X-SEMAST-001-02, AC-X-SEMAST-001-01, AC-X-SEMAST-001-05
+    contents = {
+        "./a/../file1.gasd": 'CONTEXT: "C1"\nTARGET: "Py"\n'
+    }
+    sem_ast = get_semantic_system(contents)
+    
+    # ENSURE "All paths are normalized to a consistent internal format"
+    # Assuming normalization resolves '..'
+    assert any(f.endswith("file1.gasd") for f in sem_ast.compilationUnit.files)
+
+
+def test_semast_deterministic_processing():
+    # AT-X-SEMAST-001-03, AC-X-SEMAST-001-02
+    contents = {
+        "z.gasd": 'CONTEXT: "C"\nTARGET: "Py"\n',
+        "a.gasd": 'CONTEXT: "C"\nTARGET: "Py"\n'
+    }
+    sem1 = get_semantic_system(contents)
+    
+    # Shuffle order
+    shuffled = {"a.gasd": contents["a.gasd"], "z.gasd": contents["z.gasd"]}
+    sem2 = get_semantic_system(shuffled)
+    
+    # ENSURE "The resulting CompilationUnit structure is byte-identical every time"
+    assert sem1.hash == sem2.hash
+    assert sem1.compilationUnit.deterministicOrder == sem2.compilationUnit.deterministicOrder

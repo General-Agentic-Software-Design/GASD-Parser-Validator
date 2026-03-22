@@ -8,7 +8,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Type Contract Validation"
 TARGET: "TypeScript", "Python3"
-TRACE: "US-SEMAST-003"
+TRACE: "US-SEMAST-003", "US-X-SEMAST-004", "US-X-SEMAST-007"
 
 // ===================================================================
 // Acceptance Tests
@@ -18,41 +18,71 @@ FLOW test_semast_structural_compatibility():
     @trace #AT-SEMAST-003-01, #AC-SEMAST-003-01
     1. ACHIEVE "Compare expression to target TypeContract"
     2. ENSURE "Succeeds if all required fields are present with correct types"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_bind_expression():
     @trace #AT-SEMAST-003-02, #AC-SEMAST-003-02
     1. ACHIEVE "Use BinderEngine to bind raw dictionary to TYPE"
     2. ENSURE "Returns valid TypeContract instance"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_verify_fields():
     @trace #AT-SEMAST-003-03, #AC-SEMAST-003-03
     1. ACHIEVE "Pass subset of fields to verifyFields"
     2. ENSURE "Identifies missing required fields"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_property_propagation():
     @trace #AT-SEMAST-003-04, #AC-SEMAST-003-04
     1. ACHIEVE "Execute a successful binding operation"
     2. ENSURE "Bound properties are inserted into active SymbolScope"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_binding_engine():
     @trace #AT-SEMAST-003-05, #AC-SEMAST-003-05
     1. ACHIEVE "Instantiate BinderEngine and process file"
     2. ENSURE "All VALIDATE AS TYPE commands apply logic universally"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_missing_fields():
     @trace #AT-SEMAST-003-06, #AC-SEMAST-003-06
     1. ACHIEVE "Attempt binding with missing non-optional fields"
     2. ENSURE "Binding immediately fails and yields error node"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_nested_structure():
     @trace #AT-SEMAST-003-07, #AC-SEMAST-003-07
     1. ACHIEVE "Bind deep JSON shape against nested TYPEs"
     2. ENSURE "Detects type mismatch three levels deep"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_lazy_resolution():
     @trace #AT-SEMAST-003-08, #AC-SEMAST-003-08
     1. ACHIEVE "Bind against a TYPE referencing itself iteratively"
     2. ENSURE "Lazy loading resolves successfully without stack depth crash"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Cross-File Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_cross_file_qualified_type():
+    @trace #AT-X-SEMAST-004-01, #AC-X-SEMAST-004-01, #AC-X-SEMAST-004-02
+    1. ACHIEVE "Bind expression against 'Namespace.Type' defined in another file"
+    2. ENSURE "BinderEngine resolves the qualified type and validates correctly"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cross_file_generic_args():
+    @trace #AT-X-SEMAST-007-01, #AC-X-SEMAST-004-05
+    1. ACHIEVE "Use a generic type 'List<T>' where T is defined in a different file"
+    2. ENSURE "Binder resolves the generic argument type and enforces constraints"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_missing_cross_file_type():
+    @trace #AT-X-SEMAST-004-02, #AC-X-SEMAST-004-04
+    1. ACHIEVE "Reference a non-existent type 'Remote.MissingType'"
+    2. ENSURE "Semantic error reported for unresolved cross-file reference"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Regression Tests
@@ -62,8 +92,10 @@ FLOW test_semast_binding_regression_optional():
     @trace #RT-SEMAST-003-01
     1. ACHIEVE "Bind where optional fields are completely missing"
     2. ENSURE "Succeeds since missing optionals do not violate contract"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_binding_regression_extra_fields():
     @trace #RT-SEMAST-003-02
     1. ACHIEVE "Bind expression containing extra unmapped fields"
     2. ENSURE "Flags extraFields in TypeContract output but still resolves"
+        OTHERWISE THROW "Validation Failed"

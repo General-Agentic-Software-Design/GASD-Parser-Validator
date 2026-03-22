@@ -74,3 +74,19 @@ def test_semast_strategy_regression_missing_complexity():
         strategy.complexity = AlgorithmComplexity.EXPONENTIAL
         
     assert strategy.complexity == AlgorithmComplexity.EXPONENTIAL
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_strategy_resolution():
+    # AC-X-SEMAST-008-05
+    resolver = StrategyResolver()
+    
+    # Strategy references a remote algorithm? 
+    # GASD Strategies usually bind to COMPONENTs or FLOWs.
+    # We ensure resolution works when nodes are across files.
+    strategy = ResolvedStrategyNode(SourceRange("remote.gasd", 1, 0, 1, 10), "RemoteNS.AuthStrat", algorithm="binary_search")
+    resolved = resolver.resolve(strategy)
+    
+    assert resolved.complexity == AlgorithmComplexity.O_LOG_N

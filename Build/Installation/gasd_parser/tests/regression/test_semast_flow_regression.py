@@ -63,6 +63,37 @@ def test_semast_flow_regression_empty_flow():
 
 def test_semast_flow_regression_infinite_loop():
     analyzer = FlowAnalyzer(SymbolTable())
-    flow = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "F", [], TypeContract("Void"), [make_step("LOOP", "infinite")])
+    step = make_step("LOOP", "infinite")
+    step.isUnhalting = True
+    flow = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "F", [], TypeContract("Void"), [step])
     with pytest.raises(SemanticError, match="InfiniteLoop"):
         analyzer.check_consistency(flow)
+
+# ===================================================================
+# Cross-File Regression Tests
+# ===================================================================
+
+def test_semast_flow_regression_cross_file_binding():
+    # RT-X-SEMAST-006-01
+    table = SymbolTable()
+    analyzer = FlowAnalyzer(table)
+    
+    # Define remote component method in Global scope
+    from Impl.semantic.SemanticNodes import ResolvedMethodNode, ResolvedParameter, SourceRange
+    from Impl.semantic.SymbolTable import SymbolEntry, SymbolKind
+    remote_res = ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "remoteMethod", [ResolvedParameter("p", TypeContract("String"))], TypeContract("Boolean"))
+    table.define(SymbolEntry("RemoteNS.Comp.remoteMethod", SymbolKind.Method, table.global_scope, remote_res))
+    
+    # FLOW binds to remote COMPONENT method
+    step = make_step("CALL", "RemoteNS.Comp.remoteMethod", expected_in=TypeContract("String"))
+    
+    # Should pass validation
+    analyzer.validate_steps([step])
+
+def test_semast_flow_regression_unbound_error():
+    # RT-X-SEMAST-006-02
+    analyzer = FlowAnalyzer(SymbolTable())
+    step = make_step("CALL", "MissingNS.Comp.method")
+    
+    with pytest.raises(SemanticError, match="UnboundFlow"):
+        analyzer.validate_steps([step])

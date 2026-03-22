@@ -1,5 +1,6 @@
 CONTEXT: "Algorithms Library"
 TARGET: "Java / Python"
+NAMESPACE: "example.binary_search"
 TRACE: "SRS-050 (Search Optimization)"
 
 /*
@@ -21,8 +22,8 @@ STRATEGY binary_search:
 FLOW execute_search(list, target):
     // Pre-condition check ensures algorithm validity
     // Transpiler should generate assertion or early return
-    ENSURE list IS_SORTED
+    1. ENSURE list IS_SORTED OTHERWISE THROW IllegalStateException("List must be sorted for binary search")
     
     // Delegate to the pure logic strategy defined above
-    APPLY STRATEGY binary_search(list, target)
-    RETURN result
+    2. APPLY STRATEGY binary_search(list, target)
+    3. RETURN result

@@ -17,26 +17,31 @@ FLOW test_semast_annotation_override():
     @trace #AT-SEMAST-004-01, #AC-SEMAST-004-01
     1. ACHIEVE "Apply @sensitive(level='low') to TYPE, and @sensitive(level='high') to a FIELD"
     2. ENSURE "Field resolution overrides parent annotation value"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_annotation_resolution():
     @trace #AT-SEMAST-004-02, #AC-SEMAST-004-02
     1. ACHIEVE "Extract annotation block via AnnotationResolver"
     2. ENSURE "Syntactic text transforms into typed ResolvedAnnotation"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_annotation_validation():
     @trace #AT-SEMAST-004-03, #AC-SEMAST-004-03, #AC-SEMAST-004-05
     1. ACHIEVE "Apply @trace with integer argument"
     2. ENSURE "Validation rejects argument mismatch based on annotation schema"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_annotation_hierarchy():
     @trace #AT-SEMAST-004-04, #AC-SEMAST-004-04
     1. ACHIEVE "Apply @deprecated to COMPONENT"
     2. ENSURE "get() method identifies @deprecated when analyzing any FLOW inside COMPONENT"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_annotation_propagation():
     @trace #AT-SEMAST-004-05, #AC-SEMAST-004-06
     1. ACHIEVE "Resolve FIELD inside @secure TYPE"
     2. ENSURE "FIELD successfully inherits @secure behavior"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Regression Tests
@@ -46,3 +51,4 @@ FLOW test_semast_annotation_regression_unknown():
     @trace #RT-SEMAST-004-01
     1. ACHIEVE "Apply @unknown_custom_tag"
     2. ENSURE "Gracefully stored as untyped annotation rather than crashing"
+        OTHERWISE THROW "Validation Failed"

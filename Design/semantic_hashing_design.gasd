@@ -9,7 +9,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Hashing Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-010", "US-SEMAST-011"
+TRACE: "US-SEMAST-010", "US-SEMAST-011", "US-X-SEMAST-011"
 
 // ===================================================================
 // Decisions
@@ -31,12 +31,14 @@ DECISION "Hash Input Pre-processing":
 // Components
 // ===================================================================
 
-COMPONENT SemanticHasher @trace #AC-SEMAST-010-04:
+COMPONENT SemanticHasher @trace #AC-SEMAST-010-04, #AC-X-SEMAST-011-01:
     INTERFACE:
         /// Compute deterministic SHA-256 hash for a node.
-        computeHash(node: SemanticNodeBase) -> String @trace #AC-SEMAST-010-01
+        computeHash(node: SemanticNodeBase) -> String @trace #AC-SEMAST-010-01, #AC-X-SEMAST-011-02
         /// Compare two system states for semantic drift.
         compare(oldState: SemanticSystem, newState: SemanticSystem) -> List<DriftReport> @trace #AC-SEMAST-011-01
+        /// Normalize identifiers based on namespace and name hashes.
+        normalizeId(namespace: String, name: String) -> String @trace #AC-X-SEMAST-011-02
 
 COMPONENT DeterminismGuard @trace #AC-SEMAST-011-03:
     INTERFACE:
@@ -49,3 +51,5 @@ COMPONENT DeterminismGuard @trace #AC-SEMAST-011-03:
 
 CONSTRAINT: "Hashes MUST ignore comments and whitespace variations (§1.1.0)." @trace #AC-SEMAST-010-05
 CONSTRAINT: "Hashes MUST be computed recursively for all child nodes." @trace #AC-SEMAST-010-06
+CONSTRAINT: "Symbol collections MUST be sorted alphabetically in the output for determinism." @trace #AC-X-SEMAST-011-01
+CONSTRAINT: "Identical inputs MUST yield identical JSON output regardless of environment." @trace #AC-X-SEMAST-011-03

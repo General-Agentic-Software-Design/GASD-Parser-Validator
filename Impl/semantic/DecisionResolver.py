@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from .SemanticNodes import ResolvedDecisionNode, SymbolLink
 from .SymbolTable import SemanticError
 
@@ -21,6 +21,9 @@ class DecisionResolver:
             if comp.symbolId not in self.impact_matrix:
                 self.impact_matrix[comp.symbolId] = []
             self.impact_matrix[comp.symbolId].append(decision_node.name)
+            # Auto-detect conflicts when multiple decisions affect the same symbol
+            if len(self.impact_matrix[comp.symbolId]) > 1:
+                raise SemanticError(f"DecisionConflict: Multiple decisions {self.impact_matrix[comp.symbolId]} affect the same symbol '{comp.symbolId}'.")
             
         return decision_node
 
@@ -30,5 +33,13 @@ class DecisionResolver:
             # to be compatible with existing specs that might use CHOSEN as a standalone value.
             pass
 
+    def detect_conflicts(self):
+        # US-X-SEMAST-008: Decision conflict detection
+        for comp_id, decision_ids in self.impact_matrix.items():
+            if len(decision_ids) > 1:
+                # Multiple decisions affecting the same component/symbol
+                raise SemanticError(f"DecisionConflict: Multiple decisions {decision_ids} affect the same symbol '{comp_id}'.")
+
     def generate_impact_matrix(self) -> Dict[str, List[str]]:
-        return self.impact_matrix
+        """Return the impact matrix mapping component IDs to decision IDs that affect them."""
+        return dict(self.impact_matrix)

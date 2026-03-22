@@ -17,21 +17,25 @@ FLOW test_grammar_valid_file():
     @trace #AT-PARSER-001-01
     1. ACHIEVE "Parse a valid .gasd file with all core constructs"
     2. ENSURE "Grammar produces a parse tree without errors"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_grammar_missing_keyword():
     @trace #AT-PARSER-001-02
     1. ACHIEVE "Parse input with missing mandatory keyword (e.g. COMPONENT name:)"
     2. ENSURE "Grammar rejects with syntax error"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_grammar_indentation():
     @trace #AT-PARSER-001-03
     1. ACHIEVE "Parse input with incorrect indentation"
     2. ENSURE "Grammar rejects with syntax error"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_grammar_multiple_components():
     @trace #AT-PARSER-001-04
     1. ACHIEVE "Parse file with multiple COMPONENTs"
     2. ENSURE "Grammar parses all components correctly"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Negative Tests (GEP-5 Special)
@@ -41,11 +45,13 @@ FLOW test_validate_missing_binding():
     @trace #AC-PARSER-008-02, #NT-VALIDATE-001
     1. ACHIEVE "Parse 'VALIDATE user' WITHOUT 'AS TYPE.User'"
     2. ENSURE "Grammar rejects the statement"
+        OTHERWISE THROW "Validation Failed"
 
 FLOW test_validate_complex_path():
     @trace #AC-PARSER-008-01, #AC-PARSER-008-03
     1. ACHIEVE "Parse 'VALIDATE address AS TYPE.User.Address'"
     2. ENSURE "Grammar accepts the complex type path"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Regression Tests
@@ -55,7 +61,9 @@ FLOW test_grammar_regression():
     @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
     1. ACHIEVE "Parse all historical reference specs"
     2. ENSURE "All historically valid files remain valid"
+        OTHERWISE THROW "Validation Failed"
     3. ENSURE "Ambiguity warnings = 0"
+        OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
 // Constraints

@@ -234,7 +234,7 @@ class ASTGenerator(GASDParserVisitor):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText()
         params = self.visit(ctx.param_list()) if ctx.param_list() else []
-        ret = self.visit(ctx.type_expr())
+        ret = self.visit(ctx.type_expr()) if ctx.type_expr() else None
         return MethodSignature(name=name, parameters=params, returnType=ret, **loc)
 
     def visitParam_list(self, ctx: GASDParser.Param_listContext):
@@ -424,9 +424,12 @@ class ASTGenerator(GASDParserVisitor):
     def visitControl_flow(self, ctx: GASDParser.Control_flowContext):
         loc = self._get_loc(ctx)
         if ctx.ENSURE_KW():
-            target = self._get_text(ctx.expr(), 0)
-            if ctx.OTHERWISE_KW():
-                target += f" OTHERWISE {self._get_text(ctx.expr(), 1)}"
+            parts = []
+            for i in range(1, ctx.getChildCount()):
+                child = ctx.getChild(i)
+                if not isinstance(child, GASDParser.AnnotationsContext):
+                    parts.append(child.getText())
+            target = " ".join(parts).strip()
             return {"action": "ENSURE", "target": target}
             
         if ctx.IF_KW() or ctx.ON_ERROR_KW():
@@ -471,12 +474,27 @@ class ASTGenerator(GASDParserVisitor):
 
     def visitConstraint_stmt(self, ctx: GASDParser.Constraint_stmtContext):
         name = ctx.soft_id().getText() if ctx.soft_id() else None
-        text = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else ctx.value().getText().strip('"')
+        if ctx.STRING_LITERAL():
+            text = ctx.STRING_LITERAL().getText().strip('"')
+        elif ctx.value():
+            text = ctx.value().getText().strip('"')
+        else:
+            # Fallback to children or full text if specifically formatted
+            text = ctx.getText().strip()
+            if ":" in text and name:
+                text = text.split(":", 1)[1].strip()
         return ConstraintNode(kind="Constraint", text=text, name=name, **self._get_loc(ctx))
 
     def visitInvariant_stmt(self, ctx: GASDParser.Invariant_stmtContext):
         name = ctx.soft_id().getText() if ctx.soft_id() else None
-        text = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else ctx.value().getText().strip('"')
+        if ctx.STRING_LITERAL():
+            text = ctx.STRING_LITERAL().getText().strip('"')
+        elif ctx.value():
+            text = ctx.value().getText().strip('"')
+        else:
+            text = ctx.getText().strip()
+            if ":" in text and name:
+                text = text.split(":", 1)[1].strip()
         return ConstraintNode(kind="Invariant", text=text, name=name, **self._get_loc(ctx))
 
     def visitTodo_stmt(self, ctx: GASDParser.Todo_stmtContext):

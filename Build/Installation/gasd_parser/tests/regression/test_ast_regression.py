@@ -64,7 +64,8 @@ class TestASTRegression(unittest.TestCase):
         """RT-PARSER-007-05: --version remains unchanged."""
         result = self.run_parser(["--version"])
         self.assertEqual(result.returncode, 0)
-        self.assertIn("1.2.0", result.stdout)
+        self.assertRegex(result.stdout, r"gasd-parser 1\.\d+\.\d+")
+
 
     def test_ast_performance_overhead(self):
         """RT-PARSER-007-02: Basic performance check (heuristic)."""

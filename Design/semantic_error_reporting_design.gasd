@@ -9,17 +9,18 @@
 
 CONTEXT: "Compiler / Language Tooling — Semantic Error Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-012"
+TRACE: "US-SEMAST-012", "US-X-SEMAST-010"
 
 // ===================================================================
 // Error Model
 // ===================================================================
 
-TYPE SemanticError @trace #AC-SEMAST-012-01:
+TYPE SemanticError @trace #AC-SEMAST-012-01, #AC-X-SEMAST-010-01:
     code: String // e.g., "S001", "V005"
     message: String
     level: Enum(INFO, WARNING, ERROR, FATAL)
-    location: SourceRange
+    location: SourceRange @trace #AC-X-SEMAST-010-02
+    symbolName: String @optional @trace #AC-X-SEMAST-010-02
     context: List<String> @optional
     remediation: String @optional
 
@@ -27,12 +28,14 @@ TYPE SemanticError @trace #AC-SEMAST-012-01:
 // Components
 // ===================================================================
 
-COMPONENT SemanticErrorReporter @trace #AC-SEMAST-012-03:
+COMPONENT SemanticErrorReporter @trace #AC-SEMAST-012-03, #AC-X-SEMAST-010-03:
     INTERFACE:
         /// Report a new semantic error with context.
         report(error: SemanticError) -> Void @trace #AC-SEMAST-012-02
-        /// Aggregate errors from all analysis passes.
-        getSummary() -> ErrorSummary
+        /// Aggregate errors from all analysis passes across all files.
+        getSummary() -> ErrorSummary @trace #AC-X-SEMAST-010-03
+        /// Return sorted list of errors for deterministic output.
+        getSortedErrors() -> List<SemanticError> @trace #AC-X-SEMAST-010-05
         /// Clear reporter for next analysis run.
         reset() -> Void
 
@@ -42,3 +45,5 @@ COMPONENT SemanticErrorReporter @trace #AC-SEMAST-012-03:
 
 CONSTRAINT: "Errors MUST include precise line/column mapping back to origin." @trace #AC-SEMAST-012-02
 CONSTRAINT: "Error codes MUST correspond to GASD 1.1.0 Spec sections." @trace #AC-SEMAST-012-01
+CONSTRAINT: "Semantic error reporting MUST be deterministic, sorted by file path then location." @trace #AC-X-SEMAST-010-05
+CONSTRAINT: "Severity levels (ERROR vs WARNING) MUST be enforced; analysis fails on any error." @trace #AC-X-SEMAST-010-04

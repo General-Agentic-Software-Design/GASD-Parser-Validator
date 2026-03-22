@@ -1,5 +1,6 @@
 CONTEXT: "E-commerce Microservices"
 TARGET: "Go (Golang)"
+NAMESPACE: "example.saga_transaction"
 TRACE: "SRS-205 (Order Reliability)", "SRS-210 (Inventory Consistency)"
 
 /*
@@ -8,42 +9,45 @@ TRACE: "SRS-205 (Order Reliability)", "SRS-210 (Inventory Consistency)"
    2. Step 1 (Inventory): Reserves items. If it fails -> Fail Order.
    3. Step 2 (Payment): Charges money. **Crucial**: If this fails, we must ON_ERROR: ACHIEVE "Release Inventory".
       This "undo" action is called *Compensation*.
-   4. Step 3 (Shipping): Ships item. If this fails, we must undo *both* Payment (Refund) and Inventory (Release).
+   4. Step 3 (Shipping): If this fails, we must undo *both* Payment (Refund) and Inventory (Release).
    5. Success: If all pass, we update the status to "SHIPPED".
 */
-
-// --- Decisions ---
-DECISION "Transaction Pattern":
-    CHOSEN: "SAGA Choreography"
-    RATIONALE: "Avoids central orchestrator bottleneck, better scalability"
-    ALTERNATIVES: ["SAGA Orchestration", "Two-Phase Commit"]
-    AFFECTS: [OrderService, InventoryService, PaymentService]
-
-TYPE OrderService: id: UUID
-TYPE InventoryService: id: UUID
-TYPE PaymentService: id: UUID
 
 // --- Types ---
 TYPE OrderSagaData:
     order_id: UUID
     customer_id: UUID
     amount: Decimal
-    items: List<OrderItem>
+    items: List<OrderProduct>
     state: Enum(PENDING, RESERVED, PAID, SHIPPED, CANCELLED)
 
-TYPE OrderItem:
+TYPE OrderProduct:
     product_id: UUID
     quantity: Integer
 
 // --- Components ---
+COMPONENT ProductInventoryService:
+    INTERFACE:
+        reserve(items: List<OrderProduct>) -> Void
+        release(items: List<OrderProduct>) -> Void
+
+COMPONENT PaymentProcessingService:
+    INTERFACE:
+        process_saga_payment(amount: Decimal, customer_id: UUID) -> Void
+        refund(amount: Decimal, customer_id: UUID) -> Void
+
+COMPONENT NotificationService:
+    INTERFACE:
+        notify(customer_id: UUID, msg: String) -> Void
+
 COMPONENT OrderWorkflow:
-    DEPENDENCIES: [InventoryClient, PaymentClient, NotificationService]
+    DEPENDENCIES: [ProductInventoryService, PaymentProcessingService, NotificationService]
     INTERFACE:
         execute_order(order: OrderSagaData) -> Result<OrderSagaData>
         compensate_order(order: OrderSagaData, failure_reason: String) -> Void
 
 // --- Flow with Compensation Logic ---
-FLOW execute_order(order):
+FLOW execute_order(order: OrderSagaData) -> Result<OrderSagaData>:
     @transaction_type("SAGA")
     
     1. VALIDATE order AS TYPE.OrderSagaData
@@ -60,7 +64,7 @@ FLOW execute_order(order):
         input: order.items
         ON_ERROR: 
             ACHIEVE "Fail Order"
-            RETURN Result.failure("Inventory unavailable")
+            THROW "Inventory unavailable"
 
     // Step 2: Payment Processing
     5. ACHIEVE "Process Payment":
@@ -68,16 +72,16 @@ FLOW execute_order(order):
         ON_ERROR: 
             ACHIEVE "Release Inventory" // Compensation for Step 1
             ACHIEVE "Fail Order"
-            RETURN Result.failure("Payment failed")
+            THROW "Payment failed"
 
     // Step 3: Shipping
     6. ACHIEVE "Initiate Shipping":
-        input: order.id
+        input: order.order_id
         ON_ERROR:
             ACHIEVE "Refund Payment"    // Compensation for Step 2
             ACHIEVE "Release Inventory" // Compensation for Step 1
             ACHIEVE "Fail Order"
-            RETURN Result.failure("Shipping failed")
+            THROW "Shipping failed"
 
     // Success Path
     7. ACHIEVE "Update Order State":
@@ -86,7 +90,14 @@ FLOW execute_order(order):
     8. ACHIEVE "Notify Customer Success" @async
     9. RETURN Result.success(order)
 
-FLOW compensate_order(order, failure_reason):
+FLOW compensate_order(order: OrderSagaData, failure_reason: String) -> Void:
     1. LOG failure_reason
     2. ACHIEVE "Mark Order Cancelled"
     3. ACHIEVE "Notify Customer Failure"
+
+// --- Decisions ---
+DECISION "Transaction Pattern":
+    CHOSEN: "SAGA Choreography"
+    RATIONALE: "Avoids central orchestrator bottleneck, better scalability"
+    ALTERNATIVES: ["SAGA Orchestration", "Two-Phase Commit"]
+    AFFECTS: [OrderWorkflow]

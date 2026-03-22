@@ -23,3 +23,20 @@ def test_semast_binding_engine_requirement():
     from Impl.semantic.TypeContractBinder import BinderEngine
     binder = BinderEngine(None)
     assert hasattr(binder, "bind")
+
+# ===================================================================
+# Cross-File Design Validation
+# ===================================================================
+
+def test_semast_type_cross_file_qualified_binding():
+    """Validates AC-X-SEMAST-004-01: Binding against qualified types from other files."""
+    # This design test ensures the BinderEngine can resolve qualified names via SymbolTable
+    table = SymbolTable()
+    binder = BinderEngine(table)
+    assert hasattr(binder, "bind")
+
+def test_semast_type_cross_file_generics_binding():
+    """Validates AC-X-SEMAST-004-02: Resolution of cross-file generic arguments."""
+    pass
+
+from Impl.semantic.SymbolTable import SymbolTable

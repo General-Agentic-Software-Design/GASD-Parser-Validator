@@ -1,0 +1,13 @@
+CONTEXT: "Reproduction for missing warnings in --ast"
+TARGET: "Any"
+NAMESPACE: "repro_ast"
+
+TYPE MyType:
+    field: UnknownType // Should trigger a warning in Phase 3
+
+COMPONENT TestComponent:
+    INTERFACE:
+        test_method() -> String
+
+FLOW test_method() -> String:
+    1. RETURN "Done"

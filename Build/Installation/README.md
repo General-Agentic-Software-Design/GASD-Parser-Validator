@@ -1,6 +1,6 @@
 # GASD Parser & Validator
 
-Official implementation of the GASD 1.1 specification language (Version 1.2.0).
+Official implementation of the GASD 1.1 specification language (Version 1.2.2).
 
 ## Installation
 
@@ -66,3 +66,14 @@ gasd-parser path/to/file.gasd --json
 - `--ast-output <path>`: Path to save the extracted AST JSON file.
 - `--ast-combine`: Combine multiple ASTs into a single JSON output.
 - `--no-validate`: Skip semantic validation, only check syntax.
+- `--version`: Show the version and build time.
+
+## Verification
+
+To verify the installation and build time:
+
+```bash
+gasd-parser --version
+```
+
+Output should look like: `gasd-parser 1.2.2 (built: 2026-03-22T00:01:19Z)`

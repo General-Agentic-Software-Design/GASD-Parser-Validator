@@ -119,3 +119,46 @@ def test_semast_symbol_regression_missing():
     table = SymbolTable()
     resolved = table.resolve("missing_symbol")
     assert resolved is None
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_symbol():
+    # AT-X-SEMAST-003-01, AC-X-SEMAST-003-01
+    table = SymbolTable()
+    node = SemanticNodeBase("Test", SourceRange("file1.gasd", 1, 0, 1, 10))
+    entry = SymbolEntry("RemoteType", SymbolKind.Type, table.global_scope, node)
+    table.define(entry)
+    
+    # ENSURE "Symbols defined in File A are visible to File B via Global scope"
+    resolved = table.resolve("RemoteType")
+    assert resolved is not None
+    assert resolved.nodeLink.sourceMap.file == "file1.gasd"
+
+def test_semast_cross_file_collision():
+    # AT-X-SEMAST-003-02, AC-X-SEMAST-003-03
+    table = SymbolTable()
+    node1 = SemanticNodeBase("Test", SourceRange("file1.gasd", 1, 0, 1, 10))
+    node2 = SemanticNodeBase("Test", SourceRange("file2.gasd", 1, 0, 1, 10))
+    
+    entry1 = SymbolEntry("ConflictType", SymbolKind.Type, table.global_scope, node1)
+    table.define(entry1)
+    
+    entry2 = SymbolEntry("ConflictType", SymbolKind.Type, table.global_scope, node2)
+    # ENSURE "Defining the same symbol in the same namespace across different files is a collision"
+    with pytest.raises(SemanticError, match="Collision error"):
+        table.define(entry2)
+
+def test_semast_builtin_shadowing():
+    # AT-X-SEMAST-003-03, AC-X-SEMAST-003-05
+    table = SymbolTable() # Global scope already has built-ins (String, etc.)
+    node = SemanticNodeBase("Test", SourceRange("file1.gasd", 1, 0, 1, 10))
+    
+    # ENSURE "String" is a built-in
+    assert table.resolve("String") is not None
+    
+    entry = SymbolEntry("String", SymbolKind.Type, table.global_scope, node)
+    # ENSURE "User defined symbols shadowing built-in types should trigger a warning/error"
+    with pytest.raises(SemanticError, match="Collision error|Shadowing error"):
+        table.define(entry)

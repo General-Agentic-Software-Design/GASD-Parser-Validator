@@ -1,0 +1,36 @@
+CONTEXT: "User Service"
+TARGET: "TypeScript"
+NAMESPACE: "com.example.userregistration"
+TRACE: "SRS-101 (User Registration)"
+
+IMPORT "common.gasd" AS Common
+
+TYPE UserRegistration:
+    email: String @format("email") @unique
+    age: Integer @range(18, 120)
+
+COMPONENT RegistrationService:
+    PATTERN: "Service"
+    INTERFACE: 
+        process_registration(data: UserRegistration) -> UUID
+
+FLOW process_registration(data: UserRegistration) -> UUID:
+    // 1. Validation (Schema check)
+    1. VALIDATE data AS TYPE.UserRegistration
+
+    // 2. Business Logic Checks
+    2. ENSURE uniqueness(data.email)
+        OTHERWISE THROW "Email already exists"
+
+    // 3. Security (Password Hashing)
+    3. ACHIEVE "Hash Password":
+        @algorithm("Argon2id")
+        @rounds(12)
+
+    // 4. Persistence
+    4. ACHIEVE "Save User"
+
+    // 5. Notifications (Async)
+    5. ACHIEVE "Notify User" @async
+
+    6. RETURN Common.User.id

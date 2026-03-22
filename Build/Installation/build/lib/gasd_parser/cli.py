@@ -16,7 +16,7 @@ from .ast.ASTGenerator import ASTGenerator
 from .ast.ASTExporter import ASTExporter
 from .validation.ValidationPipeline import ValidationPipeline
 from .errors.ErrorReporter import ErrorReporter, IOErrorData
-from . import __version__
+from . import __version__, __build_time__
 
 
 def main():
@@ -48,7 +48,7 @@ def main():
     parser.add_argument(
         "--version",
         action="version",
-        version=f"gasd-parser {__version__}",
+        version=f"gasd-parser {__version__} (built: {__build_time__})",
     )
     parser.add_argument(
         "--ast",
@@ -69,7 +69,6 @@ def main():
         action="store_true",
         help="Combine multiple ASTs into a single JSON output.",
     )
-
     args = parser.parse_args()
 
     if not args.files:
@@ -98,116 +97,204 @@ def main():
         print("Error: No .gasd files found to parse.", file=sys.stderr)
         sys.exit(1)
 
+    # Sort files to ensure deterministic output order regardless of OS walk order
+    target_files.sort()
+
     all_reports = []
     collected_asts = []
     success_count = 0
     failure_count = 0
+    warning_total = 0
+    
+    reporters = {}
+    valid_asts = []
 
-    for file_path in target_files:
+    # === Phase 1-3: Parse & AST Generation (Recursive) ===
+    reporters = {}
+    valid_asts = []
+    collected_asts = []
+    
+    processed_files = set()
+    queue = list(target_files)
+    
+    while queue:
+        file_path = os.path.abspath(queue.pop(0))
+        if file_path in processed_files:
+            continue
+        processed_files.add(file_path)
+        
+        if not os.path.exists(file_path):
+            # This could happen for broken imports
+            continue
+
         with open(file_path, "r") as f:
             content = f.read()
 
-        # === Phase 1: Parse ===
+        # Parse
         api = ParseTreeAPI()
         tree, reporter = api.parse(content)
         reporter.source_file = file_path
+        reporters[file_path] = reporter
 
         if reporter.get_error_count() > 0:
-            if args.json:
-                all_reports.append(reporter.to_json())
-            else:
+            if not args.json:
                 print(f"ERROR: {file_path} failed validation", file=sys.stderr)
                 print(reporter.to_console(), file=sys.stderr)
-            failure_count += 1
             continue
 
-        # === Phase 2: AST Generation ===
+        # AST Generation
         generator = ASTGenerator(source_file=file_path)
         ast = generator.visit(tree)
 
-        # === Phase 3: Semantic Validation ===
+        # Semantic Validation (syntactic/local)
         semantic_errors = []
         if not args.no_validate:
             pipeline = ValidationPipeline()
-            semantic_errors = pipeline.validate(ast)
+            # Skip ReferenceResolutionPass if we're doing the full semantic pass later
+            do_full_sem = args.ast_sem or (not args.ast and not args.json and not args.ast_output)
+            skip = ["ReferenceResolutionPass"] if do_full_sem else []
+            semantic_errors = pipeline.validate(ast, skip_passes=skip)
             for err in semantic_errors:
                 reporter.add_semantic_error(err)
 
-        # === Phase 4: Semantic AST Generation ===
-        semantic_ast = None
-        if args.ast_sem and not reporter.has_errors():
-            from .semantic.SemanticPipeline import SemanticPipeline
-            from .semantic.SymbolTable import SemanticError
-            sem_pipeline = SemanticPipeline()
-            try:
-                semantic_ast = sem_pipeline.run(ast)
-            except SemanticError as e:
-                from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
-                reporter.add_semantic_error(ValidationSemanticError(
+        if not reporter.has_errors():
+            valid_asts.append((file_path, ast))
+            if args.ast or args.ast_sem:
+                 collected_asts.append(ast)
+            
+            # Recursive Discovery of Imports
+            for d in ast.directives:
+                if d.directiveType == "IMPORT" and d.values:
+                    val_clean = d.values[0].strip('"\' ')
+                    if val_clean.endswith(".gasd"):
+                        abs_import = os.path.abspath(os.path.join(os.path.dirname(file_path), val_clean))
+                        if os.path.exists(abs_import) and abs_import not in processed_files:
+                            queue.append(abs_import)
+    
+    # Update target_files to include recursively discovered files for the final report
+    target_files = sorted(processed_files)
+
+    # === Phase 4: Semantic AST Generation (Cross-File) ===
+    semantic_system = None
+    do_full_sem = args.ast_sem or (not args.ast and not args.json and not args.ast_output)
+    if do_full_sem and valid_asts:
+        from .semantic.SemanticPipeline import SemanticPipeline
+        from .semantic.SymbolTable import SemanticError
+        from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
+        
+        sem_pipeline = SemanticPipeline()
+        try:
+            # Pass only the GASDFile ast objects
+            semantic_system = sem_pipeline.run([ast for _, ast in valid_asts])
+            sem_rep = sem_pipeline.get_reporter()
+            for sem_err in sem_rep.errors:
+                file_key = sem_err.location.file if sem_err.location and sem_err.location.file else "unknown"
+                
+                target_rep = reporters.get(file_key)
+                if not target_rep and len(reporters) == 1:
+                    target_rep = list(reporters.values())[0]
+                elif not target_rep:
+                    # Fallback if file mapping fails
+                    for rep in reporters.values():
+                        target_rep = rep
+                        break
+                        
+                if target_rep:
+                    target_rep.add_semantic_error(ValidationSemanticError(
+                        code=sem_err.code,
+                        severity=sem_err.level.value,
+                        message=sem_err.message,
+                        line=sem_err.location.startLine,
+                        column=sem_err.location.startCol,
+                        endLine=sem_err.location.endLine,
+                        endColumn=sem_err.location.endCol,
+                        sourceFile=file_key
+                    ))
+        except SemanticError as e:
+            # Catch catastrophic pipeline failures
+            loc = e.location
+            file_key = loc.file if loc and loc.file else None
+            
+            # Find the best reporter to add the error to
+            target_rep = reporters.get(file_key) if file_key else None
+            if not target_rep:
+                # If no specific file or reporter found, use the first one available
+                target_rep = list(reporters.values())[0] if reporters else None
+                
+            if target_rep:
+                target_rep.add_semantic_error(ValidationSemanticError(
                     code="SEMAST-ERR",
                     severity="ERROR",
                     message=str(e),
-                    line=0,
-                    column=0,
-                    sourceFile=file_path
+                    line=loc.startLine if loc else 0,
+                    column=loc.startCol if loc else 0,
+                    endLine=loc.endLine if loc else 0,
+                    endColumn=loc.endCol if loc else 0,
+                    sourceFile=file_key if file_key else target_rep.source_file
                 ))
 
-        # === AST Export (Per-file) ===
-        if (args.ast or args.ast_sem) and not reporter.has_errors():
-            exporter = ASTExporter()
-            export_ast = ast
-            
-            if args.ast_sem:
-                from .semantic.SemanticASTExporter import SemanticASTExporter
-                exporter = SemanticASTExporter()
-                export_ast = semantic_ast
+    # === Final Output for Per-file processing ===
+    for file_path in target_files:
+        reporter = reporters[file_path]
+        is_failure = reporter.has_errors() or reporter.get_warning_count() > 0
+        
+        # Per-file AST export if not combining and not JSON output
+        # ONLY DO THIS FOR syntactic AST (--ast) since Semantic AST is cross-file
+        if args.ast and not args.ast_sem and not args.ast_combine and args.ast_output and not is_failure:
+            export_ast = None
+            for i, f_path in enumerate(target_files):
+                if f_path == file_path and i < len(collected_asts):
+                    export_ast = collected_asts[i]
+                    break
 
-            if args.ast_combine or args.json:
-                collected_asts.append(export_ast)
-            
-            if not args.ast_combine:
+            if export_ast:
+                from .ast.ASTExporter import ASTExporter
+                exporter = ASTExporter()
                 ast_json = exporter.to_json(export_ast)
-                if args.ast_output:
-                    out_path = args.ast_output
-                    if len(target_files) > 1:
-                        base, ext = os.path.splitext(args.ast_output)
-                        filename = os.path.basename(file_path).replace(".gasd", ".json")
-                        out_path = f"{base}.{filename}"
-                    
-                    try:
-                        with open(out_path, "w") as out_f:
-                            out_f.write(ast_json)
-                    except Exception as e:
-                        reporter.add_io_error(IOErrorData(
-                            message=str(e),
-                            path=out_path,
-                            operation="WRITE"
-                        ))
-                elif not args.json and not args.ast_combine:
-                    # Raw JSON output is intentionally suppressed unless --json or --ast-combine (without --json) is specified.
-                    # This matches the user preference for "silent JSON" in default mode.
-                    pass
+                
+                out_path = args.ast_output
+                if len(target_files) > 1:
+                    base, ext = os.path.splitext(args.ast_output)
+                    filename = os.path.basename(file_path).replace(".gasd", ".json")
+                    out_path = f"{base}.{filename}"
+                
+                try:
+                    with open(out_path, "w") as out_f:
+                        out_f.write(ast_json)
+                except Exception as e:
+                    reporter.add_io_error(IOErrorData(
+                        message=str(e),
+                        path=out_path,
+                        operation="WRITE"
+                    ))
 
-        # === Final Output for Per-file processing ===
         if args.json:
             all_reports.append(reporter.to_json())
-            if reporter.has_errors():
+            if is_failure:
                 failure_count += 1
             else:
                 success_count += 1
+            warning_total += reporter.get_warning_count()
         else:
-            if reporter.has_errors():
-                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
+            if reporter.has_errors() or reporter.get_warning_count() > 0:
+                if is_failure:
+                    print(f"ERROR: {file_path} failed validation", file=sys.stderr)
+                else:
+                    print(f"OK Passed (with warnings): {file_path}", file=sys.stderr)
                 print(reporter.to_console(), file=sys.stderr)
-                failure_count += 1
+                
+                if is_failure:
+                    failure_count += 1
+                else:
+                    success_count += 1
             else:
-                # @trace #AC-PARSER-006-03
-                # Status messages go to stderr to keep stdout clean for JSON data
-                if args.ast_output:
+                if args.ast_output and not args.ast_combine and not args.ast_sem: # Only print if per-file output happened
                     print(f"OK Passed: {file_path} (Exported to {args.ast_output})", file=sys.stderr)
                 else:
                     print(f"OK Passed: {file_path}", file=sys.stderr)
                 success_count += 1
+            
+            warning_total += reporter.get_warning_count()
 
     if args.json:
         combined = {
@@ -216,32 +303,47 @@ def main():
             "failureCount": failure_count,
             "reports": all_reports
         }
-        if (args.ast or args.ast_sem) and collected_asts and not args.ast_output:
-            if args.ast_sem:
-                combined["asts"] = [a.to_dict() for a in collected_asts if a is not None]
-            else:
-                exporter = ASTExporter()
-                combined["asts"] = [exporter._to_dict(a) for a in collected_asts if a is not None]
+        if args.ast_sem and semantic_system and not args.ast_output:
+            # In unified mode, output the single cross-file system
+            combined["asts"] = [semantic_system.to_dict()]
+        elif args.ast and collected_asts and not args.ast_output:
+            from .ast.ASTExporter import ASTExporter
+            exporter = ASTExporter()
+            combined["asts"] = [exporter._to_dict(a) for a in collected_asts if a is not None]
+            
         if not args.ast_output or failure_count > 0:
             print(json.dumps(combined, indent=2))
     
-    # === AST Export (Combined) ===
-    if (args.ast or args.ast_sem) and args.ast_combine and collected_asts:
-        exporter = ASTExporter()
-        if args.ast_sem:
+    # === AST Export (Combined or Semantic) ===
+    if (args.ast and args.ast_combine) or args.ast_sem:
+        export_data = None
+        exporter = None
+        if args.ast_sem and semantic_system:
+            export_data = semantic_system
             from .semantic.SemanticASTExporter import SemanticASTExporter
             exporter = SemanticASTExporter()
+        elif args.ast and args.ast_combine and collected_asts:
+            export_data = collected_asts
+            from .ast.ASTExporter import ASTExporter
+            exporter = ASTExporter()
             
-        combined_ast_json = exporter.to_json(collected_asts)
-        if args.ast_output:
+        if export_data is not None and args.ast_output and failure_count == 0:
+            combined_ast_json = exporter.to_json(export_data)
             try:
                 with open(args.ast_output, "w") as out_f:
                     out_f.write(combined_ast_json)
+                if not args.json:
+                    print(f"Exported combined AST to {args.ast_output}", file=sys.stderr)
             except Exception as e:
-                print(f"Error writing combined AST to {args.ast_output}: {e}", file=sys.stderr)
+                # Add to first reporter for lack of global error space if not json
+                list(reporters.values())[0].add_io_error(IOErrorData(
+                    message=str(e),
+                    path=args.ast_output,
+                    operation="WRITE"
+                ))
                 failure_count += 1
-        elif not args.json:
-            # Output combined AST JSON to console if not saving to file and not producing full --json report
+        elif not args.json and export_data is not None and args.ast_combine: # Only print if not saving to file and not producing full --json report and user explicitly requested combine
+            combined_ast_json = exporter.to_json(export_data)
             print(combined_ast_json)
         else:
             # Combined AST is output via the main JSON reporting block
@@ -253,6 +355,7 @@ def main():
         print(f"Files Validated: {len(target_files)}", file=sys.stderr)
         print(f"Pass:            {success_count}", file=sys.stderr)
         print(f"Failed:          {failure_count}", file=sys.stderr)
+        print(f"Warnings:        {warning_total}", file=sys.stderr)
 
     sys.exit(1 if failure_count > 0 else 0)  # @trace #AC-PARSER-006-03
 

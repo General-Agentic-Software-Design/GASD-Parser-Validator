@@ -9,19 +9,20 @@
 
 CONTEXT: "Compiler / Language Tooling — DECISION Design"
 TARGET: "TypeScript"
-TRACE: "US-SEMAST-008"
+TRACE: "US-SEMAST-008", "US-X-SEMAST-008"
 
 // ===================================================================
 // Decision Model
 // ===================================================================
 
-TYPE ResolvedDecisionNode @trace #AC-SEMAST-008-01:
+TYPE ResolvedDecisionNode @trace #AC-SEMAST-008-01, #AC-X-SEMAST-008-01:
     kind: "ResolvedDecision"
     name: String
     chosen: String
     rationale: String
     alternatives: List<String>
-    affectedComponents: List<SymbolLink>
+    affectedNodes: List<SymbolLink> @trace #AC-X-SEMAST-008-01, #AC-X-SEMAST-008-02
+    isGlobal: Boolean @trace #AC-X-SEMAST-008-03
 
 // ===================================================================
 // Components
@@ -30,11 +31,13 @@ TYPE ResolvedDecisionNode @trace #AC-SEMAST-008-01:
 COMPONENT DecisionResolver @trace #AC-SEMAST-008-05:
     INTERFACE:
         /// Resolve decision path and trace effects.
-        resolve(decision: Decision) -> ResolvedDecisionNode @trace #AC-SEMAST-008-02
+        resolve(decision: Decision) -> ResolvedDecisionNode @trace #AC-SEMAST-008-02, #AC-X-SEMAST-008-05
         /// Verify the chosen alternative exists.
         verifyChoice(decision: ResolvedDecisionNode) -> Void @trace #AC-SEMAST-008-03
-        /// Generate impact matrix for all decisions.
-        generateImpactMatrix() -> Map<String, List<SymbolLink>>
+        /// Generate impact matrix for all decisions across the unit.
+        generateImpactMatrix(unit: CompilationUnit) -> Map<String, List<SymbolLink>> @trace #AC-X-SEMAST-008-01
+        /// Detect conflicting decisions affecting the same symbol.
+        detectConflicts(unit: CompilationUnit) -> Void @trace #AC-X-SEMAST-008-04
 
 // ===================================================================
 // Constraints
@@ -42,3 +45,5 @@ COMPONENT DecisionResolver @trace #AC-SEMAST-008-05:
 
 CONSTRAINT: "Decisions MUST cite at least one affected component or node." @trace #AC-SEMAST-008-07
 CONSTRAINT: "Rationale MUST be provided for non-trivial decisions (>= 3 alternatives)." @trace #AC-SEMAST-008-08
+CONSTRAINT: "Conflicting decisions affecting the same symbol MUST be detected and reported." @trace #AC-X-SEMAST-008-04
+CONSTRAINT: "Wildcard impacts (AFFECTS: [*]) MUST be applied to all relevant symbols globally." @trace #AC-X-SEMAST-008-03

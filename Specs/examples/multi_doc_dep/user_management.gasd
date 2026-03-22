@@ -1,0 +1,72 @@
+CONTEXT: "E-commerce Platform / Microservice"
+TARGET: "TypeScript 5.0+"
+NAMESPACE: "com.example.usermanagement"
+TRACE: "SRS-101 (User Registration)", "SRS-105 (Security)"
+
+IMPORT "common.gasd" AS Common
+
+// --- 3. Types & Contracts ---
+/// Data payload for new user registration.
+TYPE RegistrationRequest:
+    email: String @format("email")
+    password: String @min_length(12) @constraint("Must include special char")
+
+COMPONENT EmailProvider:
+    INTERFACE:
+        send_email(to: String, subject: String, body: String) -> Void
+
+// --- 4. Components & Interfaces ---
+COMPONENT AuthService @status("APPROVED"):
+    PATTERN: "Domain Service"
+    DEPENDENCIES: [UserRepository, EmailProvider]
+    
+    INTERFACE:
+        register_user_management(req: RegistrationRequest) -> String
+        suspend_user(user_id: UUID, reason: String) -> Void
+
+COMPONENT UserRepository @mockable:
+    PATTERN: "Data Access Object"
+    INTERFACE:
+        exist_by_email(email: String) -> Boolean
+        save(user: Common.User) -> Void
+        find_by_id(id: UUID) -> Optional<Common.User>
+
+// --- 5. Design Flows ---
+FLOW register_user_management(req: RegistrationRequest) -> String:
+    @error_strategy("Exception-based")
+
+    1. VALIDATE req AS TYPE.RegistrationRequest
+    2. ENSURE UserRepository.exist_by_email(req.email) IS FALSE
+        OTHERWISE THROW ConflictException("Email already registered")
+    
+    3. ACHIEVE "Generate Secure Hash":
+        @heuristic("Use Decision: Password Hashing")
+        input: req.password
+        output: hash
+    
+    4. CREATE Common.User:
+        email = req.email
+        password_hash = result_of(step 3)
+        role = "USER"
+        status = "ACTIVE"
+    
+    5. PERSIST Common.User via UserRepository
+    6. ACHIEVE "Send Welcome Email" @async
+    7. RETURN Common.User.id
+
+FLOW handle_login_failure(user_id: UUID, attempts: Integer):
+    MATCH attempts:
+        3 -> ACHIEVE "Send Warning Email"
+        5 -> ACHIEVE "Lock Account Temporarily"
+        10 -> ACHIEVE "Suspend Account" AND "Alert Security"
+        DEFAULT -> ACHIEVE "Log Failed Attempt"
+
+// --- 6. Global Constraints ---
+DECISION "Primary Key Strategy":
+    CHOSEN: "UUID v7"
+    RATIONALE: "Time-ordered UUIDs for better database indexing performance"
+    ALTERNATIVES: ["UUID v4", "ULID"]
+    AFFECTS: []
+
+CONSTRAINT: "All PII (email) must be encrypted at rest in the database"
+INVARIANT: "A suspended user cannot perform a login flow"

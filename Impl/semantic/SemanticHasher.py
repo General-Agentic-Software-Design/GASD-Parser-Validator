@@ -1,5 +1,5 @@
-from typing import List, Dict, Any
-from .SemanticNodes import SemanticNodeBase, SemanticSystem
+from typing import List, Dict, Any, Optional, Set
+from .SemanticNodes import SemanticNodeBase, SemanticSystem, CompilationUnit, ProjectFileNode
 
 class DriftReport:
     def __init__(self, node_id: str, kind: str, message: str):
@@ -62,7 +62,22 @@ class SemanticHasher:
             if name not in old_map:
                 reports.append(DriftReport(name, "Namespace", "Added"))
                 
+        # CompilationUnit check (US-X-SEMAST-011)
+        if old_state.compilationUnit and new_state.compilationUnit:
+            if old_state.compilationUnit.hash != new_state.compilationUnit.hash:
+                reports.append(DriftReport("CU", "CompilationUnit", "Modified"))
+        elif old_state.compilationUnit != new_state.compilationUnit:
+            reports.append(DriftReport("CU", "CompilationUnit", "Added/Removed"))
+
         return reports
+
+    def sort_symbols(self, symbols: Dict[str, Any]) -> Dict[str, Any]:
+        """Sort symbols deterministically by name for cross-file consistency."""
+        return dict(sorted(symbols.items()))
+
+    def hash_system(self, system: SemanticSystem) -> str:
+        """Compute a hash of the entire semantic system (global graph)."""
+        return system.hash
 
 class DeterminismGuard:
     def verify_runs(self, *states: SemanticSystem) -> bool:

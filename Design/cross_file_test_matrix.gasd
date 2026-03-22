@@ -1,0 +1,59 @@
+/*
+   Design: Cross-File Test Matrix & Regression Strategy
+   ====================================================
+   Defines the comprehensive test coverage matrix and validation strategies
+   for the v1.3.0 cross-file semantic engine.
+
+   Output: Impl/tests/cross_file/
+*/
+
+CONTEXT: "Quality Engineering — Test Matrix Design"
+TARGET: "TypeScript"
+TRACE: "US-X-SEMAST-012"
+
+// ===================================================================
+// Test Domains Matrix (§12)
+// ===================================================================
+
+TYPE TestDomain @trace #AC-X-SEMAST-012-01:
+    domain: Enum(IMPORTS, NAMESPACES, TYPES, COMPONENTS, FLOWS, DECISIONS, CONSTRAINTS, DETERMINISM, ERRORS)
+    scenarios: List<TestScenario>
+
+TYPE TestScenario:
+    id: String
+    description: String
+    inputFiles: List<String>
+    expectedResult: Enum(PASS, FAIL)
+    expectedErrorCode: String @optional
+
+// ===================================================================
+// Validation Components
+// ===================================================================
+
+COMPONENT GoldenFileEngine @trace #AC-X-SEMAST-012-02:
+    INTERFACE:
+        /// Compare actual Semantic AST JSON against expected baseline.
+        compareAgainstGolden(actual: JSON, golden: JSON) -> Boolean
+        /// Update golden files with confirmed correct system output.
+        updateGolden(actual: JSON) -> Void
+
+COMPONENT MutationFuzzer @trace #AC-X-SEMAST-012-03:
+    INTERFACE:
+        /// Randomly reorder import statements and verify same output.
+        fuzzImportOrdering(unit: CompilationUnit) -> Void
+        /// Rename shared symbols and verify consistent propagation.
+        mutateSymbolNames(unit: CompilationUnit) -> Void
+
+COMPONENT StressTester @trace #AC-X-SEMAST-012-04:
+    INTERFACE:
+        /// Verify system remains stable with 100+ files and 10,000+ symbols.
+        stressScale() -> PerformanceReport
+        /// Verify deep recursion limits for imports and generics.
+        stressDeepRecursion(depth: Integer) -> Void
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "100% pass rate MUST be achieved on the 100-feature semantic test matrix." @trace #AT-X-SEMAST-012-01
+CONSTRAINT: "Cross-OS path normalization (Windows vs POSIX) MUST be verified." @trace #RT-X-SEMAST-012-03

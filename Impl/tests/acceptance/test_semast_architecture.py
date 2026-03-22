@@ -52,7 +52,7 @@ def test_semast_interface_compliance():
     analyzer = DependencyAnalyzer(table)
     
     # Interface
-    intf_methods = {"run": ResolvedMethodNode("run", [], TypeContract("Boolean"))}
+    intf_methods = {"run": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "run", [], TypeContract("Boolean"))}
     intf_comp = generate_mock_component("Runnable", methods=intf_methods, pattern="Interface")
     
     table.define(SymbolEntry("Runnable", SymbolKind.Component, table.current_scope, intf_comp))
@@ -115,12 +115,12 @@ def test_semast_interface_mismatch():
     table = SymbolTable()
     analyzer = DependencyAnalyzer(table)
     
-    intf_methods = {"run": ResolvedMethodNode("run", [ResolvedParameter("timeout", TypeContract("Integer"))], TypeContract("Boolean"))}
+    intf_methods = {"run": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "run", [ResolvedParameter("timeout", TypeContract("Integer"))], TypeContract("Boolean"))}
     intf_comp = generate_mock_component("Runnable", methods=intf_methods, pattern="Interface")
     table.define(SymbolEntry("Runnable", SymbolKind.Component, table.current_scope, intf_comp))
     
     # Wrong param type
-    impl_methods = {"run": ResolvedMethodNode("run", [ResolvedParameter("timeout", TypeContract("String"))], TypeContract("Boolean"))}
+    impl_methods = {"run": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "run", [ResolvedParameter("timeout", TypeContract("String"))], TypeContract("Boolean"))}
     impl_comp = generate_mock_component("MyJob", methods=impl_methods)
     
     # ENSURE "Semantic Error is raised for interface violation"
@@ -138,3 +138,59 @@ def test_semast_architecture_regression_self_dep():
     cycles = analyzer.detect_cycles(graph)
     assert len(cycles) == 1
     assert cycles[0].path == ["A", "A"]
+
+# ===================================================================
+# Cross-File Acceptance Tests
+# ===================================================================
+
+def test_semast_cross_file_interface():
+    # AC-X-SEMAST-005-04
+    table = SymbolTable()
+    analyzer = DependencyAnalyzer(table)
+    
+    # Interface in remote file
+    intf_methods = {"remoteRun": ResolvedMethodNode(SourceRange("", 0, 0, 0, 0), "remoteRun", [], TypeContract("Boolean"))}
+    intf_comp = generate_mock_component("RemoteNS.RemoteInterface", methods=intf_methods, pattern="Interface")
+    table.define(SymbolEntry("RemoteNS.RemoteInterface", SymbolKind.Component, table.global_scope, intf_comp))
+    
+    # Implementation in local file
+    impl_comp = generate_mock_component("LocalImpl")
+    
+    # ENSURE "Analyzer throws MissingMethod for remote interface violation"
+    with pytest.raises(SemanticError, match="MissingMethod"):
+        analyzer.verify_interface(impl_comp, SymbolLink("RemoteNS.RemoteInterface"))
+
+def test_semast_cross_file_cycles():
+    # AC-X-SEMAST-005-03
+    table = SymbolTable()
+    analyzer = DependencyAnalyzer(table)
+    
+    # A in File1 depends on B in File2
+    comp_a = generate_mock_component("File1.A", deps=[SymbolLink("File2.B")])
+    # B in File2 depends on A in File1
+    comp_b = generate_mock_component("File2.B", deps=[SymbolLink("File1.A")])
+    
+    graph = analyzer.analyze([comp_a, comp_b])
+    
+    # ENSURE "Analyzer detects and reports cross-file cycle path"
+    cycles = analyzer.detect_cycles(graph)
+    assert len(cycles) > 0
+    assert "File1.A" in cycles[0].path
+    assert "File2.B" in cycles[0].path
+
+def test_semast_provides_requires_balance():
+    # AT-X-SEMAST-005-01
+    table = SymbolTable()
+    analyzer = DependencyAnalyzer(table)
+    
+    # CompA REQUIRES ServiceX
+    comp_a = generate_mock_component("CompA")
+    comp_a.requires = ["ServiceX"] # Mocking provides/requires fields
+    
+    # CompB PROVIDES ServiceX
+    comp_b = generate_mock_component("CompB")
+    comp_b.provides = ["ServiceX"]
+    
+    # ENSURE "Analyzer validates the matching of PROVIDES and REQUIRES globally"
+    # This will be fully implemented in Phase 9
+    assert analyzer.validate_balance([comp_a, comp_b]) is True
