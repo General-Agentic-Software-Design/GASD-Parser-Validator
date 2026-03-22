@@ -1,6 +1,6 @@
 # GASD Parser & Validator
 
-Official implementation of the GASD 1.1 specification language (Version 1.2.2).
+Official implementation of the GASD 1.1 specification language (Version 1.4.0).
 
 ## Installation
 
@@ -76,4 +76,4 @@ To verify the installation and build time:
 gasd-parser --version
 ```
 
-Output should look like: `gasd-parser 1.2.2 (built: 2026-03-22T00:01:19Z)`
+Output should look like: `gasd-parser 1.4.0 (built: 2026-03-22T00:01:19Z)`
