@@ -1,28 +1,32 @@
 /*
    --- Build Plan: GASD Parser & Validator ---
    Expert implementation of building and testing the official GASD parser.
-   Strictly follows GASD 1.1.0 normative specification:
-    - Specs/GASD_Specification-1.1.md
-    - Specs/gasd-1.1.0.gasd
-    - Requirements/ver-1.2/GASD Semantic AST.md
-    - Requirements/ver-1.2/Built-in-types-support.md
-    Strictly follows the user story in Requirements/*
+   Strictly follows GASD 1.1.0 normative specification.
+   Following the Standard GASD Project Life-cycle Template:
+   https://github.com/General-Agentic-Software-Design/agents.gasd/blob/main/Build/build_plan.gasd
 */
+
+NAMESPACE: "GASD-PARSER"
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "ANTLR4", "Python3"
 TRACE: "EPIC-PARSER-001", "US-PARSER-001", "US-PARSER-002", "US-PARSER-003", "US-PARSER-004", "US-PARSER-005", "US-PARSER-006", "US-PARSER-007", "US-PARSER-008", "EPIC-SEMAST-001", "US-SEMAST-001", "US-SEMAST-002", "US-SEMAST-003", "US-SEMAST-004", "US-SEMAST-005", "US-SEMAST-006", "US-SEMAST-007", "US-SEMAST-008", "US-SEMAST-009", "US-SEMAST-010", "US-SEMAST-011", "US-SEMAST-012", "US-SEMAST-013", "US-SEMAST-014", "US-SEMAST-015", "US-SEMAST-016", "US-SEMAST-017", "US-SEMAST-018", "EPIC-X-SEMAST-001", "US-X-SEMAST-001", "US-X-SEMAST-002", "US-X-SEMAST-003", "US-X-SEMAST-004", "US-X-SEMAST-005", "US-X-SEMAST-006", "US-X-SEMAST-007", "US-X-SEMAST-008", "US-X-SEMAST-009", "US-X-SEMAST-010", "US-X-SEMAST-011", "US-X-SEMAST-012"
+
+CONSTRAINT: "Only execute one phase and pause by default, unless explicitly instructed by a human."
 
 // ===================================================================
 // PHASE 1 — Design (Output: Design/ folder)
 // Generate design-level GASD specifications for each component.
 // ===================================================================
 
-/// Requirement: Always read Requirements/ver-1.0/User_story.md first
-/// to ensure 100% coverage and traceability.
-FLOW phase1_generate_designs():
+FLOW phase1_generate_design():
+    /// Requirement: Always read Requirements/ver-1.0/User_story.md first
+    /// to ensure 100% coverage and traceability for Syntactic Analysis.
     1. ACHIEVE "Read Requirements/ver-1.0/User_story.md"
     2. ENSURE "All #US, #AC, #AT, #RT IDs are extracted"
+        OTHERWISE THROW "Requirements Traceability Failed"
+    
+    // --- Syntactic Analysis Designs (from original Phase 1) ---
     3. ACHIEVE "Generate Design/grammar_design.gasd" @trace #US-PARSER-001
     4. ACHIEVE "Generate Design/parse_tree_design.gasd" @trace #US-PARSER-002
     5. ACHIEVE "Generate Design/ast_design.gasd" @trace #US-PARSER-003
@@ -31,22 +35,88 @@ FLOW phase1_generate_designs():
     8. ACHIEVE "Generate Design/cli_design.gasd" @trace #US-PARSER-006
     9. ACHIEVE "Update Design/ast_design.gasd & Design/cli_design.gasd for JSON extraction" @trace #US-PARSER-007
     10. ACHIEVE "Update Design/grammar_design.gasd & Design/ast_design.gasd for VALIDATE AS TYPE binding" @trace #US-PARSER-008
-    11. ENSURE "All AC IDs are traced in design files"
+    
+    // --- Semantic AST Designs (from original Phase 6) ---
+    /// Requirement: Always read Requirements/ver-1.2/GASD Semantic AST.md and Requirements/ver-1.2/Built-in-types-support.md
+    /// to ensure 100% coverage and traceability for all Semantic AST user stories.
+    11. ACHIEVE "Read Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md and Requirements/ver-1.3/Cross-File Semantic AST Validation.md"
+    12. ENSURE "All #US-SEMAST, #US-X-SEMAST, #AC-SEMAST, #AC-X-SEMAST, #AT-SEMAST, #AT-X-SEMAST, #RT-SEMAST, #RT-X-SEMAST IDs are extracted"
+        OTHERWISE THROW "Semantic Requirements Traceability Failed"
+    
+    // Core Semantic Model Designs
+    13. ACHIEVE "Generate Design/semantic_ast_model_design.gasd" @trace #US-SEMAST-001, #US-X-SEMAST-001
+    14. ACHIEVE "Generate Design/symbol_resolution_design.gasd" @trace #US-SEMAST-002, #US-X-SEMAST-003
+    15. ACHIEVE "Generate Design/type_contract_binding_design.gasd" @trace #US-SEMAST-003, #US-X-SEMAST-004, #US-X-SEMAST-007
+    16. ACHIEVE "Generate Design/annotation_handling_design.gasd" @trace #US-SEMAST-004
+    17. ACHIEVE "Generate Design/architecture_deps_design.gasd" @trace #US-SEMAST-005, #US-X-SEMAST-005
+    
+    // FLOW & Strategy & Decision Designs
+    18. ACHIEVE "Generate Design/flow_semantic_analysis_design.gasd" @trace #US-SEMAST-006, #US-X-SEMAST-006
+    19. ACHIEVE "Generate Design/strategy_resolution_design.gasd" @trace #US-SEMAST-007
+    20. ACHIEVE "Generate Design/decision_resolution_design.gasd" @trace #US-SEMAST-008, #US-X-SEMAST-008
+    
+    // Infrastructure Designs
+    21. ACHIEVE "Generate Design/namespace_import_design.gasd" @trace #US-SEMAST-009, #US-X-SEMAST-002
+    22. ACHIEVE "Generate Design/semantic_hashing_design.gasd" @trace #US-SEMAST-010, #US-X-SEMAST-011
+    23. ACHIEVE "Generate Design/cicd_determinism_design.gasd" @trace #US-SEMAST-011
+    24. ACHIEVE "Generate Design/semantic_error_reporting_design.gasd" @trace #US-SEMAST-012, #US-X-SEMAST-010
+    
+    // Spec-Specific Construct Designs
+    25. ACHIEVE "Generate Design/context_directive_design.gasd" @trace #US-SEMAST-013
+    26. ACHIEVE "Generate Design/human_in_loop_design.gasd" @trace #US-SEMAST-014
+    27. ACHIEVE "Generate Design/resource_block_design.gasd" @trace #US-SEMAST-015
+    
+    // New Global Consistency Designs
+    28. ACHIEVE "Generate Design/global_invariants_design.gasd" @trace #US-X-SEMAST-009
+    
+    // CLI & Compatibility Designs
+    29. ACHIEVE "Update Design/cli_design.gasd for --ast-sem option" @trace #US-SEMAST-016
+    30. ACHIEVE "Generate Design/backward_compatibility_design.gasd" @trace #US-SEMAST-017, #US-SEMAST-020
+    31. ACHIEVE "Update Design/cli_design.gasd for --ast-output/--ast-combine reuse with --ast-sem" @trace #US-SEMAST-018
+    32. ACHIEVE "Generate Design/builtin_types_design.gasd" @trace #US-SEMAST-019
+    33. ACHIEVE "Generate Design/cross_file_test_matrix.gasd" @trace #US-X-SEMAST-012
+    
+    34. ENSURE "All AC IDs are traced in design files"
+        OTHERWISE THROW "Design Traceability Failed"
 
 // ===================================================================
-// PHASE 2 — Validation Specifications (Output: Validation/ folder)
+// PHASE 2 — Validation of Design (Output: Design/Validation/ folder)
 // Generate explicit, comprehensive GASD test cases strictly based on the Design/ folder.
 // ===================================================================
 
-FLOW phase2_generate_validation_specs():
+FLOW phase2_generate_validation_of_design():
+    // --- Syntactic Validation Specs ---
     1. ACHIEVE "Generate Validation/grammar_tests.gasd from Design/grammar_design.gasd"
     2. ACHIEVE "Generate Validation/parse_tree_tests.gasd from Design/parse_tree_design.gasd"
     3. ACHIEVE "Generate Validation/ast_tests.gasd from Design/ast_design.gasd"
     4. ACHIEVE "Generate Validation/semantic_validation_tests.gasd from Design/semantic_validation_design.gasd"
     5. ACHIEVE "Generate Validation/error_reporting_tests.gasd from Design/error_reporting_design.gasd"
-    6. ACHIEVE "Generate Validation/cli_tests.gasd from Design/cli_tests.gasd"
-    7. ENSURE "Validation specs cover all constraints and type definitions present in the Design folder"
-
+    6. ACHIEVE "Generate Validation/cli_tests.gasd from Design/cli_design.gasd"
+    
+    // --- Semantic AST Validation Specs ---
+    /// Requirement: Consult Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md and Requirements/ver-1.3/Cross-File Semantic AST Validation.md.
+    7. ACHIEVE "Read Requirements/ver-1.3/Cross-File Semantic AST Validation.md"
+    8. ACHIEVE "Generate Validation/semantic_ast_model_tests.gasd from Design/semantic_ast_model_design.gasd"
+    9. ACHIEVE "Generate Validation/symbol_resolution_tests.gasd from Design/symbol_resolution_design.gasd"
+    10. ACHIEVE "Generate Validation/type_contract_binding_tests.gasd from Design/type_contract_binding_design.gasd"
+    11. ACHIEVE "Generate Validation/annotation_handling_tests.gasd from Design/annotation_handling_design.gasd"
+    12. ACHIEVE "Generate Validation/architecture_deps_tests.gasd from Design/architecture_deps_design.gasd"
+    13. ACHIEVE "Generate Validation/flow_semantic_analysis_tests.gasd from Design/flow_semantic_analysis_design.gasd"
+    14. ACHIEVE "Generate Validation/strategy_resolution_tests.gasd from Design/strategy_resolution_design.gasd"
+    15. ACHIEVE "Generate Validation/decision_resolution_tests.gasd from Design/decision_resolution_design.gasd"
+    16. ACHIEVE "Generate Validation/namespace_import_tests.gasd from Design/namespace_import_design.gasd"
+    17. ACHIEVE "Generate Validation/semantic_hashing_tests.gasd from Design/semantic_hashing_design.gasd"
+    18. ACHIEVE "Generate Validation/context_directive_tests.gasd from Design/context_directive_design.gasd"
+    19. ACHIEVE "Generate Validation/human_in_loop_tests.gasd from Design/human_in_loop_design.gasd"
+    20. ACHIEVE "Generate Validation/resource_block_tests.gasd from Design/resource_block_design.gasd"
+    21. ACHIEVE "Generate Validation/ast_sem_cli_tests.gasd from Design/cli_design.gasd"
+    22. ACHIEVE "Generate Validation/backward_compatibility_tests.gasd from Design/backward_compatibility_design.gasd"
+    23. ACHIEVE "Generate Validation/builtin_types_tests.gasd from Design/builtin_types_design.gasd"
+    24. ACHIEVE "Generate Validation/global_invariants_tests.gasd from Design/global_invariants_design.gasd"
+    25. ACHIEVE "Generate Validation/cross_file_test_matrix_validation.gasd from Design/cross_file_test_matrix.gasd"
+    
+    26. ENSURE "Validation specs cover all constraints and type definitions present in the Design folder"
+        OTHERWISE THROW "Validation Specification Gap Detected"
 
 // ===================================================================
 // PHASE 3 — Testing (Output: Impl/tests/ folder)
@@ -57,37 +127,116 @@ FLOW phase3_generate_tests():
     /// Requirement: Consult ONLY Requirements/ and Design/ folders.
     /// Do NOT use Impl/ (implementation) as a reference during test generation.
     1. ACHIEVE "Review Requirements/, Validation/ and Design/ for testing scope"
-    // Acceptance Tests
-    2. ACHIEVE "Generate Impl/tests/acceptance/test_grammar.py" @trace #AT-PARSER-001-01, #AT-PARSER-001-02, #AT-PARSER-001-03, #AT-PARSER-001-04
-    3. ACHIEVE "Generate Impl/tests/acceptance/test_parse_tree.py" @trace #AT-PARSER-002-01, #AT-PARSER-002-02, #AT-PARSER-002-03
-    4. ACHIEVE "Generate Impl/tests/acceptance/test_ast.py" @trace #AT-PARSER-003-01, #AT-PARSER-003-02, #AT-PARSER-003-03
-    5. ACHIEVE "Generate Impl/tests/acceptance/test_semantic.py" @trace #AT-PARSER-004-01, #AT-PARSER-004-02, #AT-PARSER-004-03
-    6. ACHIEVE "Generate Impl/tests/acceptance/test_errors.py" @trace #AT-PARSER-005-01, #AT-PARSER-005-02
-    7. ACHIEVE "Generate Impl/tests/acceptance/test_cli_runner.py" @trace #AT-PARSER-006-01, #AC-PARSER-006-02, #AC-PARSER-006-03
-    8. ACHIEVE "Generate Impl/tests/acceptance/test_ast_extraction.py covering all AT-PARSER-007-0* tests" @trace #AT-PARSER-007-01, #AT-PARSER-007-02, #AT-PARSER-007-03, #AT-PARSER-007-04, #AT-PARSER-007-05, #AT-PARSER-007-06, #AT-PARSER-007-07, #AT-PARSER-007-08
-    9. ACHIEVE "Generate Impl/tests/acceptance/test_explicit_binding.py covering AT-VALIDATE-001, AT-VALIDATE-002, AT-VALIDATE-003, NT-VALIDATE-001, NT-VALIDATE-002" @trace #US-PARSER-008
-    // Regression Tests
-    10. ACHIEVE "Generate Impl/tests/regression/test_grammar.py" @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
-    11. ACHIEVE "Generate Impl/tests/regression/test_parse_tree.py" @trace #RT-PARSER-002-01, #RT-PARSER-002-02
-    12. ACHIEVE "Generate Impl/tests/regression/test_ast.py" @trace #RT-PARSER-003-01, #RT-PARSER-003-02
-    13. ACHIEVE "Generate Impl/tests/regression/test_semantic.py" @trace #RT-PARSER-004-01, #RT-PARSER-004-02
-    14. ACHIEVE "Generate Impl/tests/regression/test_errors.py" @trace #RT-PARSER-005-01
-    15. ACHIEVE "Include CLI regression in RT-PARSER-006-01" @trace #RT-PARSER-006-01
-    16. ACHIEVE "Add exhaustive AST extraction regression tests in Impl/tests/regression/test_ast_regression.py" @trace #RT-PARSER-007-01, #RT-PARSER-007-02, #RT-PARSER-007-03, #RT-PARSER-007-04, #RT-PARSER-007-05, #RT-PARSER-007-06, #RT-PARSER-007-07
-    17. ACHIEVE "Add exhaustive VALIDATE AS TYPE binding regression tests in Impl/tests/regression/test_binding_regression.py" @trace #RT-VALIDATE-001, #RT-VALIDATE-002
-    18. ENSURE "100% Traceability and Coverage for all AC-PARSER-007-*, AT-PARSER-007-*, and RT-PARSER-007-*"
-    // Negative Tests
-    26. ACHIEVE "Add exhaustive negative testing suite covering all spec constraints (V001-V014, S001-S002)" @trace #US-PARSER-005, #US-PARSER-008
-    27. ACHIEVE "Generate Specs/exhaustive_negative_examples.gasd as normative negative reference"
-    // Design Validation Tests
-    19. ACHIEVE "Generate Impl/tests/design_validation/grammar_tests.py from Validation/grammar_tests.gasd"
-    20. ACHIEVE "Generate Impl/tests/design_validation/parse_tree_tests.py from Validation/parse_tree_tests.gasd"
-    21. ACHIEVE "Generate Impl/tests/design_validation/ast_tests.py from Validation/ast_tests.gasd"
-    22. ACHIEVE "Generate Impl/tests/design_validation/semantic_validation_tests.py from Validation/semantic_validation_tests.gasd"
-    23. ACHIEVE "Generate Impl/tests/design_validation/error_reporting_tests.py from Validation/error_reporting_tests.gasd"
-    24. ACHIEVE "Generate Impl/tests/design_validation/cli_tests.py from Validation/cli_tests.gasd"
-    25. ENSURE "100% Traceability and Coverage for all Design Validation Tests"
+    2. ENSURE "No Impl/ (implementation) code is used as reference"
+        OTHERWISE THROW "Design Violation: Implementation Leakage"
 
+    // --- Backward Compatibility Gate (MUST run first) ---
+    3. ENSURE "All existing tests pass unmodified before any new test generation" @trace #AC-SEMAST-017-05, #AC-SEMAST-017-06
+        OTHERWISE THROW "Regression Detected: Existing Tests Failed"
+
+    // --- Acceptance Tests ---
+    4. ACHIEVE "Generate Impl/tests/acceptance/test_grammar.py" @trace #AT-PARSER-001-01, #AT-PARSER-001-02, #AT-PARSER-001-03, #AT-PARSER-001-04
+    5. ACHIEVE "Generate Impl/tests/acceptance/test_parse_tree.py" @trace #AT-PARSER-002-01, #AT-PARSER-002-02, #AT-PARSER-002-03
+    6. ACHIEVE "Generate Impl/tests/acceptance/test_ast.py" @trace #AT-PARSER-003-01, #AT-PARSER-003-02, #AT-PARSER-003-03
+    7. ACHIEVE "Generate Impl/tests/acceptance/test_semantic.py" @trace #AT-PARSER-004-01, #AT-PARSER-004-02, #AT-PARSER-004-03
+    8. ACHIEVE "Generate Impl/tests/acceptance/test_errors.py" @trace #AT-PARSER-005-01, #AT-PARSER-005-02
+    9. ACHIEVE "Generate Impl/tests/acceptance/test_cli_runner.py" @trace #AT-PARSER-006-01, #AC-PARSER-006-02, #AC-PARSER-006-03
+    10. ACHIEVE "Generate Impl/tests/acceptance/test_ast_extraction.py covering all AT-PARSER-007-0* tests" @trace #AT-PARSER-007-01, #AT-PARSER-007-02, #AT-PARSER-007-03, #AT-PARSER-007-04, #AT-PARSER-007-05, #AT-PARSER-007-06, #AT-PARSER-007-07, #AT-PARSER-007-08
+    11. ACHIEVE "Generate Impl/tests/acceptance/test_explicit_binding.py covering AT-VALIDATE-001, AT-VALIDATE-002, AT-VALIDATE-003, NT-VALIDATE-001, NT-VALIDATE-002" @trace #US-PARSER-008
+
+    // --- Acceptance Tests  ---
+    12. ACHIEVE "Generate Impl/tests/acceptance/test_semast_model.py from Validation/semantic_ast_model_tests.gasd" @trace #AT-SEMAST-001-01 through #AT-SEMAST-001-11, #AT-X-SEMAST-001-01 through #AT-X-SEMAST-001-03
+    13. ACHIEVE "Generate Impl/tests/acceptance/test_semast_symbol_resolution.py from Validation/symbol_resolution_tests.gasd" @trace #AT-SEMAST-002-01 through #AT-SEMAST-002-08, #AT-X-SEMAST-003-01 through #AT-X-SEMAST-003-03
+    14. ACHIEVE "Generate Impl/tests/acceptance/test_semast_type_binding.py from Validation/type_contract_binding_tests.gasd" @trace #AT-SEMAST-003-01 through #AT-SEMAST-003-08, #AT-X-SEMAST-004-01 through #AT-X-SEMAST-004-02, #AT-X-SEMAST-007-01
+    15. ACHIEVE "Generate Impl/tests/acceptance/test_semast_annotations.py from Validation/annotation_handling_tests.gasd" @trace #AT-SEMAST-004-01 through #AT-SEMAST-004-06
+    16. ACHIEVE "Generate Impl/tests/acceptance/test_semast_architecture.py from Validation/architecture_deps_tests.gasd" @trace #AT-SEMAST-005-01 through #AT-SEMAST-005-08
+    17. ACHIEVE "Generate Impl/tests/acceptance/test_semast_flow.py from Validation/flow_semantic_analysis_tests.gasd" @trace #AT-SEMAST-006-01 through #AT-SEMAST-006-14, #AT-X-SEMAST-006-01 through #AT-X-SEMAST-006-02
+    18. ACHIEVE "Generate Impl/tests/acceptance/test_semast_strategy.py from Validation/strategy_resolution_tests.gasd" @trace #AT-SEMAST-007-01 through #AT-SEMAST-007-09
+    19. ACHIEVE "Generate Impl/tests/acceptance/test_semast_decision.py from Validation/decision_resolution_tests.gasd" @trace #AT-SEMAST-008-01 through #AT-SEMAST-008-09
+    20. ACHIEVE "Generate Impl/tests/acceptance/test_semast_namespace.py from Validation/namespace_import_tests.gasd" @trace #AT-SEMAST-009-01 through #AT-SEMAST-009-05, #AT-X-SEMAST-002-01 through #AT-X-SEMAST-002-03
+    21. ACHIEVE "Generate Impl/tests/acceptance/test_semast_hashing.py from Validation/semantic_hashing_tests.gasd" @trace #AT-SEMAST-010-01 through #AT-SEMAST-010-06
+    22. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cicd.py from Validation/semantic_hashing_tests.gasd" @trace #AT-SEMAST-011-01 through #AT-SEMAST-011-03
+    23. ACHIEVE "Generate Impl/tests/acceptance/test_semast_errors.py from Validation/semantic_error_reporting_design.gasd" @trace #AT-SEMAST-012-01 through #AT-SEMAST-012-03
+    24. ACHIEVE "Generate Impl/tests/acceptance/test_semast_directives.py from Validation/context_directive_tests.gasd" @trace #AT-SEMAST-013-01 through #AT-SEMAST-013-06
+    25. ACHIEVE "Generate Impl/tests/acceptance/test_semast_human_in_loop.py from Validation/human_in_loop_tests.gasd" @trace #AT-SEMAST-014-01 through #AT-SEMAST-014-06
+    26. ACHIEVE "Generate Impl/tests/acceptance/test_semast_resources.py from Validation/resource_block_tests.gasd" @trace #AT-SEMAST-015-01 through #AT-SEMAST-015-03
+    27. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cli.py from Validation/ast_sem_cli_tests.gasd" @trace #AT-SEMAST-016-01 through #AT-SEMAST-016-07, #AT-X-SEMAST-010-01 through #AT-X-SEMAST-010-02
+    28. ACHIEVE "Generate Impl/tests/acceptance/test_semast_backward_compat.py from Validation/backward_compatibility_tests.gasd" @trace #AT-SEMAST-017-01 through #AT-SEMAST-017-06
+    29. ACHIEVE "Generate Impl/tests/acceptance/test_semast_output_reuse.py from Validation/ast_sem_cli_tests.gasd" @trace #AT-SEMAST-018-01 through #AT-SEMAST-018-06
+    30. ACHIEVE "Generate Impl/tests/acceptance/test_semast_global_invariants.py from Validation/global_invariants_tests.gasd" @trace #AT-X-SEMAST-009-01 through #AT-X-SEMAST-009-03
+    31. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cross_file_matrix.py from Validation/cross_file_test_matrix_validation.gasd" @trace #AT-X-SEMAST-012-01 through #AT-X-SEMAST-012-03
+
+    32. ENSURE "All AC and AT are covered by acceptance tests"
+        OTHERWISE THROW "Testing Coverage Gap Detected: Acceptance"
+
+    // --- Regression Tests     ---
+    33. ACHIEVE "Generate Impl/tests/regression/test_grammar.py" @trace #RT-PARSER-001-01, #RT-PARSER-001-02, #RT-PARSER-001-03
+    34. ACHIEVE "Generate Impl/tests/regression/test_parse_tree.py" @trace #RT-PARSER-002-01, #RT-PARSER-002-02
+    35. ACHIEVE "Generate Impl/tests/regression/test_ast.py" @trace #RT-PARSER-003-01, #RT-PARSER-003-02
+    36. ACHIEVE "Generate Impl/tests/regression/test_semantic.py" @trace #RT-PARSER-004-01, #RT-PARSER-004-02
+    37. ACHIEVE "Generate Impl/tests/regression/test_errors.py" @trace #RT-PARSER-005-01
+    38. ACHIEVE "Include CLI regression in RT-PARSER-006-01" @trace #RT-PARSER-006-01
+    39. ACHIEVE "Add exhaustive AST extraction regression tests in Impl/tests/regression/test_ast_regression.py" @trace #RT-PARSER-007-01, #RT-PARSER-007-02, #RT-PARSER-007-03, #RT-PARSER-007-04, #RT-PARSER-007-05, #RT-PARSER-007-06, #RT-PARSER-007-07
+    40. ACHIEVE "Add exhaustive VALIDATE AS TYPE binding regression tests in Impl/tests/regression/test_binding_regression.py" @trace #RT-VALIDATE-001, #RT-VALIDATE-002
+
+    // --- Regression Tests  ---
+    41. ACHIEVE "Generate Impl/tests/regression/test_semast_model_regression.py from Validation/semantic_ast_model_tests.gasd" @trace #RT-SEMAST-001-01, #RT-SEMAST-001-02
+    42. ACHIEVE "Generate Impl/tests/regression/test_semast_symbol_regression.py from Validation/symbol_resolution_tests.gasd" @trace #RT-SEMAST-002-01, #RT-SEMAST-002-02
+    43. ACHIEVE "Generate Impl/tests/regression/test_semast_type_regression.py from Validation/type_contract_binding_tests.gasd" @trace #RT-SEMAST-003-01, #RT-SEMAST-003-02
+    44. ACHIEVE "Generate Impl/tests/regression/test_semast_annotation_regression.py from Validation/annotation_handling_tests.gasd" @trace #RT-SEMAST-004-01
+    45. ACHIEVE "Generate Impl/tests/regression/test_semast_architecture_regression.py from Validation/architecture_deps_tests.gasd" @trace #RT-SEMAST-005-01
+    46. ACHIEVE "Generate Impl/tests/regression/test_semast_flow_regression.py from Validation/flow_semantic_analysis_tests.gasd" @trace #RT-SEMAST-006-01, #RT-SEMAST-006-02
+    47. ACHIEVE "Generate Impl/tests/regression/test_semast_strategy_regression.py from Validation/strategy_resolution_tests.gasd" @trace #RT-SEMAST-007-01
+    48. ACHIEVE "Generate Impl/tests/regression/test_semast_decision_regression.py from Validation/decision_resolution_tests.gasd" @trace #RT-SEMAST-008-01
+    49. ACHIEVE "Generate Impl/tests/regression/test_semast_namespace_regression.py from Validation/namespace_import_tests.gasd" @trace #RT-SEMAST-009-01
+    50. ACHIEVE "Generate Impl/tests/regression/test_semast_hashing_regression.py from Validation/semantic_hashing_tests.gasd" @trace #RT-SEMAST-010-01
+    51. ACHIEVE "Generate Impl/tests/regression/test_semast_directive_regression.py from Validation/context_directive_tests.gasd" @trace #RT-SEMAST-013-01
+    52. ACHIEVE "Generate Impl/tests/regression/test_semast_human_regression.py from Validation/human_in_loop_tests.gasd" @trace #RT-SEMAST-014-01
+    53. ACHIEVE "Generate Impl/tests/regression/test_semast_resource_regression.py from Validation/resource_block_tests.gasd" @trace #RT-SEMAST-015-01
+    54. ACHIEVE "Generate Impl/tests/regression/test_semast_cli_regression.py from Validation/ast_sem_cli_tests.gasd and Validation/backward_compatibility_tests.gasd" @trace #RT-SEMAST-016-01, #RT-SEMAST-016-02, #RT-SEMAST-017-01, #RT-SEMAST-017-02, #RT-SEMAST-018-01, #RT-SEMAST-018-02
+
+    55. ENSURE "All RT are covered by regression tests"
+        OTHERWISE THROW "Testing Coverage Gap Detected: Regression"
+
+    // --- Negative Tests  ---
+    56. ACHIEVE "Add exhaustive negative testing suite covering all spec constraints (V001-V014, S001-S002)" @trace #US-PARSER-005, #US-PARSER-008
+    57. ACHIEVE "Generate Specs/exhaustive_negative_examples.gasd as normative negative reference"
+    58. ACHIEVE "Generate Impl/tests/negative/test_semast_negative.py to explicitly trigger and validate all semantic constraint failures defined in Phase 1 Constraints" @trace #US-SEMAST-012, #EPIC-SEMAST-001
+    59. ENSURE "All negative testing paths correctly yield structured SemanticError objects with accurate codes and locations" @trace #AC-SEMAST-012-01, #AC-SEMAST-012-02
+        OTHERWISE THROW "Semantic Error Reporting Validation Failed"
+    60. ENSURE "Negative tests correctly trigger and validate expected failures"
+        OTHERWISE THROW "Negative Testing Failure"
+
+    // --- Design Validation Tests  ---
+    61. ACHIEVE "Generate Impl/tests/design_validation/grammar_tests.py from Validation/grammar_tests.gasd"
+    62. ACHIEVE "Generate Impl/tests/design_validation/parse_tree_tests.py from Validation/parse_tree_tests.gasd"
+    63. ACHIEVE "Generate Impl/tests/design_validation/ast_tests.py from Validation/ast_tests.gasd"
+    64. ACHIEVE "Generate Impl/tests/design_validation/semantic_validation_tests.py from Validation/semantic_validation_tests.gasd"
+    65. ACHIEVE "Generate Impl/tests/design_validation/error_reporting_tests.py from Validation/error_reporting_tests.gasd"
+    66. ACHIEVE "Generate Impl/tests/design_validation/cli_tests.py from Validation/cli_tests.gasd"
+    67. ACHIEVE "Generate Impl/tests/design_validation/test_semast_model_tests.py from Validation/semantic_ast_model_tests.gasd"
+    68. ACHIEVE "Generate Impl/tests/design_validation/test_semast_symbol_resolution_tests.py from Validation/symbol_resolution_tests.gasd"
+    69. ACHIEVE "Generate Impl/tests/design_validation/test_semast_type_contract_binding_tests.py from Validation/type_contract_binding_tests.gasd"
+    70. ACHIEVE "Generate Impl/tests/design_validation/test_semast_annotation_handling_tests.py from Validation/annotation_handling_tests.gasd"
+    71. ACHIEVE "Generate Impl/tests/design_validation/test_semast_architecture_deps_tests.py from Validation/architecture_deps_tests.gasd"
+    72. ACHIEVE "Generate Impl/tests/design_validation/test_semast_flow_semantic_analysis_tests.py from Validation/flow_semantic_analysis_tests.gasd"
+    73. ACHIEVE "Generate Impl/tests/design_validation/test_semast_strategy_resolution_tests.py from Validation/strategy_resolution_tests.gasd"
+    74. ACHIEVE "Generate Impl/tests/design_validation/test_semast_decision_resolution_tests.py from Validation/decision_resolution_tests.gasd"
+    75. ACHIEVE "Generate Impl/tests/design_validation/test_semast_namespace_import_tests.py from Validation/namespace_import_tests.gasd"
+    76. ACHIEVE "Generate Impl/tests/design_validation/test_semast_semantic_hashing_tests.py from Validation/semantic_hashing_tests.gasd"
+    77. ACHIEVE "Generate Impl/tests/design_validation/test_semast_context_directive_tests.py from Validation/context_directive_tests.gasd"
+    78. ACHIEVE "Generate Impl/tests/design_validation/test_semast_human_in_loop_tests.py from Validation/human_in_loop_tests.gasd"
+    79. ACHIEVE "Generate Impl/tests/design_validation/test_semast_resource_block_tests.py from Validation/resource_block_tests.gasd"
+    80. ACHIEVE "Generate Impl/tests/design_validation/test_semast_ast_sem_cli_tests.py from Validation/ast_sem_cli_tests.gasd"
+    81. ACHIEVE "Generate Impl/tests/design_validation/test_semast_backward_compatibility_tests.py from Validation/backward_compatibility_tests.gasd"
+    82. ACHIEVE "Generate Impl/tests/design_validation/test_semast_global_invariants_tests.py from Validation/global_invariants_tests.gasd"
+    83. ACHIEVE "Generate Impl/tests/design_validation/test_semast_cross_file_test_matrix_tests.py from Validation/cross_file_test_matrix_validation.gasd"
+    
+    84. ENSURE "Design validation tests match the validation specifications"
+        OTHERWISE THROW "Design Validation Mismatch"
+
+    85. ENSURE "100% Traceability and Coverage for all AC, AT, and RT"
+        OTHERWISE THROW "Testing Coverage Gap Detected"
 
 // ===================================================================
 // PHASE 4 — Implementation (Output: Impl/ folder)
@@ -95,9 +244,15 @@ FLOW phase3_generate_tests():
 // ===================================================================
 
 FLOW phase4_generate_implementation():
+    /// Requirement: Consult ONLY the Design/ and Design/Validation/ folders.
+    /// Do NOT use the Requirements/ folder as a reference during implementation.
+    /// CRITICAL: Existing Syntactic Impl/ code MUST NOT be modified when adding Semantic AST.
+    
+    // --- Syntactic Implementation (from original Phase 4) ---
     1. ACHIEVE "Implement Impl/grammar/gasd.g4 from Design/grammar_design.gasd" @trace #US-PARSER-001
     2. ACHIEVE "antlr4 -Dlanguage=Python3 -visitor Impl/grammar/gasd.g4 -o Impl/parser/generated"
     3. ENSURE "Grammar compiles successfully" @trace #AC-PARSER-001-02
+        OTHERWISE THROW "Grammar Compilation Failed"
     4. ACHIEVE "Implement Impl/parser/ from Design/parse_tree_design.gasd" @trace #US-PARSER-002
     5. ACHIEVE "Implement Impl/ast/ from Design/ast_design.gasd" @trace #US-PARSER-003
     6. ACHIEVE "Implement Impl/validation/ from Design/semantic_validation_design.gasd" @trace #US-PARSER-004
@@ -105,252 +260,83 @@ FLOW phase4_generate_implementation():
     8. ACHIEVE "Implement AST JSON Export in Impl/ast/ & Impl/cli/" @trace #US-PARSER-007
     9. ACHIEVE "Implement Mandatory VALIDATE AS TYPE Binding in Impl/parser/ & Impl/validation/" @trace #US-PARSER-008
 
-/// Quality Gate: All tests must pass before delivery.
-FLOW run_to_pass():
-    1. ACHIEVE "pytest Impl/tests including acceptance, regression and design validation tests"
-    2. ENSURE "Fixing implementation till All tests pass"
-        OTHERWISE THROW "Build Failure: Quality Gate Failed"
+    // --- Semantic AST Preparation & Built-in Types (from original Phase 5) ---
+    10. ACHIEVE "Read Requirements/ver-1.2/Built-in-types-support.md"
+    11. ENSURE "All #US-SEMAST-019/020, #AC-SEMAST, #AT-SEMAST, #NT-SEMAST IDs are extracted"
+        OTHERWISE THROW "Built-in Types Traceability Failed"
+    12. ACHIEVE "Update Impl/semantic/SymbolTable.py to pre-register 14 built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-01
+    13. ACHIEVE "Update Impl/validation/passes/ReferenceResolutionPass.py to recognize built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-02
+    14. ACHIEVE "Ensure VALIDATE AS TYPE bindings resolve to built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-06
 
-// ===================================================================
-// PHASE 5 — Semantic AST Preparation & Built-in Types (Output: Impl/semantic/SymbolTable.py)
-// Foundation for the Semantic Type System.
-// Strictly follows: Requirements/ver-1.2/Built-in-types-support.md
-// ===================================================================
-
-FLOW phase5_semantic_ast_prep():
-    /// Requirement: Always read Requirements/ver-1.2/Built-in-types-support.md
-    /// to ensure 100% coverage and traceability for US-SEMAST-019 and US-SEMAST-020.
-    1. ACHIEVE "Read Requirements/ver-1.2/Built-in-types-support.md"
-    2. ENSURE "All #US-SEMAST-019/020, #AC-SEMAST, #AT-SEMAST, #NT-SEMAST IDs are extracted"
-
-    // --- Implementation ---
-    3. ACHIEVE "Update Impl/semantic/SymbolTable.py to pre-register 14 built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-01
-    4. ACHIEVE "Update Impl/validation/passes/ReferenceResolutionPass.py to recognize built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-02
-    5. ACHIEVE "Ensure VALIDATE AS TYPE bindings resolve to built-in types" @trace #US-SEMAST-019, #AC-SEMAST-019-06
-
-    // --- Backward Compatibility Gate (US-SEMAST-020) ---
-    6. ACHIEVE "Run full test suite (pytest Impl/tests/)" @trace #AT-SEMAST-020-01
-    7. ENSURE "Legacy examples like validate_simple.gasd pass without V008 warnings" @trace #AT-SEMAST-020-02
-    8. ENSURE "All existing syntactic and semantic features remain functional" @trace #AC-SEMAST-020-03
-
-// ===================================================================
-// PHASE 6 — Semantic AST Design (Output: Design/ folder)
-// Generate design-level GASD specifications for each Semantic AST component.
-// Strictly follows: Requirements/ver-1.2/GASD Semantic AST.md & Requirements/ver-1.2/Built-in-types-support.md
-// ===================================================================
-
-/// Requirement: Always read Requirements/ver-1.2/GASD Semantic AST.md and Requirements/ver-1.2/Built-in-types-support.md
-/// to ensure 100% coverage and traceability for all user stories.
-FLOW phase6_semantic_ast_design():
-    1. ACHIEVE "Read Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md and Requirements/ver-1.3/Cross-File Semantic AST Validation.md"
-    2. ENSURE "All #US-SEMAST, #US-X-SEMAST, #AC-SEMAST, #AC-X-SEMAST, #AT-SEMAST, #AT-X-SEMAST, #RT-SEMAST, #RT-X-SEMAST IDs are extracted"
-    // Core Semantic Model Designs
-    3. ACHIEVE "Generate Design/semantic_ast_model_design.gasd" @trace #US-SEMAST-001, #US-X-SEMAST-001
-    4. ACHIEVE "Generate Design/symbol_resolution_design.gasd" @trace #US-SEMAST-002, #US-X-SEMAST-003
-    5. ACHIEVE "Generate Design/type_contract_binding_design.gasd" @trace #US-SEMAST-003, #US-X-SEMAST-004, #US-X-SEMAST-007
-    6. ACHIEVE "Generate Design/annotation_handling_design.gasd" @trace #US-SEMAST-004
-    7. ACHIEVE "Generate Design/architecture_deps_design.gasd" @trace #US-SEMAST-005, #US-X-SEMAST-005
-    // FLOW & Strategy & Decision Designs
-    8. ACHIEVE "Generate Design/flow_semantic_analysis_design.gasd" @trace #US-SEMAST-006, #US-X-SEMAST-006
-    9. ACHIEVE "Generate Design/strategy_resolution_design.gasd" @trace #US-SEMAST-007
-    10. ACHIEVE "Generate Design/decision_resolution_design.gasd" @trace #US-SEMAST-008, #US-X-SEMAST-008
-    // Infrastructure Designs
-    11. ACHIEVE "Generate Design/namespace_import_design.gasd" @trace #US-SEMAST-009, #US-X-SEMAST-002
-    12. ACHIEVE "Generate Design/semantic_hashing_design.gasd" @trace #US-SEMAST-010, #US-X-SEMAST-011
-    13. ACHIEVE "Generate Design/cicd_determinism_design.gasd" @trace #US-SEMAST-011
-    14. ACHIEVE "Generate Design/semantic_error_reporting_design.gasd" @trace #US-SEMAST-012, #US-X-SEMAST-010
-    // Spec-Specific Construct Designs
-    15. ACHIEVE "Generate Design/context_directive_design.gasd" @trace #US-SEMAST-013
-    16. ACHIEVE "Generate Design/human_in_loop_design.gasd" @trace #US-SEMAST-014
-    17. ACHIEVE "Generate Design/resource_block_design.gasd" @trace #US-SEMAST-015
-    // New Global Consistency Designs
-    18. ACHIEVE "Generate Design/global_invariants_design.gasd" @trace #US-X-SEMAST-009
-    // CLI & Compatibility Designs
-    19. ACHIEVE "Update Design/cli_design.gasd for --ast-sem option" @trace #US-SEMAST-016
-    20. ACHIEVE "Generate Design/backward_compatibility_design.gasd" @trace #US-SEMAST-017, #US-SEMAST-020
-    21. ACHIEVE "Update Design/cli_design.gasd for --ast-output/--ast-combine reuse with --ast-sem" @trace #US-SEMAST-018
-    22. ACHIEVE "Generate Design/builtin_types_design.gasd" @trace #US-SEMAST-019
-    23. ACHIEVE "Generate Design/cross_file_test_matrix.gasd" @trace #US-X-SEMAST-012
-    24. ENSURE "All AC-SEMAST and AC-X-SEMAST IDs are traced in design files"
-
-// ===================================================================
-// PHASE 7 — Semantic AST Validation Specs (Output: Validation/ folder)
-// Generate comprehensive GASD test case specs for Semantic AST.
-// Strictly follows: Requirements/ver-1.2/GASD Semantic AST.md & Requirements/ver-1.2/Built-in-types-support.md
-// ===================================================================
-
-FLOW phase7_semantic_ast_validation_specs():
-    /// Requirement: Consult Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md and Requirements/ver-1.3/Cross-File Semantic AST Validation.md.
-    1. ACHIEVE "Read Requirements/ver-1.3/Cross-File Semantic AST Validation.md"
-    2. ACHIEVE "Generate Validation/semantic_ast_model_tests.gasd from Design/semantic_ast_model_design.gasd"
-    3. ACHIEVE "Generate Validation/symbol_resolution_tests.gasd from Design/symbol_resolution_design.gasd"
-    4. ACHIEVE "Generate Validation/type_contract_binding_tests.gasd from Design/type_contract_binding_design.gasd"
-    5. ACHIEVE "Generate Validation/annotation_handling_tests.gasd from Design/annotation_handling_design.gasd"
-    6. ACHIEVE "Generate Validation/architecture_deps_tests.gasd from Design/architecture_deps_design.gasd"
-    7. ACHIEVE "Generate Validation/flow_semantic_analysis_tests.gasd from Design/flow_semantic_analysis_design.gasd"
-    8. ACHIEVE "Generate Validation/strategy_resolution_tests.gasd from Design/strategy_resolution_design.gasd"
-    9. ACHIEVE "Generate Validation/decision_resolution_tests.gasd from Design/decision_resolution_design.gasd"
-    10. ACHIEVE "Generate Validation/namespace_import_tests.gasd from Design/namespace_import_design.gasd"
-    11. ACHIEVE "Generate Validation/semantic_hashing_tests.gasd from Design/semantic_hashing_design.gasd"
-    12. ACHIEVE "Generate Validation/context_directive_tests.gasd from Design/context_directive_design.gasd"
-    13. ACHIEVE "Generate Validation/human_in_loop_tests.gasd from Design/human_in_loop_design.gasd"
-    14. ACHIEVE "Generate Validation/resource_block_tests.gasd from Design/resource_block_design.gasd"
-    15. ACHIEVE "Generate Validation/ast_sem_cli_tests.gasd from Design/cli_design.gasd"
-    16. ACHIEVE "Generate Validation/backward_compatibility_tests.gasd from Design/backward_compatibility_design.gasd"
-    17. ACHIEVE "Generate Validation/builtin_types_tests.gasd from Design/builtin_types_design.gasd"
-    18. ACHIEVE "Generate Validation/global_invariants_tests.gasd from Design/global_invariants_design.gasd"
-    19. ACHIEVE "Generate Validation/cross_file_test_matrix_validation.gasd from Design/cross_file_test_matrix.gasd"
-    20. ENSURE "Validation specs cover all constraints and type definitions present in Semantic AST Design files including AC-X-SEMAST IDs"
-
-// ===================================================================
-// PHASE 8 — Semantic AST Testing (Output: Impl/tests/ folder)
-// Generate all Semantic AST acceptance and regression tests.
-// CRITICAL: NO existing tests may be modified. (US-SEMAST-017)
-// ===================================================================
-
-FLOW phase8_semantic_ast_tests():
-    /// Requirement: Consult ONLY Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md, Requirements/ver-1.3/Cross-File Semantic AST Validation.md and Design/ folders.
-    /// Do NOT modify any existing test files. (US-SEMAST-020)
-    1. ACHIEVE "Review Requirements/ver-1.2/GASD Semantic AST.md, Requirements/ver-1.2/Built-in-types-support.md, Requirements/ver-1.3/Cross-File Semantic AST Validation.md and Semantic AST Design/ files for testing scope"
-
-    // --- Backward Compatibility Gate (MUST run first) ---
-    2. ENSURE "All existing tests in Impl/tests/ pass unmodified before any new test generation" @trace #AC-SEMAST-017-05, #AC-SEMAST-017-06
-
-    // --- Acceptance Tests (Fully driven by Phase 6 Validation Specs) ---
-    3. ACHIEVE "Generate Impl/tests/acceptance/test_semast_model.py from Validation/semantic_ast_model_tests.gasd" @trace #AT-SEMAST-001-01 through #AT-SEMAST-001-11, #AT-X-SEMAST-001-01 through #AT-X-SEMAST-001-03
-    4. ACHIEVE "Generate Impl/tests/acceptance/test_semast_symbol_resolution.py from Validation/symbol_resolution_tests.gasd" @trace #AT-SEMAST-002-01 through #AT-SEMAST-002-08, #AT-X-SEMAST-003-01 through #AT-X-SEMAST-003-03
-    5. ACHIEVE "Generate Impl/tests/acceptance/test_semast_type_binding.py from Validation/type_contract_binding_tests.gasd" @trace #AT-SEMAST-003-01 through #AT-SEMAST-003-08, #AT-X-SEMAST-004-01 through #AT-X-SEMAST-004-02, #AT-X-SEMAST-007-01
-    6. ACHIEVE "Generate Impl/tests/acceptance/test_semast_annotations.py from Validation/annotation_handling_tests.gasd" @trace #AT-SEMAST-004-01 through #AT-SEMAST-004-06
-    7. ACHIEVE "Generate Impl/tests/acceptance/test_semast_architecture.py from Validation/architecture_deps_tests.gasd" @trace #AT-SEMAST-005-01 through #AT-SEMAST-005-08
-    8. ACHIEVE "Generate Impl/tests/acceptance/test_semast_flow.py from Validation/flow_semantic_analysis_tests.gasd" @trace #AT-SEMAST-006-01 through #AT-SEMAST-006-14, #AT-X-SEMAST-006-01 through #AT-X-SEMAST-006-02
-    9. ACHIEVE "Generate Impl/tests/acceptance/test_semast_strategy.py from Validation/strategy_resolution_tests.gasd" @trace #AT-SEMAST-007-01 through #AT-SEMAST-007-09
-    10. ACHIEVE "Generate Impl/tests/acceptance/test_semast_decision.py from Validation/decision_resolution_tests.gasd" @trace #AT-SEMAST-008-01 through #AT-SEMAST-008-09
-    11. ACHIEVE "Generate Impl/tests/acceptance/test_semast_namespace.py from Validation/namespace_import_tests.gasd" @trace #AT-SEMAST-009-01 through #AT-SEMAST-009-05, #AT-X-SEMAST-002-01 through #AT-X-SEMAST-002-03
-    12. ACHIEVE "Generate Impl/tests/acceptance/test_semast_hashing.py from Validation/semantic_hashing_tests.gasd" @trace #AT-SEMAST-010-01 through #AT-SEMAST-010-06
-    13. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cicd.py from Validation/semantic_hashing_tests.gasd" @trace #AT-SEMAST-011-01 through #AT-SEMAST-011-03
-    14. ACHIEVE "Generate Impl/tests/acceptance/test_semast_errors.py from Validation/semantic_error_reporting_design.gasd" @trace #AT-SEMAST-012-01 through #AT-SEMAST-012-03
-    15. ACHIEVE "Generate Impl/tests/acceptance/test_semast_directives.py from Validation/context_directive_tests.gasd" @trace #AT-SEMAST-013-01 through #AT-SEMAST-013-06
-    16. ACHIEVE "Generate Impl/tests/acceptance/test_semast_human_in_loop.py from Validation/human_in_loop_tests.gasd" @trace #AT-SEMAST-014-01 through #AT-SEMAST-014-06
-    17. ACHIEVE "Generate Impl/tests/acceptance/test_semast_resources.py from Validation/resource_block_tests.gasd" @trace #AT-SEMAST-015-01 through #AT-SEMAST-015-03
-    18. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cli.py from Validation/ast_sem_cli_tests.gasd" @trace #AT-SEMAST-016-01 through #AT-SEMAST-016-07, #AT-X-SEMAST-010-01 through #AT-X-SEMAST-010-02
-    19. ACHIEVE "Generate Impl/tests/acceptance/test_semast_backward_compat.py from Validation/backward_compatibility_tests.gasd" @trace #AT-SEMAST-017-01 through #AT-SEMAST-017-06
-    20. ACHIEVE "Generate Impl/tests/acceptance/test_semast_output_reuse.py from Validation/ast_sem_cli_tests.gasd" @trace #AT-SEMAST-018-01 through #AT-SEMAST-018-06
-    21. ACHIEVE "Generate Impl/tests/acceptance/test_semast_global_invariants.py from Validation/global_invariants_tests.gasd" @trace #AT-X-SEMAST-009-01 through #AT-X-SEMAST-009-03
-    22. ACHIEVE "Generate Impl/tests/acceptance/test_semast_cross_file_matrix.py from Validation/cross_file_test_matrix_validation.gasd" @trace #AT-X-SEMAST-012-01 through #AT-X-SEMAST-012-03
-    23. ENSURE "100% of Acceptance Tests and Trace IDs defined in Phase 6/7 Validation files are implemented including AC-X-SEMAST coverage"
-
-    // --- Regression Tests (Fully driven by Phase 6 Validation Specs) ---
-    22. ACHIEVE "Generate Impl/tests/regression/test_semast_model_regression.py from Validation/semantic_ast_model_tests.gasd" @trace #RT-SEMAST-001-01, #RT-SEMAST-001-02
-    23. ACHIEVE "Generate Impl/tests/regression/test_semast_symbol_regression.py from Validation/symbol_resolution_tests.gasd" @trace #RT-SEMAST-002-01, #RT-SEMAST-002-02
-    24. ACHIEVE "Generate Impl/tests/regression/test_semast_type_regression.py from Validation/type_contract_binding_tests.gasd" @trace #RT-SEMAST-003-01, #RT-SEMAST-003-02
-    25. ACHIEVE "Generate Impl/tests/regression/test_semast_annotation_regression.py from Validation/annotation_handling_tests.gasd" @trace #RT-SEMAST-004-01
-    26. ACHIEVE "Generate Impl/tests/regression/test_semast_architecture_regression.py from Validation/architecture_deps_tests.gasd" @trace #RT-SEMAST-005-01
-    27. ACHIEVE "Generate Impl/tests/regression/test_semast_flow_regression.py from Validation/flow_semantic_analysis_tests.gasd" @trace #RT-SEMAST-006-01, #RT-SEMAST-006-02
-    28. ACHIEVE "Generate Impl/tests/regression/test_semast_strategy_regression.py from Validation/strategy_resolution_tests.gasd" @trace #RT-SEMAST-007-01
-    29. ACHIEVE "Generate Impl/tests/regression/test_semast_decision_regression.py from Validation/decision_resolution_tests.gasd" @trace #RT-SEMAST-008-01
-    30. ACHIEVE "Generate Impl/tests/regression/test_semast_namespace_regression.py from Validation/namespace_import_tests.gasd" @trace #RT-SEMAST-009-01
-    31. ACHIEVE "Generate Impl/tests/regression/test_semast_hashing_regression.py from Validation/semantic_hashing_tests.gasd" @trace #RT-SEMAST-010-01
-    32. ACHIEVE "Generate Impl/tests/regression/test_semast_directive_regression.py from Validation/context_directive_tests.gasd" @trace #RT-SEMAST-013-01
-    33. ACHIEVE "Generate Impl/tests/regression/test_semast_human_regression.py from Validation/human_in_loop_tests.gasd" @trace #RT-SEMAST-014-01
-    34. ACHIEVE "Generate Impl/tests/regression/test_semast_resource_regression.py from Validation/resource_block_tests.gasd" @trace #RT-SEMAST-015-01
-    35. ACHIEVE "Generate Impl/tests/regression/test_semast_cli_regression.py from Validation/ast_sem_cli_tests.gasd and Validation/backward_compatibility_tests.gasd" @trace #RT-SEMAST-016-01, #RT-SEMAST-016-02, #RT-SEMAST-017-01, #RT-SEMAST-017-02, #RT-SEMAST-018-01, #RT-SEMAST-018-02
-    36. ENSURE "100% of Regression Tests and Trace IDs defined in Phase 6 Validation files are implemented"
-
-    // --- Negative Tests (Validation of Semantic Rejections) ---
-    37. ACHIEVE "Generate Impl/tests/negative/test_semast_negative.py to explicitly trigger and validate all semantic constraint failures defined in Phase 6 Constraints" @trace #US-SEMAST-012, #EPIC-SEMAST-001
-    38. ENSURE "All negative testing paths correctly yield structured SemanticError objects with accurate codes and locations" @trace #AC-SEMAST-012-01, #AC-SEMAST-012-02
-
-    // --- Design Validation Tests ---
-    39. ACHIEVE "Generate Impl/tests/design_validation/test_semast_model_tests.py from Validation/semantic_ast_model_tests.gasd"
-    40. ACHIEVE "Generate Impl/tests/design_validation/test_semast_symbol_resolution_tests.py from Validation/symbol_resolution_tests.gasd"
-    41. ACHIEVE "Generate Impl/tests/design_validation/test_semast_type_contract_binding_tests.py from Validation/type_contract_binding_tests.gasd"
-    42. ACHIEVE "Generate Impl/tests/design_validation/test_semast_annotation_handling_tests.py from Validation/annotation_handling_tests.gasd"
-    43. ACHIEVE "Generate Impl/tests/design_validation/test_semast_architecture_deps_tests.py from Validation/architecture_deps_tests.gasd"
-    44. ACHIEVE "Generate Impl/tests/design_validation/test_semast_flow_semantic_analysis_tests.py from Validation/flow_semantic_analysis_tests.gasd"
-    45. ACHIEVE "Generate Impl/tests/design_validation/test_semast_strategy_resolution_tests.py from Validation/strategy_resolution_tests.gasd"
-    46. ACHIEVE "Generate Impl/tests/design_validation/test_semast_decision_resolution_tests.py from Validation/decision_resolution_tests.gasd"
-    47. ACHIEVE "Generate Impl/tests/design_validation/test_semast_namespace_import_tests.py from Validation/namespace_import_tests.gasd"
-    48. ACHIEVE "Generate Impl/tests/design_validation/test_semast_semantic_hashing_tests.py from Validation/semantic_hashing_tests.gasd"
-    49. ACHIEVE "Generate Impl/tests/design_validation/test_semast_context_directive_tests.py from Validation/context_directive_tests.gasd"
-    50. ACHIEVE "Generate Impl/tests/design_validation/test_semast_human_in_loop_tests.py from Validation/human_in_loop_tests.gasd"
-    51. ACHIEVE "Generate Impl/tests/design_validation/test_semast_resource_block_tests.py from Validation/resource_block_tests.gasd"
-    52. ACHIEVE "Generate Impl/tests/design_validation/test_semast_ast_sem_cli_tests.py from Validation/ast_sem_cli_tests.gasd"
-    53. ACHIEVE "Generate Impl/tests/design_validation/test_semast_backward_compatibility_tests.py from Validation/backward_compatibility_tests.gasd"
-    54. ACHIEVE "Generate Impl/tests/design_validation/test_semast_global_invariants_tests.py from Validation/global_invariants_tests.gasd"
-    55. ACHIEVE "Generate Impl/tests/design_validation/test_semast_cross_file_test_matrix_tests.py from Validation/cross_file_test_matrix_validation.gasd"
-    56. ENSURE "100% of Design Validation Tests and Trace IDs defined in Phase 6/7 Validation files are implemented"
-
-    55. ENSURE "All acceptance, regression, negative, and design validation tests are defined" @trace #EPIC-SEMAST-001
-    56. ENSURE "No existing test files were modified" @trace #AC-SEMAST-017-05, #RT-SEMAST-017-02
-
-// ===================================================================
-// PHASE 9 — Semantic AST Implementation (Output: Impl/ folder)
-// Generate Semantic AST production code from Phase 5 designs.
-// CRITICAL: NO existing implementation may be altered. (US-SEMAST-017)
-// ===================================================================
-
-FLOW phase9_semantic_ast_implementation():
-    /// Requirement: Existing Impl/ code MUST NOT be modified.
-    /// The Semantic AST layer is purely additive. @trace #US-SEMAST-020
-    /// Consult ONLY Design/ folders for implementation details.
+    // --- Semantic AST Implementation ---
+    15. ACHIEVE "Transpile Impl/semantic/ node class hierarchy (65+ node types) including CompilationUnit and ProjectFileNode following Design/semantic_ast_model_design.gasd" @trace #US-SEMAST-001, #US-X-SEMAST-001
+    16. ACHIEVE "Transpile Impl/semantic/SymbolTable.py with generic and cross-file scoped symbol resolution following Design/symbol_resolution_design.gasd" @trace #US-SEMAST-002, #US-X-SEMAST-003
+    17. ACHIEVE "Transpile Impl/semantic/TypeContractBinder.py for cross-file VALIDATE AS TYPE binding following Design/type_contract_binding_design.gasd" @trace #US-SEMAST-003, #US-X-SEMAST-004, #US-X-SEMAST-007
+    18. ACHIEVE "Transpile Impl/semantic/AnnotationResolver.py for §14 annotations following Design/annotation_handling_design.gasd" @trace #US-SEMAST-004
+    19. ACHIEVE "Transpile Impl/semantic/DependencyGraphBuilder.py for cross-file COMPONENT wiring following Design/architecture_deps_design.gasd" @trace #US-SEMAST-005, #US-X-SEMAST-005
+    20. ACHIEVE "Transpile Impl/semantic/FlowAnalyzer.py for cross-file FLOW semantic resolution following Design/flow_semantic_analysis_design.gasd" @trace #US-SEMAST-006, #US-X-SEMAST-006
+    21. ACHIEVE "Transpile Impl/semantic/StrategyResolver.py for global STRATEGY resolution following Design/strategy_resolution_design.gasd" @trace #US-SEMAST-007
+    22. ACHIEVE "Transpile Impl/semantic/DecisionResolver.py for cross-file DECISION resolution following Design/decision_resolution_design.gasd" @trace #US-SEMAST-008, #US-X-SEMAST-008
+    23. ACHIEVE "Transpile Impl/semantic/NamespaceResolver.py for cross-file IMPORT resolution and dependency graph construction following Design/namespace_import_design.gasd" @trace #US-SEMAST-009, #US-X-SEMAST-002
+    24. ACHIEVE "Transpile Impl/semantic/DirectiveResolver.py for context directives following Design/context_directive_design.gasd" @trace #US-SEMAST-013
+    25. ACHIEVE "Transpile Impl/semantic/HumanInLoopResolver.py for human-in-the-loop constructs following Design/human_in_loop_design.gasd" @trace #US-SEMAST-014
+    26. ACHIEVE "Transpile Impl/semantic/ResourceResolver.py for resource blocks following Design/resource_block_design.gasd" @trace #US-SEMAST-015
+    27. ACHIEVE "Transpile Impl/semantic/SemanticHasher.py for global deterministic hashing following Design/semantic_hashing_design.gasd" @trace #US-SEMAST-010, #US-X-SEMAST-011
+    28. ACHIEVE "Transpile Impl/semantic/SemanticErrorReporter.py for aggregated cross-file error reporting following Design/semantic_error_reporting_design.gasd" @trace #US-SEMAST-012, #US-X-SEMAST-010
+    29. ACHIEVE "Transpile Impl/semantic/SemanticASTExporter.py for global JSON export following Design/cli_design.gasd" @trace #US-SEMAST-016
+    30. ACHIEVE "Transpile --ast-sem flag addition to Impl/cli.py following Design/cli_design.gasd" @trace #US-SEMAST-016
+    31. ACHIEVE "Transpile --ast-output and --ast-combine support for --ast-sem following Design/cli_design.gasd" @trace #US-SEMAST-018
+    32. ACHIEVE "Implement Impl/semantic/GlobalConstraintRegistry.py and Impl/semantic/ConstraintValidator.py following Design/global_invariants_design.gasd" @trace #US-X-SEMAST-009
+    33. ACHIEVE "Transpile Impl/semantic/SemanticPipeline.py that chains all resolver passes including global consistency checks following Design/architecture_deps_design.gasd"
     
-    // --- Core Semantic Model ---
-    2. ACHIEVE "Transpile Impl/semantic/ node class hierarchy (65+ node types) including CompilationUnit and ProjectFileNode following Design/semantic_ast_model_design.gasd" @trace #US-SEMAST-001, #US-X-SEMAST-001
-    3. ACHIEVE "Transpile Impl/semantic/SymbolTable.py with generic and cross-file scoped symbol resolution following Design/symbol_resolution_design.gasd" @trace #US-SEMAST-002, #US-X-SEMAST-003
-    4. ACHIEVE "Transpile Impl/semantic/TypeContractBinder.py for cross-file VALIDATE AS TYPE binding following Design/type_contract_binding_design.gasd" @trace #US-SEMAST-003, #US-X-SEMAST-004, #US-X-SEMAST-007
-    5. ACHIEVE "Transpile Impl/semantic/AnnotationResolver.py for §14 annotations following Design/annotation_handling_design.gasd" @trace #US-SEMAST-004
-    6. ACHIEVE "Transpile Impl/semantic/DependencyGraphBuilder.py for cross-file COMPONENT wiring following Design/architecture_deps_design.gasd" @trace #US-SEMAST-005, #US-X-SEMAST-005
+    // --- Consistency & Verification ---
+    34. ENSURE "Semantic pipeline correctly handles CompilationUnit for multi-file systems" @trace #AC-X-SEMAST-001-03
+        OTHERWISE THROW "Semantic Pipeline Multi-file Validation Failed"
+    35. ENSURE "Semantic pipeline only invoked when --ast-sem is specified" @trace #AC-SEMAST-017-09
+        OTHERWISE THROW "Semantic Pipeline Invocation Logic Failed"
+    36. ENSURE "100% of the generated Semantic AST implementation is transpiled from and faithfully follows the Design/*.gasd specs"
+        OTHERWISE THROW "Semantic AST Implementation Design Mismatch"
+    37. ENSURE "No information from the Requirements/ folder is used for implementation"
+        OTHERWISE THROW "Design Violation: Implementation Leakage"
+    38. ENSURE "Implementation compiles successfully"
+        OTHERWISE THROW "Build Failed: Compilation Error"
 
-    // --- Analysis Passes ---
-    7. ACHIEVE "Transpile Impl/semantic/FlowAnalyzer.py for cross-file FLOW semantic resolution following Design/flow_semantic_analysis_design.gasd" @trace #US-SEMAST-006, #US-X-SEMAST-006
-    8. ACHIEVE "Transpile Impl/semantic/StrategyResolver.py for global STRATEGY resolution following Design/strategy_resolution_design.gasd" @trace #US-SEMAST-007
-    9. ACHIEVE "Transpile Impl/semantic/DecisionResolver.py for cross-file DECISION resolution following Design/decision_resolution_design.gasd" @trace #US-SEMAST-008, #US-X-SEMAST-008
-    10. ACHIEVE "Transpile Impl/semantic/NamespaceResolver.py for cross-file IMPORT resolution and dependency graph construction following Design/namespace_import_design.gasd" @trace #US-SEMAST-009, #US-X-SEMAST-002
+// ===================================================================
+// PHASE 5 — Full Quality Gate
+// All tests must pass before delivery.
+// ===================================================================
 
-    // --- Spec Construct Passes ---
-    11. ACHIEVE "Transpile Impl/semantic/DirectiveResolver.py for context directives following Design/context_directive_design.gasd" @trace #US-SEMAST-013
-    12. ACHIEVE "Transpile Impl/semantic/HumanInLoopResolver.py for human-in-the-loop constructs following Design/human_in_loop_design.gasd" @trace #US-SEMAST-014
-    13. ACHIEVE "Transpile Impl/semantic/ResourceResolver.py for resource blocks following Design/resource_block_design.gasd" @trace #US-SEMAST-015
-
-    // --- Infrastructure ---
-    14. ACHIEVE "Transpile Impl/semantic/SemanticHasher.py for global deterministic hashing following Design/semantic_hashing_design.gasd" @trace #US-SEMAST-010, #US-X-SEMAST-011
-    15. ACHIEVE "Transpile Impl/semantic/SemanticErrorReporter.py for aggregated cross-file error reporting following Design/semantic_error_reporting_design.gasd" @trace #US-SEMAST-012, #US-X-SEMAST-010
-    16. ACHIEVE "Transpile Impl/semantic/SemanticASTExporter.py for global JSON export following Design/cli_design.gasd" @trace #US-SEMAST-016
-
-    // --- CLI Integration (additive only) ---
-    17. ACHIEVE "Transpile --ast-sem flag addition to Impl/cli.py following Design/cli_design.gasd" @trace #US-SEMAST-016
-    18. ACHIEVE "Transpile --ast-output and --ast-combine support for --ast-sem following Design/cli_design.gasd" @trace #US-SEMAST-018
-    19. ACHIEVE "Implement Impl/semantic/GlobalConstraintRegistry.py and Impl/semantic/ConstraintValidator.py following Design/global_invariants_design.gasd" @trace #US-X-SEMAST-009
-    20. ENSURE "gasd-parser --help shows --ast-sem" @trace #AC-SEMAST-016-09
-
-    // --- Semantic AST Pipeline Orchestrator ---
-    21. ACHIEVE "Transpile Impl/semantic/SemanticPipeline.py that chains all resolver passes including global consistency checks following Design/architecture_deps_design.gasd"
-    22. ENSURE "Semantic pipeline correctly handles CompilationUnit for multi-file systems" @trace #AC-X-SEMAST-001-03
-    23. ENSURE "Semantic pipeline only invoked when --ast-sem is specified" @trace #AC-SEMAST-017-09
-
-    24. ENSURE "100% of the generated Semantic AST implementation is transpiled from and faithfully follows the Design/*.gasd specs"
-
-/// Quality Gate: ALL tests (existing + new) must pass.
-FLOW run_semantic_ast_full_quality_gate():
-    1. ENSURE "All existing parser tests pass unmodified" @trace #AC-SEMAST-017-05, #AC-SEMAST-017-06
-    2. ACHIEVE "pytest Impl/tests including ALL acceptance, regression, and design validation tests"
-    3. ENSURE "185+ Semantic AST tests passing (includes Cross-File Semantic AST Validation)" @trace #EPIC-SEMAST-001, #EPIC-X-SEMAST-001
-    4. ENSURE "Design/builtin_types_design.gasd is valid and fully implemented" @trace #AC-SEMAST-019-01
-    5. ENSURE "gasd-parser file.gasd output is unchanged (no --ast-sem)" @trace #AC-SEMAST-017-08
-    6. ENSURE "gasd-parser file.gasd --ast output is byte-identical to pre-semantic-AST version" @trace #AT-SEMAST-017-03
-    7. ENSURE "gasd-parser with --no-validate allows shadowing built-in types" @trace #US-CLI-021
-    8. ENSURE "Fixing implementation till All tests pass"
+FLOW phase5_full_quality_gate():
+    1. ACHIEVE "Execute full test suite including acceptance, regression, negative, and design validation tests"
+    2. ACHIEVE "If any tests fail, iteratively fix the implementation based on Design/ and re-run all tests until 100% pass"
+    
+    // --- Specific Verification Items ---
+    3. ENSURE "All existing parser tests pass unmodified" @trace #AC-SEMAST-017-05, #AC-SEMAST-017-06
+        OTHERWISE THROW "Backward Compatibility Regression Detected"
+    4. ENSURE "185+ Semantic AST tests passing (includes Cross-File Semantic AST Validation)" @trace #EPIC-SEMAST-001, #EPIC-X-SEMAST-001
+        OTHERWISE THROW "Semantic AST Test Suite Failed"
+    5. ENSURE "Design/builtin_types_design.gasd is valid and fully implemented" @trace #AC-SEMAST-019-01
+        OTHERWISE THROW "Built-in Types Implementation Missing"
+    6. ENSURE "gasd-parser file.gasd output is unchanged (no --ast-sem)" @trace #AC-SEMAST-017-08
+        OTHERWISE THROW "Sanity Check Failed: Output Changed Without Flag"
+    7. ENSURE "gasd-parser file.gasd --ast output is byte-identical to pre-semantic-AST version" @trace #AT-SEMAST-017-03
+        OTHERWISE THROW "Syntactic AST Regression Detected"
+    8. ENSURE "gasd-parser with --no-validate allows shadowing built-in types" @trace #US-CLI-021
+        OTHERWISE THROW "CLI Shadowing Logic Failed"
+    
+    9. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================
-// PHASE 10 — Final Packaging (Output: Build/Installation/ folder)
+// PHASE 6 — Final Packaging (Output: Build/Installation/ folder)
 // Unified packaging of Parser + Semantic AST into a standalone application.
 // ===================================================================
 
-FLOW phase10_final_packaging():
+FLOW phase6_final_packaging():
     /// Requirement: Ensure final product meets all requirements in Requirements/ver-1.2/GASD Semantic AST.md 
     /// and Requirements/ver-1.2/Built-in-types-support.md.
-    // --- Basic Infrastructure ---
+    
+    // --- Packaging Steps ---
     1. ACHIEVE "Create Build/Installation/setup.py with package metadata"
     2. ACHIEVE "Create Build/Installation/pyproject.toml with build system config"
     3. ACHIEVE "Create Build/Installation/gasd_parser/ package directory"
@@ -361,25 +347,37 @@ FLOW phase10_final_packaging():
     
     // --- Installation Validation ---
     8. ENSURE "pip install -e Build/Installation succeeds"
+        OTHERWISE THROW "Package Installation Failed"
     9. ENSURE "gasd-parser --help shows all options (--ast, --ast-sem, --ast-output, --ast-combine)" @trace #AC-SEMAST-016-09
+        OTHERWISE THROW "CLI Help Output Missing Options"
     10. ENSURE "PYTHONPATH=Build/Installation python3 -m gasd_parser --version output does not contain 'DEVELOPMENT'"
+        OTHERWISE THROW "Production Version Tagging Failed"
     
     // --- Syntactic Functionality Validation ---
     11. ENSURE "gasd-parser Specs/valid_sample.gasd exits 0"
+        OTHERWISE THROW "Basic Parse Test Failed"
     12. ENSURE "gasd-parser Specs/invalid_duplicates.gasd exits non-zero"
+        OTHERWISE THROW "Basic Semantic Rejection Failed"
     13. ENSURE "gasd-parser parses multiple files and directories recursively" @trace #AC-PARSER-006-01, #AC-PARSER-006-02
+        OTHERWISE THROW "Recursive Directory Parsing Failed"
     14. ENSURE "gasd-parser --ast generates syntactic JSON output" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
+        OTHERWISE THROW "Syntactic JSON Export Failed"
     15. ENSURE "gasd-parser --ast-combine merges multiple syntactic ASTs" @trace #AC-PARSER-007-06
+        OTHERWISE THROW "Syntactic AST Combination Failed"
     
     // --- Semantic Functionality Validation ---
     16. ENSURE "gasd-parser file.gasd --ast-sem outputs Semantic AST JSON" @trace #AT-SEMAST-016-01
+        OTHERWISE THROW "Semantic AST JSON Export Failed"
     17. ENSURE "gasd-parser file.gasd --ast-sem --ast-output out.json writes to file" @trace #AT-SEMAST-018-01
+        OTHERWISE THROW "Semantic AST Output File Writing Failed"
     18. ENSURE "gasd-parser dir/ --ast-sem --ast-combine merges semantic ASTs" @trace #AT-SEMAST-018-03
+        OTHERWISE THROW "Semantic AST Combination Failed"
     
     // --- Backward Compatibility & Regression Gate ---
     19. ENSURE "gasd-parser file.gasd --ast still outputs syntactic AST (unchanged)" @trace #AC-SEMAST-016-04
+        OTHERWISE THROW "Syntactic AST CLI Regression"
     20. ENSURE "All existing and new packaging tests remain valid" @trace #US-SEMAST-017
-
-
-
-
+        OTHERWISE THROW "Packaging Test Suite Failed"
+    
+    21. ENSURE "Final distribution passes all basic functionality smoke tests"
+        OTHERWISE THROW "Packaging Failed: Functionality Sanity Error"
