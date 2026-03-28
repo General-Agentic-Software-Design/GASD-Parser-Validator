@@ -69,8 +69,8 @@ TYPE Event:
     ast = generator.visit(tree)
 
     field = ast.types[0].fields[0]
-    assert field.typeExpr.baseType == "literal"
-    assert field.typeExpr.literalValue == '"ACTIVE"'
+    assert field.type.baseType == "literal"
+    assert field.type.literalValue == '"ACTIVE"'
 
 
 def test_integer_literal_ast_node():
@@ -87,8 +87,8 @@ TYPE Versioned:
     ast = generator.visit(tree)
 
     field = ast.types[0].fields[0]
-    assert field.typeExpr.baseType == "literal"
-    assert field.typeExpr.literalValue == "2"
+    assert field.type.baseType == "literal"
+    assert field.type.literalValue == "2"
 
 
 # -----------------------------------------------------------------------

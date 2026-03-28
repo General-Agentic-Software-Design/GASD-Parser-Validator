@@ -1,4 +1,4 @@
-# Generated from GASDParser.g4 by ANTLR 4.13.2
+# Generated from Impl/grammar/GASDParser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .GASDParser import GASDParser
@@ -16,6 +16,16 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#section.
     def visitSection(self, ctx:GASDParser.SectionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#version_dir.
+    def visitVersion_dir(self, ctx:GASDParser.Version_dirContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#version_number.
+    def visitVersion_number(self, ctx:GASDParser.Version_numberContext):
         return self.visitChildren(ctx)
 
 
@@ -104,6 +114,26 @@ class GASDParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GASDParser#step_id.
+    def visitStep_id(self, ctx:GASDParser.Step_idContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#depends_clause.
+    def visitDepends_clause(self, ctx:GASDParser.Depends_clauseContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#depends_stmt.
+    def visitDepends_stmt(self, ctx:GASDParser.Depends_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#step_ref.
+    def visitStep_ref(self, ctx:GASDParser.Step_refContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GASDParser#internal_block.
     def visitInternal_block(self, ctx:GASDParser.Internal_blockContext):
         return self.visitChildren(ctx)
@@ -111,6 +141,31 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#otherwise_stmt.
     def visitOtherwise_stmt(self, ctx:GASDParser.Otherwise_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#postcondition_stmt.
+    def visitPostcondition_stmt(self, ctx:GASDParser.Postcondition_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#postcondition_expr.
+    def visitPostcondition_expr(self, ctx:GASDParser.Postcondition_exprContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#timeout_stmt.
+    def visitTimeout_stmt(self, ctx:GASDParser.Timeout_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#duration_literal.
+    def visitDuration_literal(self, ctx:GASDParser.Duration_literalContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#on_error_clause.
+    def visitOn_error_clause(self, ctx:GASDParser.On_error_clauseContext):
         return self.visitChildren(ctx)
 
 
@@ -186,6 +241,56 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#invariant_stmt.
     def visitInvariant_stmt(self, ctx:GASDParser.Invariant_stmtContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#contract_def.
+    def visitContract_def(self, ctx:GASDParser.Contract_defContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#input_blk.
+    def visitInput_blk(self, ctx:GASDParser.Input_blkContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#output_blk.
+    def visitOutput_blk(self, ctx:GASDParser.Output_blkContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#idempotent_blk.
+    def visitIdempotent_blk(self, ctx:GASDParser.Idempotent_blkContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#case_blk.
+    def visitCase_blk(self, ctx:GASDParser.Case_blkContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#case_clause.
+    def visitCase_clause(self, ctx:GASDParser.Case_clauseContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#model_def.
+    def visitModel_def(self, ctx:GASDParser.Model_defContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#invariant_ref.
+    def visitInvariant_ref(self, ctx:GASDParser.Invariant_refContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#assumption_def.
+    def visitAssumption_def(self, ctx:GASDParser.Assumption_defContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#qualified_name.
+    def visitQualified_name(self, ctx:GASDParser.Qualified_nameContext):
         return self.visitChildren(ctx)
 
 
@@ -286,6 +391,16 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#annotation.
     def visitAnnotation(self, ctx:GASDParser.AnnotationContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#param_val.
+    def visitParam_val(self, ctx:GASDParser.Param_valContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#alias_val.
+    def visitAlias_val(self, ctx:GASDParser.Alias_valContext):
         return self.visitChildren(ctx)
 
 

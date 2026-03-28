@@ -1,0 +1,89 @@
+/*
+   Design: Scoped Invariants & External Model Integration
+   ========================================================
+   Defines the grammar and semantic rules for LOCAL/GLOBAL invariant scoping
+   and external MODEL block references (TLA+, Alloy, Spin, Promela).
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Invariant Scoping and Model Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-006"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Default Scope for 1.1 Files":
+    CHOSEN: "LOCAL"
+    RATIONALE: "Per GEP-6 §5.2, existing INVARIANT without scope in 1.1 files SHALL be treated as LOCAL."
+    ALTERNATIVES: ["LOCAL default", "GLOBAL default", "Error on missing scope"]
+    AFFECTS: [ScopedInvariantRule]
+
+DECISION "GLOBAL Invariant Enforcement":
+    CHOSEN: "Application + DB constraint required"
+    RATIONALE: "Per GEP-6 §5.1, GLOBAL invariants with only application-level enforcement SHALL trigger LINT-006."
+    ALTERNATIVES: ["Application + DB required", "Application only"]
+    AFFECTS: [ModelDefRule]
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// Scoped invariant grammar rule.
+TYPE ScopedInvariantRule @trace #AC-V2-006-01:
+    syntax: "INVARIANT (LOCAL | GLOBAL)? ':' STRING_LITERAL"
+    scope_qualifier: "LOCAL | GLOBAL"
+
+/// MODEL block grammar rule.
+TYPE ModelDefRule @trace #AC-V2-006-02:
+    syntax: "MODEL STRING_LITERAL ':' INDENT TYPE ':' model_type FILE ':' STRING_LITERAL VERIFIES ':' INDENT invariant_ref+ DEDENT ASSUMPTIONS ':' INDENT STRING_LITERAL+ DEDENT DEDENT"
+    model_type: "TLA+ | Alloy | Spin | Promela | STRING_LITERAL"
+
+// ===================================================================
+// Semantic Validation
+// ===================================================================
+
+/// Validates invariant scoping based on version.
+FLOW validate_invariant_scoping(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-006-03
+    1. ACHIEVE "Collect all INVARIANT nodes from AST"
+    2. ACHIEVE "For each INVARIANT, check if scope qualifier is present"
+    3. ACHIEVE "For VERSION 1.2: emit LINT-003 ERROR for INVARIANT without scope"
+    4. ACHIEVE "For VERSION 1.1: default missing scope to LOCAL"
+    5. RETURN "List of errors"
+
+/// Validates GLOBAL invariants have proper enforcement (DB or MODEL).
+FLOW validate_global_invariant_enforcement(ast: GASDFile) -> List<SemanticError>:
+    @trace #AC-V2-006-04
+    1. ACHIEVE "Collect all GLOBAL INVARIANT nodes"
+    2. ACHIEVE "For each GLOBAL INVARIANT, check for corresponding MODEL or DB constraint"
+    3. ENSURE "Every GLOBAL INVARIANT has MODEL or DB-level enforcement"
+        OTHERWISE THROW "LINT-006: GLOBAL INVARIANT lacks DB or MODEL enforcement"
+    4. RETURN "List of errors"
+
+/// Validates GLOBAL invariant comments identifying enforcement points.
+FLOW validate_global_invariant_comments(ast: GASDFile) -> List<SemanticError>:
+    @trace #AC-V2-006-05
+    1. ACHIEVE "For each GLOBAL INVARIANT, check that a GASD-level comment identifies all enforcement points"
+    2. RETURN "List of warnings"
+
+/// Validates MODEL FILE path existence.
+FLOW validate_model_file_paths(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-006-06
+    1. ACHIEVE "Collect all MODEL blocks from AST"
+    2. ACHIEVE "For each MODEL, verify that FILE path exists on filesystem"
+    3. ACHIEVE "For VERSION 1.2: emit ERROR for missing model file"
+    4. ACHIEVE "For VERSION 1.1: emit WARNING for missing model file"
+    5. RETURN "List of errors or warnings"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "LINT-003: INVARIANT without scope qualifier in VERSION 1.2 is an ERROR" @trace #AC-V2-006-03
+CONSTRAINT: "LINT-006: GLOBAL INVARIANT with only application-level enforcement is an ERROR" @trace #AC-V2-006-04
+CONSTRAINT: "GLOBAL invariants MUST include a GASD-level comment identifying all enforcement points" @trace #AC-V2-006-05
+CONSTRAINT: "Analyzers MUST validate that MODEL FILE path exists; error if missing in 1.2" @trace #AC-V2-006-06
+CONSTRAINT: "In VERSION 1.1 files, missing scope qualifier SHALL default to LOCAL" @trace #AC-V2-006-01

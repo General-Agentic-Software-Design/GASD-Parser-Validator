@@ -20,7 +20,7 @@ TYPE T:
     assert len(ast.types) == 1
     assert ast.types[0].name == "T"
     assert ast.types[0].fields[0].name == "f"
-    assert ast.types[0].fields[0].typeExpr.baseType == "String"
+    assert ast.types[0].fields[0].type.baseType == "String"
 
 def test_ast_backward_compatibility():
     """RT-PARSER-003-02: AST schema backward compatibility maintained."""

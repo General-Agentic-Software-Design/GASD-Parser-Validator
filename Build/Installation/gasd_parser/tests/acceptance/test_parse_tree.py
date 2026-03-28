@@ -80,7 +80,7 @@ TYPE T:
     for i in range(tree.getChildCount()):
         section = tree.section(i)
         if section and section.constraint_stmt():
-            text = section.constraint_stmt().STRING_LITERAL().getText().strip('"')
+            text = section.constraint_stmt().STRING_LITERAL()[0].getText().strip('"')
             assert text == "Global rule"
             found_constraint = True
             break

@@ -1,0 +1,82 @@
+/*
+   Design: CONTRACT Modeling at IMPORT Boundaries
+   ================================================
+   Defines the grammar and semantic rules for the CONTRACT block,
+   behavioral CASE definitions, and provider/consumer hash agreement.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Contract Modeling Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-004"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Contract Hash Algorithm":
+    CHOSEN: "Deterministic content-based SHA-256 hash"
+    RATIONALE: "Per GEP-6 §3.2, each CONTRACT SHALL have a deterministic hash. SHA-256 ensures stability and uniqueness."
+    ALTERNATIVES: ["SHA-256", "SHA-1", "CRC-32", "MD5"]
+    AFFECTS: [ContractHasher]
+
+DECISION "Contract-Import Binding":
+    CHOSEN: "Contracts linkable to IMPORT aliases via qualified_name"
+    RATIONALE: "Per GEP-6 §3.1, CONTRACT Pay.createCustomer references IMPORT 'payment.gasd' AS Pay."
+    ALTERNATIVES: ["Qualified name binding", "Explicit IMPORT attribute"]
+    AFFECTS: [TypeContract]
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// CASE definition grammar rule.
+TYPE CaseDefRule @trace #AC-V2-004-02:
+    syntax: "CASE IDENTIFIER ':' INDENT case_clause+ DEDENT"
+    case_clause: "POSTCONDITION ':' postcondition_expr | THROWS ':' IDENTIFIER | AFTER ':' (duration_literal | retry_spec)"
+
+// ===================================================================
+// Semantic Validation
+// ===================================================================
+
+/// Validates that every IMPORT has a corresponding CONTRACT in VERSION 1.2.
+FLOW validate_import_contract_binding(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-004-03
+    1. ACHIEVE "Collect all IMPORT statements from AST"
+    2. ACHIEVE "Collect all CONTRACT definitions from AST"
+    3. ACHIEVE "For each IMPORT, check if a matching CONTRACT exists"
+    4. ACHIEVE "For VERSION 1.2: emit LINT-002 ERROR for IMPORT without CONTRACT"
+    5. ACHIEVE "For VERSION 1.1: emit WARNING for IMPORT without CONTRACT"
+    6. RETURN "List of errors or warnings"
+
+/// Validates that each CASE in a CONTRACT has either POSTCONDITION or THROWS.
+FLOW validate_contract_cases(ast: GASDFile) -> List<SemanticError>:
+    @trace #AC-V2-004-04
+    1. ACHIEVE "Collect all CONTRACT definitions from AST"
+    2. ACHIEVE "For each CASE, check if POSTCONDITION or THROWS is specified"
+    3. ENSURE "Every CASE has at least POSTCONDITION or THROWS"
+        OTHERWISE THROW "LINT-007: CASE missing POSTCONDITION or THROWS"
+    4. RETURN "List of errors"
+
+// ===================================================================
+// Contract Hasher Component
+// ===================================================================
+
+/// Generates a deterministic hash for each CONTRACT definition.
+COMPONENT ContractHasher @trace #AC-V2-004-05:
+    PATTERN: "Utility"
+    DEPENDENCIES: []
+    INTERFACE:
+        computeHash(contract: TypeContract) -> String
+        verifyAgreement(providerHash: String, consumerHash: String) -> Boolean
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "CONTRACT MUST define at least one CASE under BEHAVIORS" @trace #AC-V2-004-01
+CONSTRAINT: "LINT-002: Every IMPORT in VERSION 1.2 MUST have a corresponding CONTRACT" @trace #AC-V2-004-03
+CONSTRAINT: "LINT-007: Every CASE MUST specify either THROWS or POSTCONDITION" @trace #AC-V2-004-04
+CONSTRAINT: "Contract hash MUST be stable: identical content always produces identical hash" @trace #AC-V2-004-05
+CONSTRAINT: "Provider and consumer MUST compile against the same CONTRACT hash" @trace #AC-V2-004-05

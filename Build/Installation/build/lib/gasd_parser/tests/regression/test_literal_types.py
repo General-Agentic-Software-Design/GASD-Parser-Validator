@@ -25,7 +25,7 @@ TYPE Order:
     generator = ASTGenerator()
     ast = generator.visit(tree)
 
-    fields = {f.name: f.typeExpr for f in ast.types[0].fields}
+    fields = {f.name: f.type for f in ast.types[0].fields}
     # Identifier types should have no literalValue
     assert fields["id"].literalValue is None
     assert fields["id"].baseType == "Integer"
@@ -49,7 +49,7 @@ TYPE Order:
     generator = ASTGenerator()
     ast = generator.visit(tree)
 
-    fields = {f.name: f.typeExpr for f in ast.types[0].fields}
+    fields = {f.name: f.type for f in ast.types[0].fields}
 
     # Literal field
     assert fields["status"].baseType == "literal"
@@ -76,7 +76,7 @@ TYPE Container:
     generator = ASTGenerator()
     ast = generator.visit(tree)
 
-    fields = {f.name: f.typeExpr for f in ast.types[0].fields}
+    fields = {f.name: f.type for f in ast.types[0].fields}
     assert fields["tags"].baseType == "List"
     assert fields["tags"].literalValue is None
     assert fields["meta"].isOptional is True

@@ -17,7 +17,7 @@ def get_semantic_system(contents: Dict[str, str]) -> SemanticSystem:
         asts.append(ast)
     
     pipeline = SemanticPipeline()
-    return pipeline.build(asts)
+    return pipeline.run(asts)
 
 def get_semantic_ast(content: str) -> SemanticSystem:
     return get_semantic_system({"file.gasd": content})
@@ -133,7 +133,7 @@ def test_semast_model_builder_incremental():
     ast2 = gen.visit(tree2)
     
     pipeline = SemanticPipeline()
-    sem = pipeline.build([ast1, ast2])
+    sem = pipeline.run([ast1, ast2])
     
     ns = sem.namespaces["global"]
     assert "T1" in ns.types

@@ -10,6 +10,31 @@
 CONTEXT: "Compiler / Language Tooling — AST Design"
 TARGET: "TypeScript"
 TRACE: "US-PARSER-003", "US-PARSER-007"
+IMPORT "semantic_ast_model_design.gasd"
+
+/// Opaque types representing the ANTLR parse tree contexts.
+TYPE GasdFileContext: _internal: Boolean
+TYPE DecisionContext: _internal: Boolean
+TYPE TypeDefContext: _internal: Boolean
+TYPE ComponentDefContext: _internal: Boolean
+TYPE FlowDefContext: _internal: Boolean
+TYPE StrategyDefContext: _internal: Boolean
+
+COMPONENT GASDParser:
+    INTERFACE:
+        parse() -> Void
+
+COMPONENT GASDVisitor:
+    INTERFACE:
+        visit() -> Void
+
+COMPONENT GASDLexer:
+    INTERFACE:
+        tokenize(input: String) -> Void
+
+COMPONENT ASTNodes:
+    INTERFACE:
+        node() -> Void
 
 // ===================================================================
 // Decisions
@@ -19,13 +44,13 @@ DECISION "AST vs CST":
     CHOSEN: "Separate AST Layer"
     RATIONALE: "The ANTLR parse tree (CST) includes syntactic noise (colons, commas, keywords). A clean AST simplifies downstream analysis and code generation."
     ALTERNATIVES: ["Separate AST Layer", "In-place CST Processing"]
-    AFFECTS: [ASTGenerator, ASTNodes]
+    AFFECTS: [ASTGenerator]
 
 DECISION "AST Generation Method":
     CHOSEN: "ANTLR Visitor-based Transformation"
     RATIONALE: "A visitor walks the CST and constructs typed AST nodes, allowing full control over the output shape."
     ALTERNATIVES: ["ANTLR Visitor-based Transformation", "CST Listener-based Construction"]
-    AFFECTS: [ASTGenerator]
+    AFFECTS: []
 
 DECISION "AST Node Identity":
     CHOSEN: "Discriminated Union with NodeKind Enum"
@@ -204,7 +229,15 @@ TYPE ReviewNode:
     text: String
 
 // ===================================================================
-// AST Generator Component
+COMPONENT ReferenceResolutionPass:
+    PATTERN: "Analysis"
+    INTERFACE:
+        resolve(ast: GASDFile) -> Void
+COMPONENT SemanticPipeline:
+    PATTERN: "Pipeline"
+    INTERFACE:
+        run(fileNodes: List<ProjectFileNode>) -> SemanticSystem
+
 // ===================================================================
 
 /// Transforms the ANTLR parse tree into a typed AST.

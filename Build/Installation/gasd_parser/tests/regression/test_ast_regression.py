@@ -57,14 +57,14 @@ class TestASTRegression(unittest.TestCase):
         # Actually field: String is common. 
         # Let's check the AST structure for literal types if possible.
         # Based on ASTGenerator, visitType_expr: return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        field_type = data["types"][0]["fields"][0]["typeExpr"]
+        field_type = data["types"][0]["fields"][0]["type"]
         self.assertEqual(field_type["literalValue"], '"🎉 🚀"')
 
     def test_ast_version_unaffected(self):
         """RT-PARSER-007-05: --version remains unchanged."""
         result = self.run_parser(["--version"])
         self.assertEqual(result.returncode, 0)
-        self.assertRegex(result.stdout, r"gasd-parser 1\.\d+\.\d+")
+        self.assertRegex(result.stdout, r"gasd-parser [12]\.\d+\.\d+")
 
 
     def test_ast_performance_overhead(self):

@@ -85,6 +85,33 @@ NOT_KW         : 'NOT' ;
 AND_KW         : 'AND' ;
 OR_KW          : 'OR' ;
 
+// GEP-6
+VERSION_KW      : 'VERSION' ;
+CONTRACT_KW     : 'CONTRACT' ;
+CASE_KW         : 'CASE' ;
+THROWS_KW       : 'THROWS' ;
+AFTER_KW        : 'AFTER' ;
+LOCAL_KW        : 'LOCAL' ;
+GLOBAL_KW       : 'GLOBAL' ;
+MODEL_KW        : 'MODEL' ;
+FILE_KW         : 'FILE' ;
+VERIFIES_KW     : 'VERIFIES' ;
+ASSUMPTIONS_KW  : 'ASSUMPTIONS' ;
+ASSUMPTION_KW   : 'ASSUMPTION' ;
+CONSEQUENCE_KW  : 'CONSEQUENCE' ;
+IDEMPOTENT_KW   : 'IDEMPOTENT' ;
+TIMEOUT_KW      : 'TIMEOUT' ;
+SET_KW          : 'SET' ;
+DELETE_KW       : 'DELETE' ;
+DEPENDS_ON_KW   : 'DEPENDS_ON' ;
+STEP_KW         : 'STEP' ;
+POSTCONDITION_KW: 'POSTCONDITION' ;
+BEHAVIORS_KW    : 'BEHAVIORS' ;
+
+MS_UNIT         : 'ms' ;
+S_UNIT          : 's' ;
+M_UNIT          : 'm' ;
+
 CONSTRAINT_KW  : 'CONSTRAINT' ;
 INVARIANT_KW   : 'INVARIANT' ;
 
@@ -140,7 +167,7 @@ STEP_NUM : INTEGER DOT ;
 BOOLEAN_LITERAL : 'true' | 'false' | 'TRUE' | 'FALSE' ;
 INTEGER : '-'? [0-9]+ ;
 FLOAT_LITERAL : '-'? [0-9]+ '.' [0-9]+ ;
-STRING_LITERAL : '"' (~["\\] | '\\' .)* '"' ;
+STRING_LITERAL : '"' (~["\\] | '\\' .)* '"' | '\'' (~['\\] | '\\' .)* '\'' ;
 
 IDENTIFIER : [#a-zA-Z_] [#a-zA-Z0-9_-]* ;
 OR_OP      : '|' ;

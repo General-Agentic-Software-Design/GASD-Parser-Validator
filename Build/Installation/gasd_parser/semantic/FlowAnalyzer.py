@@ -10,9 +10,10 @@ class FlowControlBlockKind(str, Enum):
     ENSURE_OTHERWISE = "ENSURE_OTHERWISE"
 
 class FlowAnalyzer:
-    def __init__(self, symbol_table: SymbolTable, reporter=None):
+    def __init__(self, symbol_table: SymbolTable, reporter=None, version: str = "1.1"):
         self.symbol_table = symbol_table
         self.reporter = reporter
+        self.version = version
 
     def analyze(self, flow_node: ResolvedFlowNode) -> ResolvedFlowNode:
         # Build CFG from raw AST steps (AC-SEMAST-006-01)
@@ -92,7 +93,7 @@ class FlowAnalyzer:
                             returned = True
 
                 if step.operation == "ENSURE":
-                    if not step.otherwisePath:
+                    if not step.otherwisePath and self.version == "1.2":
                         if self.reporter:
                             from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
                             self.reporter.report(StructuredSemanticError(

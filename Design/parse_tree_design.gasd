@@ -96,6 +96,11 @@ TYPE ParseError:
     message: String
     offendingToken: String @optional
 
+COMPONENT ParseTreeBuilder @trace #AC-PARSER-002-01:
+    INTERFACE:
+        /// Build a syntactic parse tree from ANTLR context.
+        build(ctx: GasdFileContext) -> Void
+
 // ===================================================================
 // Constraints
 // ===================================================================

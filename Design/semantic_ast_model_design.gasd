@@ -20,7 +20,7 @@ DECISION "Semantic Node Representation":
     CHOSEN: "Immutable Graph Nodes"
     RATIONALE: "The semantic AST is effectively a directed acyclic graph (DAG) where nodes reference each other via resolved symbols. Immutability ensures thread-safety and simplifies incremental analysis."
     ALTERNATIVES: ["Mutable Tree Nodes", "Immutable Graph Nodes"]
-    AFFECTS: [SemanticNodeBase, SymbolLink]
+    AFFECTS: [SemanticNodeBase]
 
 DECISION "Symbol Linking Strategy":
     CHOSEN: "Weak GUID-based References"
@@ -54,6 +54,21 @@ TYPE ResolvedAnnotation:
     scope: Enum(GLOBAL, TYPE, FIELD, COMPONENT, FLOW, STEP)
     arguments: Map<String, Any>
 
+/// Base type for all semantic expression nodes.
+TYPE ExpressionNode:
+    kind: String
+    source: SourceRange
+
+/// Reference to a symbol in the global or local scope.
+TYPE SymbolLink:
+    symbolId: String
+    kind: String
+
+/// Reference to an external imported file/namespace.
+TYPE ImportLink:
+    path: String
+    alias: String @optional
+
 // ===================================================================
 // Root Semantic Model
 // ===================================================================
@@ -65,6 +80,22 @@ TYPE SemanticSystem @trace #AC-SEMAST-001-02:
     namespaces: Map<String, NamespaceNode>
     globalConstraints: List<ResolvedConstraintNode>
     metadata: SystemMetadata
+
+TYPE JSON: _internal: Boolean
+TYPE PerformanceReport: _internal: Boolean
+TYPE Type: _internal: Boolean
+TYPE CyclePath: _internal: Boolean
+IMPORT "strategy_resolution_design.gasd"
+IMPORT "decision_resolution_design.gasd"
+IMPORT "symbol_resolution_design.gasd"
+IMPORT "global_invariants_design.gasd"
+IMPORT "semantic_error_reporting_design.gasd"
+IMPORT "type_contract_binding_design.gasd"
+
+TYPE SystemMetadata:
+    version: String
+    target: String
+    context: String @optional
 
 /// Multi-File Compilation Unit representing the entire system scope.
 TYPE CompilationUnit @trace #AC-X-SEMAST-001-03:
@@ -103,13 +134,13 @@ TYPE ResolvedTypeNode @trace #AC-SEMAST-001-03:
 
 TYPE ResolvedFieldNode:
     name: String
-    typeRef: TypeContract // Resolved type contract
+    typeRef: TypeStructure // Resolved type structure
     isOptional: Boolean
 
-/// Type Contract representing §12 and §13 requirements.
-TYPE TypeContract:
+/// Type Structure representing §12 and §13 requirements.
+TYPE TypeStructure:
     baseType: String
-    args: List<TypeContract> @optional
+    args: List<TypeStructure> @optional
     constraints: List<String> @optional
 
 // ===================================================================
@@ -120,8 +151,12 @@ TYPE ResolvedFlowNode @trace #AC-SEMAST-001-04:
     kind: "ResolvedFlow"
     name: String
     inputs: List<ResolvedParameter>
-    output: TypeContract @optional
+    output: TypeStructure @optional
     pipeline: List<SemanticFlowStep>
+
+TYPE ResolvedParameter:
+    name: String
+    type: TypeStructure
 
 TYPE SemanticFlowStep @trace #AC-SEMAST-001-10:
     kind: "SemanticFlowStep"
@@ -134,7 +169,7 @@ TYPE SemanticFlowStep @trace #AC-SEMAST-001-10:
 
 TYPE ResolvedExpression:
     kind: String
-    type: TypeContract
+    type: TypeStructure
     value: Any @optional
     dependencies: List<SymbolLink>
 
@@ -147,8 +182,19 @@ TYPE ResolvedComponentNode @trace #AC-SEMAST-001-05:
     name: String
     pattern: String
     dependencies: List<SymbolLink>
-    resources: List<ResolvedResourceNode>
+    resources: List<ResourceNode>
     methods: Map<String, ResolvedMethodNode>
+
+TYPE ResourceNode:
+    name: String
+    kind: Enum(DB, API, CACHE, QUEUE, FILE, ENV)
+    config: Map<String, Any> @optional
+
+TYPE ResolvedMethodNode:
+    name: String
+    inputs: List<ResolvedParameter>
+    output: TypeStructure @optional
+    isAsync: Boolean @default(false)
 
 // ===================================================================
 // Symbol Table Design

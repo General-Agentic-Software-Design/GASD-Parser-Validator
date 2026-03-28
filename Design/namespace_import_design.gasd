@@ -19,13 +19,13 @@ DECISION "Import Loading Strategy":
     CHOSEN: "Lazy Recursive Loading"
     RATIONALE: "Only load and parse imported files when a symbol from that namespace is referenced, reducing memory overhead for large systems."
     ALTERNATIVES: ["Eager Full Load", "Lazy Recursive Loading"]
-    AFFECTS: [ImportResolver, DependencyGraph]
+    AFFECTS: [ImportResolver]
 
 DECISION "Circular Import Detection":
     CHOSEN: "Depth-First Search (DFS) with Detection Stack"
     RATIONALE: "DFS naturally tracks the current path. If a file is encountered that is already on the stack, a cycle is detected."
     ALTERNATIVES: ["DFS with Stack", "Recursive Ascent"]
-    AFFECTS: [ImportResolver]
+    AFFECTS: []
 
 // ===================================================================
 // Namespace Model
@@ -37,11 +37,6 @@ TYPE ResolvedNamespace @trace #AC-SEMAST-009-01, #AC-X-SEMAST-002-02:
     sourceFile: String // Path to the file defining this namespace
     exportedSymbols: Map<String, SymbolEntry>
     subNamespaces: Map<String, SymbolLink>
-
-TYPE DependencyGraph @trace #AC-X-SEMAST-002-03:
-    nodes: List<String> // Canonical file paths
-    edges: List<Edge> // (from, to)
-    processingOrder: List<String> // Topologically sorted paths
 
 // ===================================================================
 // Components

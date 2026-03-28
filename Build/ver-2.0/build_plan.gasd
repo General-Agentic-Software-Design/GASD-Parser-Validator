@@ -1,0 +1,156 @@
+/*
+   --- Build Plan: GASD Parser-Validator v2.0 ---
+   Build plan for GASD Parser-Validator v2.0 (GASD 1.2 support).
+   Phases cover Design, Validation, Testing, Implementation, Quality, and Packaging.
+*/
+
+NAMESPACE: "GASD-Parser-Validator-v2.0"
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008"
+
+CONSTRAINT: "GASD agent MUST only execute one phase and pause by default, unless explicitly instructed by a human."
+CONSTRAINT: "GASD agent MUST read and master 'GASD/GASD-1.2/GASD_Specification.md' and 'GASD/GASD-1.1/GASD_Specification-1.1.md' before generating any GASD files."
+CONSTRAINT: "GASD agent MUST read and master 'Requirements/ver-2.x/ver-2.0/User_story.md' before executing any phase."
+
+// ===================================================================
+
+// PHASE 1 — Design (Output: Design/ folder)
+// Generate design-level GASD specifications for each component.
+// ===================================================================
+
+FLOW phase1_generate_design():
+    1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md"
+    2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2 IDs are extracted"
+        OTHERWISE THROW "Requirements Traceability Failed"
+    3. ACHIEVE "Generate Design/component_design.gasd" @trace #US-V2-001
+    4. ENSURE "All AC-V2 IDs are traced in design files"
+        OTHERWISE THROW "Design Traceability Failed"
+    5. ENSURE "All generated design gasd pass 'gasd-parser --ast-sem' with no errors"
+        OTHERWISE THROW "Design Syntax or Semantic Error Detected"
+    6. ENSURE "All steps 1-5 are completed correctly, faithfully, and thoroughly"
+        OTHERWISE THROW "Design Quality Gate Failed: Incomplete or Unfaithful Execution"
+
+// ===================================================================
+// PHASE 2 — Generate Validations (Output: Validation/ folder)
+// Generate explicit, comprehensive GASD validations for Design, Acceptance, Regression, and Negative cases.
+// ===================================================================
+
+FLOW phase2_generate_validations():
+    1. ACHIEVE "Read and master Requirements/ver-2.x/ and Design/ folders to ensure expertise before generation"
+    2. ENSURE "All validation gasd are generated ONLY from Requirements/ and Design/"
+        OTHERWISE THROW "Validation Source Violation: Implementation Leakage"
+    3. ACHIEVE "Exhaustive validation of Design of all cases based on Design gasd; output to Validation/Design/"
+    4. ACHIEVE "Exhaustive validation of Acceptance Tests of all cases; output to Validation/Acceptance/"
+    5. ACHIEVE "Validation of Regression Tests of all cases; output to Validation/Regression/"
+    6. ACHIEVE "Exhaustive validation of Negative Tests of all cases; output to Validation/Negative/"
+    7. ACHIEVE "Exhaustive validation of Annotation Semantic Registry (all 21 triples); output to Validation/SemanticRegistry/" @trace #US-V2-002
+    8. ACHIEVE "Exhaustive validation of GEP-6 Linting Engine (Rules LINT-001 to LINT-012); output to Validation/Linting/" @trace #US-V2-001
+    9. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting) passes 'gasd-parser --ast-sem' with no errors"
+        OTHERWISE THROW "Validation Syntax or Semantic Error Detected"
+    10. ENSURE "All steps 1-9 are completed correctly, faithfully, and thoroughly"
+        OTHERWISE THROW "Validation Quality Gate Failed: Incomplete or Unfaithful Execution"
+
+// ===================================================================
+// PHASE 3 — Testing (Output: Impl/tests/ folder)
+// Generate all acceptance and regression tests, then run to pass.
+// ===================================================================
+
+FLOW phase3_generate_tests():
+    /// Requirement: Consult ONLY Requirements/ and Design/ folders.
+    /// Do NOT use Impl/ (implementation) as a reference during test generation.
+    1. ACHIEVE "Review Requirements/, Validation/ and Design/ for testing scope"
+    2. ENSURE "No Impl/ (implementation) code is used as reference"
+        OTHERWISE THROW "Design Violation: Implementation Leakage"
+
+    // --- Backward Compatibility Gate (MUST run first) ---
+    3. ENSURE "All existing tests pass unmodified before any new test generation"
+        OTHERWISE THROW "Regression Detected: Existing Tests Failed"
+
+    // --- Acceptance Tests ---
+    4. ACHIEVE "Generate most comprehensive Impl/tests/acceptance/test_component.py from Validation/Acceptance/ including all scenarios and cases" @trace #AT-001-01
+    5. ENSURE "All AC and AT from Validation/Acceptance/ are covered by acceptance tests"
+        OTHERWISE THROW "Testing Coverage Gap Detected: Acceptance"
+
+    // --- Regression Tests ---
+    6. ACHIEVE "Generate most comprehensive Impl/tests/regression/test_component.py from Validation/Regression/ including all scenarios and cases" @trace #RT-001-01
+    7. ENSURE "All RT from Validation/Regression/ are covered by regression tests"
+        OTHERWISE THROW "Testing Coverage Gap Detected: Regression"
+
+    // --- Negative Tests ---
+    8. ACHIEVE "Add most comprehensive negative testing suite from Validation/Negative/ covering all spec constraints, scenarios, and cases"
+    9. ENSURE "Negative tests from Validation/Negative/ correctly trigger and validate expected failures"
+        OTHERWISE THROW "Negative Testing Failure"
+
+    // --- Design Validation Tests ---
+    10. ACHIEVE "Generate most comprehensive Impl/tests/design_validation/component_tests.py from Validation/Design/ including all scenarios and cases"
+    11. ENSURE "Design validation tests match the specifications in Validation/Design/"
+        OTHERWISE THROW "Design Validation Mismatch"
+
+    // --- Annotation Semantic Registry ---
+    12. ACHIEVE "Generate exhaustive unit and integration tests for Annotation Semantic Registry from Validation/SemanticRegistry/" @trace #US-V2-002
+    13. ENSURE "Registry tests verify all 21 standard annotation triples"
+        OTHERWISE THROW "Semantic Registry Coverage Failure"
+
+    // --- GEP-6 Linting Engine ---
+    14. ACHIEVE "Generate exhaustive unit and integration tests for GEP-6 Linting Engine from Validation/Linting/" @trace #US-V2-001
+    15. ENSURE "Linting tests verify all 12 rules with version-sensitive severity"
+        OTHERWISE THROW "Linting Engine Coverage Failure"
+
+    16. ENSURE "100% Traceability and Coverage for all AC, AT, RT, and Semantic Triples"
+        OTHERWISE THROW "Testing Coverage Gap Detected"
+    17. ENSURE "All steps 1-16 are completed correctly, faithfully, and thoroughly"
+        OTHERWISE THROW "Testing Quality Gate Failed: Incomplete or Unfaithful Execution"
+
+// ===================================================================
+// PHASE 4 — Implementation (Output: Impl/ folder)
+// Generate production code from Phase 1 designs.
+// ===================================================================
+
+FLOW phase4_generate_implementation():
+    /// Requirement: Consult ONLY the Design/ and Validation/ folders.
+    /// Do NOT use the Requirements/ folder as a reference during implementation.
+    // --- Core Implementation Milestones ---
+    1. ACHIEVE "Update Impl/parser/ to support VERSION 1.2 and new syntax invariants"
+    2. ACHIEVE "Implement Impl/semantic/AnnotationRegistry.py with 21 standard triples" @trace #US-V2-002
+    3. ACHIEVE "Implement Impl/semantic/LintEngine.py with 12 validation rules" @trace #US-V2-001
+    4. ACHIEVE "Enhance Impl/semantic/ to support CONTRACT, CASE and POSTCONDITION enforcement"
+    5. ACHIEVE "Implement ENVIRONMENTAL vs ASSUMPTION validation logic"
+    
+    6. ENSURE "No information from the Requirements/ folder is used for implementation"
+        OTHERWISE THROW "Design Violation: Implementation Leakage"
+    7. ENSURE "Implementation compiles successfully and passes all unit tests"
+        OTHERWISE THROW "Build Failed: Compilation or Unit Test Error"
+    8. ENSURE "All steps 1-7 are completed correctly, faithfully, and thoroughly"
+        OTHERWISE THROW "Implementation Quality Gate Failed: Incomplete or Unfaithful Execution"
+
+// ===================================================================
+// PHASE 5 — Full Quality Gate
+// All tests must pass before delivery.
+// ===================================================================
+
+FLOW phase5_full_quality_gate():
+    1. ACHIEVE "Execute full test suite including acceptance, regression, negative, and design validation tests"
+    2. ACHIEVE "If any tests fail, iteratively fix the implementation based on Design/ and re-run all tests until 100% pass"
+    3. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
+        OTHERWISE THROW "Build Failure: Quality Gate Failed"
+
+// ===================================================================
+// PHASE 6 — Final Packaging (Output: Build/Installation/ folder)
+// Unified packaging of components into a standalone application.
+// ===================================================================
+
+FLOW phase6_final_packaging():
+    1. ACHIEVE "Create build configuration with project metadata ensuring version is declared as 2.0"
+    2. ACHIEVE "Perform top-to-bottom validation of all project artifacts (Requirements, Design, Validation, Implementation)"
+    3. ENSURE "All documents and information across all project folders are in sync"
+        OTHERWISE THROW "Packaging Failed: Synchronicity Error"
+    4. ACHIEVE "Prepare Build/Installation/ directory for distribution"
+    5. ENSURE "No operations modify, pollute, or delete the parent 'Build/' folder — all artifacts must strictly go to 'Build/Installation/'"
+        OTHERWISE THROW "Packaging Failed: Build Directory Mutation"
+    6. ACHIEVE "Assemble production artifacts strictly into the Build/Installation/ directory"
+    7. ENSURE "Installation into clean environment succeeds"
+        OTHERWISE THROW "Packaging Failed: Installation Error"
+    8. ENSURE "Final distribution passes all basic functionality smoke tests"
+        OTHERWISE THROW "Packaging Failed: Functionality Sanity Error"

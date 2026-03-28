@@ -14,12 +14,11 @@ TRACE: "US-SEMAST-002", "US-X-SEMAST-003"
 // ===================================================================
 // Decisions
 // ===================================================================
-
 DECISION "Scope Hierarchy Model":
     CHOSEN: "Parent-Linked Tree"
     RATIONALE: "Each scope holds a reference to its parent. Lookup climbs the tree until the identifier is found or the global scope is exhausted."
     ALTERNATIVES: ["Parent-Linked Tree", "Flattened Symbol Map"]
-    AFFECTS: [SymbolScope]
+    AFFECTS: [SymbolScope, SymbolTable]
 
 DECISION "Shadowing Policy":
     CHOSEN: "Prohibit Local-to-Global Shadowing"

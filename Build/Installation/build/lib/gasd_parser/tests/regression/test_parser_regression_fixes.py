@@ -1,5 +1,5 @@
 import pytest
-from gasd_parser.parser.ParseTreeAPI import ParseTreeAPI
+from Impl.parser.ParseTreeAPI import ParseTreeAPI
 
 def parse_snippet(source: str):
     api = ParseTreeAPI()

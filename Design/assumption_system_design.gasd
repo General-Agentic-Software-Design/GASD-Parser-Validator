@@ -1,0 +1,73 @@
+/*
+   Design: ASSUMPTION Blocks & Warning System
+   =============================================
+   Defines the grammar and semantic rules for explicit ASSUMPTION blocks
+   and the environmental dependency tracking system.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Assumption System Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-008"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Assumption Enforcement":
+    CHOSEN: "Mandatory for annotations with environmental dependencies"
+    RATIONALE: "Per GEP-6 §8.1, annotations with environmental dependencies (from semantic triples) MUST have a corresponding ASSUMPTION block."
+    ALTERNATIVES: ["Mandatory for env dependencies", "Advisory only", "Optional with warning"]
+    AFFECTS: [AssumptionDefRule]
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// ASSUMPTION block grammar rule.
+TYPE AssumptionDefRule @trace #AC-V2-008-01:
+    syntax_block: "ASSUMPTION STRING_LITERAL ':' INDENT (AFFECTS ':' list_literal)? (CONSEQUENCE ':' STRING_LITERAL)? DEDENT"
+    syntax_inline: "ASSUMPTION ':' STRING_LITERAL"
+
+// ===================================================================
+// Semantic Validation
+// ===================================================================
+
+/// Validates that annotations with environmental dependencies have ASSUMPTION blocks.
+FLOW validate_assumption_coverage(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-008-02, #AC-V2-008-03
+    1. ACHIEVE "Collect all annotations from AST"
+    2. ACHIEVE "For each annotation, lookup semantic triple in registry"
+    3. ACHIEVE "If triple has environmental_dependency, check for corresponding ASSUMPTION"
+    4. ACHIEVE "For VERSION 1.2: emit LINT-012 ERROR for annotation with env dependency but no ASSUMPTION"
+    5. ACHIEVE "For VERSION 1.1: emit WARNING for annotation with env dependency but no ASSUMPTION"
+    6. RETURN "List of errors or warnings"
+
+/// Validates @transaction_type specifically requires ASSUMPTION in 1.2.
+FLOW validate_transaction_assumption(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-008-02
+    1. ACHIEVE "Collect all @transaction_type annotations from AST"
+    2. ACHIEVE "For each @transaction_type, check for corresponding ASSUMPTION block"
+    3. ACHIEVE "For VERSION 1.2: emit LINT-005 ERROR for missing ASSUMPTION"
+    4. ACHIEVE "For VERSION 1.1: emit WARNING for missing ASSUMPTION"
+    5. RETURN "List of errors or warnings"
+
+/// Validates @retry without @idempotent.
+FLOW validate_retry_idempotent(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-008-04
+    1. ACHIEVE "Collect all @retry annotations from AST"
+    2. ACHIEVE "For each @retry, check if @idempotent is also present on the same construct"
+    3. ACHIEVE "For VERSION 1.2: emit LINT-004 ERROR for @retry without @idempotent"
+    4. ACHIEVE "For VERSION 1.1: emit WARNING for @retry without @idempotent"
+    5. RETURN "List of errors or warnings"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "LINT-005: @transaction_type without ASSUMPTION in VERSION 1.2 is an ERROR" @trace #AC-V2-008-02
+CONSTRAINT: "LINT-012: Annotation with environmental dependency lacking ASSUMPTION in VERSION 1.2 is an ERROR" @trace #AC-V2-008-03
+CONSTRAINT: "LINT-004: @retry without @idempotent in VERSION 1.2 is an ERROR" @trace #AC-V2-008-04
+CONSTRAINT: "ASSUMPTION MUST specify AFFECTS and CONSEQUENCE clauses" @trace #AC-V2-008-01
+CONSTRAINT: "ASSUMPTIONs MUST be included in all verification output and reports" @trace #AC-V2-008-01

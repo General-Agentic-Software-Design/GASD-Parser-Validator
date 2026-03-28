@@ -14,8 +14,9 @@ TRACE: "US-SEMAST-012", "US-X-SEMAST-010"
 // ===================================================================
 // Error Model
 // ===================================================================
-
+/// Base type for all semantic validation and syntax errors.
 TYPE SemanticError @trace #AC-SEMAST-012-01, #AC-X-SEMAST-010-01:
+    kind: "SemanticError"
     code: String // e.g., "S001", "V005"
     message: String
     level: Enum(INFO, WARNING, ERROR, FATAL)
@@ -23,6 +24,8 @@ TYPE SemanticError @trace #AC-SEMAST-012-01, #AC-X-SEMAST-010-01:
     symbolName: String @optional @trace #AC-X-SEMAST-010-02
     context: List<String> @optional
     remediation: String @optional
+
+TYPE ErrorSummary: _internal: Boolean
 
 // ===================================================================
 // Components

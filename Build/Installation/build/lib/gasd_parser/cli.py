@@ -1,5 +1,5 @@
 """
-gasd-parser CLI — Canonical validator for GASD 1.1 specification files.
+gasd-parser CLI — Canonical validator for GASD 1.2 specification files.
 
 Usage:
     gasd-parser <file.gasd> [options]
@@ -20,9 +20,11 @@ from . import __version__, __build_time__
 
 
 def main():
+
     parser = argparse.ArgumentParser(
-        prog="gasd-parser",
-        description="GASD 1.1 Parser & Validator — Canonical source of truth for GASD specification files.",
+        prog="gasd_parser",
+        description="GASD 1.2 Parser & Validator — Canonical source of truth for GASD specification files.",
+        formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument(
         "files",
@@ -147,6 +149,7 @@ def main():
         ast = generator.visit(tree)
 
         # Semantic Validation (syntactic/local)
+
         semantic_errors = []
         if not args.no_validate:
             pipeline = ValidationPipeline()
@@ -183,6 +186,7 @@ def main():
         from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
         
         sem_pipeline = SemanticPipeline(validate_built_in_types=not args.no_validate)
+
         try:
             # Pass only the GASDFile ast objects
             semantic_system = sem_pipeline.run([ast for _, ast in valid_asts])

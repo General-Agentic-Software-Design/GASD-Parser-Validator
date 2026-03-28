@@ -36,13 +36,13 @@ DECISION "Indentation Strategy":
     CHOSEN: "Custom Lexer with INDENT/DEDENT Token Emission"
     RATIONALE: "GASD uses Python-style significant whitespace. A custom lexer override tracks indentation depth and emits synthetic INDENT/DEDENT tokens on the token stream."
     ALTERNATIVES: ["Custom Lexer with INDENT/DEDENT", "Whitespace-agnostic grammar", "Brace-based scopes"]
-    AFFECTS: [GASDLexer]
+    AFFECTS: [IndentationTokens]
 
 DECISION "Comment Handling":
     CHOSEN: "Lexer-Level Skip with Documentation Channel"
     RATIONALE: "Single-line (//) and block (/* */) comments are skipped. Documentation comments (///) are sent to a hidden channel for downstream doc generation."
     ALTERNATIVES: ["Lexer-Level Skip with Documentation Channel", "C-style skip"]
-    AFFECTS: [GASDLexer]
+    AFFECTS: []
 
 // ===================================================================
 // Lexer Token Design

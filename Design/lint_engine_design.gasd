@@ -1,0 +1,101 @@
+/*
+   Design: GASD 1.2 Linting Engine
+   =================================
+   Defines the comprehensive linting engine implementing all 12 lint rules
+   from GEP-6 §9.1 with version-sensitive severity.
+
+   Output: Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Linting Engine Design"
+TARGET: "Python3"
+TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008"
+
+// ===================================================================
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Lint Engine Architecture":
+    CHOSEN: "Rule-based pipeline with version-sensitive severity"
+    RATIONALE: "Each of the 12 rules from GEP-6 §9.1 must be independently executable with severity determined by the file's VERSION."
+    ALTERNATIVES: ["Rule-based pipeline", "Monolithic validator", "Plugin-based system"]
+    AFFECTS: [LintEngine]
+
+// ===================================================================
+// Lint Rule Model
+// ===================================================================
+
+/// A lint rule with version-sensitive severity.
+TYPE LintRule:
+    rule_id: String
+    pattern: String
+    recommendation: String
+    severity_v12: String
+    severity_v11: String
+
+/// Result of a single lint rule execution.
+TYPE LintResult:
+    rule_id: String
+    severity: String
+    message: String
+    line: Integer
+    column: Integer
+    context: String @optional
+
+// ===================================================================
+// Lint Rule Registry — All 12 Rules from GEP-6 §9.1
+// ===================================================================
+
+/// LINT-001: ACHIEVE without POSTCONDITION — v1.2 ERROR, v1.1 Warning
+/// LINT-002: IMPORT without CONTRACT — v1.2 ERROR, v1.1 Warning
+/// LINT-003: INVARIANT without scope qualifier — v1.2 ERROR, v1.1 Info
+/// LINT-004: @retry without @idempotent — v1.2 ERROR, v1.1 Warning
+/// LINT-005: @transaction_type without ASSUMPTION — v1.2 ERROR, v1.1 Warning
+/// LINT-006: GLOBAL INVARIANT only app enforcement — v1.2 ERROR, v1.1 Warning
+/// LINT-007: CONTRACT CASE without THROWS or POSTCONDITION — v1.2 ERROR, v1.1 Error
+/// LINT-008: DEPENDS_ON non-existent step — v1.2 ERROR, v1.1 Error
+/// LINT-009: DEPENDS_ON circular dependency — v1.2 ERROR, v1.1 Error
+/// LINT-010: Obligation identifier collision — v1.2 ERROR, v1.1 Error
+/// LINT-011: Annotation without AS identifier — v1.2 ERROR, v1.1 Info
+/// LINT-012: Env-dep annotation without ASSUMPTION — v1.2 ERROR, v1.1 Warning
+TYPE LintRuleRegistry:
+    rules: List<LintRule>
+    count: Integer @default("12")
+
+// ===================================================================
+// Lint Engine Component
+// ===================================================================
+
+/// Orchestrates all lint rules against a parsed GASD file.
+COMPONENT LintEngine:
+    PATTERN: "Pipeline"
+    DEPENDENCIES: [VersionResolver, AnnotationSemanticRegistry, DependencyGraphBuilder, ObligationResolver]
+    INTERFACE:
+        runAllRules(ast: GASDFile, version: String) -> List<LintResult>
+        runRule(ruleId: String, ast: GASDFile, version: String) -> List<LintResult>
+
+/// Master lint orchestration flow.
+FLOW run_lint_engine(ast: GASDFile, version: String) -> List<LintResult>:
+    1. ACHIEVE "Run LINT-001: Check all ACHIEVE for POSTCONDITION"
+    2. ACHIEVE "Run LINT-002: Check all IMPORT for CONTRACT"
+    3. ACHIEVE "Run LINT-003: Check all INVARIANT for scope qualifier"
+    4. ACHIEVE "Run LINT-004: Check all @retry for @idempotent"
+    5. ACHIEVE "Run LINT-005: Check all @transaction_type for ASSUMPTION"
+    6. ACHIEVE "Run LINT-006: Check all GLOBAL INVARIANT for enforcement"
+    7. ACHIEVE "Run LINT-007: Check all CONTRACT CASE for THROWS or POSTCONDITION"
+    8. ACHIEVE "Run LINT-008: Check all DEPENDS_ON for valid step references"
+    9. ACHIEVE "Run LINT-009: Check all DEPENDS_ON for circular dependencies"
+    10. ACHIEVE "Run LINT-010: Check all AS identifiers for collisions"
+    11. ACHIEVE "Run LINT-011: Check all annotations for AS identifier presence"
+    12. ACHIEVE "Run LINT-012: Check all environmental annotations for ASSUMPTION"
+    13. RETURN "Merged list of all LintResults"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Lint engine MUST implement all 12 rules from GEP-6 §9.1"
+CONSTRAINT: "Each rule MUST apply version-sensitive severity (ERROR in 1.2, Warning/Info in 1.1)"
+CONSTRAINT: "Lint results MUST include rule ID, severity, message, and location metadata"

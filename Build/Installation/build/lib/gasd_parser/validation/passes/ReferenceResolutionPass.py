@@ -146,7 +146,8 @@ class ReferenceResolutionPass(ValidationPass):
             
         # Validate Type definitions
         for t in ast.types:
-            for field in t.fields:
-                check_type_expr(field.typeExpr, field, f"{t.name}.{field.name}")
+            if t.fields:
+                for field in t.fields:
+                    check_type_expr(field.type, field, f"{t.name}.{field.name}")
                 
         return errors

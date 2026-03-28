@@ -1,15 +1,17 @@
 import os
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Any, Optional, Union, Set
 from ..ast.ASTNodes import (
     GASDFile, TypeDefinition, ComponentDefinition, FlowDefinition, StrategyDefinition, Decision, 
-    QuestionNode, ApprovalNode, ReviewNode, FlowStepNode, TypeExpression, Parameter, MatchNode
+    QuestionNode, ApprovalNode, ReviewNode, FlowStepNode, TypeExpression, Parameter, MatchNode,
+    ContractDefinition, ModelDefinition, AssumptionDefinition
 )
 from .SemanticNodes import (
     SemanticSystem, NamespaceNode, SystemMetadata, SourceRange, CompilationUnit, ProjectFileNode,
     ResolvedTypeNode, ResolvedComponentNode, ResolvedFlowNode, ResolvedStrategyNode, ResolvedDecisionNode,
     ResolvedConstraintNode, ResolvedFieldNode, TypeContract, ScopeEnum, ResolvedParameter,
     ResolvedQuestionNode, ResolvedApprovalNode, ResolvedReviewNode, SymbolLink, SemanticFlowStep,
-    ResolvedExpression, ResolvedMethodNode, SemanticNodeBase
+    ResolvedExpression, ResolvedMethodNode, SemanticNodeBase, ResolvedAnnotation,
+    ResolvedContractNode, ResolvedModelNode, ResolvedAssumptionNode
 )
 from .SymbolTable import SymbolTable, SymbolEntry, SymbolKind, SemanticError
 from .AnnotationResolver import AnnotationResolver
@@ -175,7 +177,11 @@ class SemanticPipeline:
             target_expr,
             bindings,
             otherwise_path=otherwise_path,
-            sub_steps=subs
+            sub_steps=subs,
+            postconditions=getattr(step, "postconditions", []),
+            timeout=getattr(step, "timeout", None),
+            depends_on=getattr(step, "dependsOn", None) or [],
+            step_number=getattr(step, "stepNumber", None)
         )
 
     def _signatures_match(self, flow: ResolvedFlowNode, method: ResolvedMethodNode) -> bool:
@@ -203,14 +209,6 @@ class SemanticPipeline:
         self.flow_analyzer.reporter = self.reporter
         
         asts = [ast] if isinstance(ast, GASDFile) else ast
-        try:
-            return self.build(asts)
-        except SemanticError as e:
-            # Errors are already in reporter if raised during build analysis
-            raise
-
-    def build(self, asts: List[GASDFile]) -> SemanticSystem:
-        self.reporter.reset()
         
         # AC-X-SEMAST-001-03: Create CompilationUnit
         file_nodes = {}
@@ -291,16 +289,17 @@ class SemanticPipeline:
                 
                 res = ResolvedTypeNode(self._get_range(t, fpath), t.name, {}, False)
                 res.fqn = fqn
+                res.annotations = self.annotation_resolver.resolve(getattr(t, "annotations", []), ScopeEnum.TYPE)
                 self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Type, self.symbol_table.global_scope, res))
                 # Local alias
                 if node.namespace != "global":
                     self.symbol_table.define(SymbolEntry(t.name, SymbolKind.Type, self.symbol_table.current_scope, res))
             
-            # Components
             for c in ast.components:
                 fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
                 res_comp = ResolvedComponentNode(self._get_range(c, fpath), c.name, c.pattern or "", [], [], {})
                 res_comp.fqn = fqn
+                res_comp.annotations = self.annotation_resolver.resolve(getattr(c, "annotations", []), ScopeEnum.COMPONENT)
                 self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Component, self.symbol_table.global_scope, res_comp))
                 if node.namespace != "global":
                     self.symbol_table.define(SymbolEntry(c.name, SymbolKind.Component, self.symbol_table.current_scope, res_comp))
@@ -310,12 +309,14 @@ class SemanticPipeline:
                 fqn = f"{node.namespace}.{f.name}" if node.namespace != "global" else f.name
                 res = ResolvedFlowNode(self._get_range(f, fpath), f.name, [], None, [])
                 res.fqn = fqn
+                res.annotations = self.annotation_resolver.resolve(getattr(f, "annotations", []), ScopeEnum.FLOW)
                 self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Flow, self.symbol_table.global_scope, res))
 
             for s in ast.strategies:
                 fqn = f"{node.namespace}.{s.name}" if node.namespace != "global" else s.name
                 res = ResolvedStrategyNode(self._get_range(s, fpath), s.name)
                 res.fqn = fqn
+                res.annotations = self.annotation_resolver.resolve(getattr(s, "annotations", []), ScopeEnum.FLOW) # Strategies as flows
                 self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Strategy, self.symbol_table.global_scope, res))
 
             for d in ast.decisions:
@@ -351,12 +352,17 @@ class SemanticPipeline:
             for t in ast.types:
                 fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
                 res_t: ResolvedTypeNode = self.symbol_table.resolve(fqn).nodeLink
-                res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.typeExpr), f.typeExpr.isOptional) for f in t.fields}
+                res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.type), f.type.isOptional) for f in t.fields}
                 
             for c in ast.components:
                 fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
                 res_c: ResolvedComponentNode = self.symbol_table.resolve(fqn).nodeLink
-                res_c.methods = {m.name: ResolvedMethodNode(self._get_range(m, fpath), m.name, self._res_params(m.parameters), self._res_type_expr(m.returnType)) for m in c.methods}
+                res_c.methods = {
+                    m.name: ResolvedMethodNode(
+                        self._get_range(m, fpath), m.name, self._res_params(m.parameters), self._res_type_expr(m.returnType),
+                        annotations=self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
+                    ) for m in c.methods
+                }
                 
                 # US-X-SEMAST-005 / AT-X-SEMAST-005-03: Dependency Resolution
                 res_deps = []
@@ -404,7 +410,26 @@ class SemanticPipeline:
 
             self.symbol_table.exit_scope()
 
-        # Pass 3: Global Validation
+        # Pass 3: Global Validation & GEP-6 Collections
+        all_contracts = []
+        all_models = []
+        all_assumptions = []
+        
+        for fpath, fnode in file_nodes.items():
+            ast = fnode.syntacticRoot
+            for c in ast.contracts:
+                res_c = ResolvedContractNode(self._get_range(c, fpath), c.name, list(c.behaviors.values()) if isinstance(c.behaviors, dict) else c.behaviors)
+                res_c.annotations = self.annotation_resolver.resolve(getattr(c, "annotations", []), ScopeEnum.COMPONENT)
+                all_contracts.append(res_c)
+            for m in ast.models:
+                res_m = ResolvedModelNode(self._get_range(m, fpath), m.name, getattr(m, 'fields', []), m.verifies)
+                res_m.annotations = self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
+                all_models.append(res_m)
+            for a in ast.assumptions:
+                res_a = ResolvedAssumptionNode(self._get_range(a, fpath), a.name, a.consequence)
+                res_a.annotations = self.annotation_resolver.resolve(getattr(a, "annotations", []), ScopeEnum.COMPONENT)
+                all_assumptions.append(res_a)
+
         all_flows = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Flow and s.nodeLink]
         all_decs = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Decision and s.nodeLink]
         all_comps = [s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s and s.kind == SymbolKind.Component and s.nodeLink]
@@ -416,11 +441,6 @@ class SemanticPipeline:
                     if not self._signatures_match(f, m):
                         raise SemanticError(f"SignatureMismatch: Flow '{f.name}' signature doesn't match component method in '{c.name}'")
 
-        for f in all_flows:
-            if f:
-                self.flow_analyzer.analyze(f)
-                self.flow_analyzer.check_consistency(f)
-            
         for d in all_decs:
             if d:
                 self.decision_resolver.resolve(d)
@@ -431,8 +451,15 @@ class SemanticPipeline:
         for fnode in file_nodes.values():
             if not fnode or not fnode.syntacticRoot: continue
             for c_ast in fnode.syntacticRoot.constraints:
-                # Resolve constraint to semantic node
-                res_c = ResolvedConstraintNode(SourceRange(fnode.filePath, c_ast.line, c_ast.column, c_ast.line, c_ast.column), c_ast.text)
+                # Resolve constraint to semantic node, preserving kind (Constraint vs Invariant)
+                kind_override = getattr(c_ast, 'kind', 'ResolvedConstraint') or 'ResolvedConstraint'
+                # Map AST kinds to semantic kinds
+                if kind_override == 'Invariant':
+                    kind_override = 'Invariant'
+                res_c = ResolvedConstraintNode(SourceRange(fnode.filePath, c_ast.line, c_ast.column, c_ast.line, c_ast.column), c_ast.text, kind_override=kind_override)
+                # Preserve scope and name for LINT-003/006
+                res_c.scope = getattr(c_ast, 'scope', None)
+                res_c.name = getattr(c_ast, 'name', None)
                 all_constraints.append(res_c)
         
         # Build NamespaceNodes for ConstraintValidator/System
@@ -455,15 +482,48 @@ class SemanticPipeline:
              ns_nodes[ns_name] = NamespaceNode(source_range, ns_name, ns_types, ns_comps, ns_flows, {}, ns_decs)
 
         metadata.files = list(file_nodes.values())
-        system = SemanticSystem(ns_nodes, all_constraints, metadata, comp_unit)
+
+        # Determine system version (highest version among files)
+        version = "1.1"
+        for fn in file_nodes.values():
+            if fn.syntacticRoot and getattr(fn.syntacticRoot, 'version', '1.1') == "1.2":
+                version = "1.2"
+                break
+        
+        self.flow_analyzer.version = version
+        
+        for f in all_flows:
+            if f:
+                self.flow_analyzer.analyze(f)
+                self.flow_analyzer.check_consistency(f)
+        
+        # Collect top-level annotations and postconditions
+        system_annotations = []
+        system_postconditions = []
+        for fn in file_nodes.values():
+            if fn.syntacticRoot:
+                system_annotations.extend(self.annotation_resolver.resolve(fn.syntacticRoot.annotations, ScopeEnum.GLOBAL))
+                system_postconditions.extend([e.expression for e in fn.syntacticRoot.ensures])
+        
+        system = SemanticSystem(
+            ns_nodes, all_constraints, metadata, comp_unit,
+            contracts=all_contracts,
+            models=all_models,
+            assumptions=all_assumptions,
+            postconditions=system_postconditions
+        )
+        system.annotations = system_annotations
+        
+        # Pass 4: Linting Engine (GEP-6)
+        from .LintEngine import LintEngine
+        linter = LintEngine(self.reporter, version=version)
+        linter.lint_system(system)
+        
         from .SemanticErrorReporter import ErrorLevel
         constraint_errors = self.constraint_validator.validate_system(system)
         for msg in constraint_errors:
             self.reporter.report(StructuredSemanticError("CONSTRAINT-ERR", msg, ErrorLevel.ERROR, SourceRange("",0,0,0,0)))
 
-        has_critical = any(e.level in [ErrorLevel.ERROR, ErrorLevel.FATAL] for e in self.reporter.errors)
-        if has_critical:
-            err = next((e for e in self.reporter.errors if e.level in [ErrorLevel.ERROR, ErrorLevel.FATAL]), self.reporter.errors[0])
-            raise SemanticError(f"{err.message}", location=err.location)
-            
+        # Note: We no longer raise SemanticError here for lint violations.
+        # The CLI will check the reporter for any errors.
         return system

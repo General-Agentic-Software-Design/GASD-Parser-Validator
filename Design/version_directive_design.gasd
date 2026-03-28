@@ -1,0 +1,101 @@
+/*
+   Design: VERSION Directive & Version-Aware Processing
+   =====================================================
+   Defines the grammar and semantic rules for the VERSION directive
+   and version-specific processing logic for GASD 1.2.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Version Directive Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-001"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Version Default Behavior":
+    CHOSEN: "Missing VERSION implies 1.1"
+    RATIONALE: "Per GEP-6 §10.2, files without VERSION declaration SHALL be treated as VERSION 1.1 for backward compatibility."
+    ALTERNATIVES: ["Missing VERSION implies 1.1", "Missing VERSION triggers error"]
+    AFFECTS: [VersionResolver]
+
+DECISION "VERSION Directive Placement":
+    CHOSEN: "VERSION MUST be the first directive"
+    RATIONALE: "Per GEP-6 §10.1, VERSION MUST appear before CONTEXT and TARGET to enable early version-aware parsing."
+    ALTERNATIVES: ["VERSION first directive", "VERSION anywhere in header"]
+    AFFECTS: [VersionDirectiveRule]
+
+// ===================================================================
+
+// ===================================================================
+
+// Grammar Additions
+// ===================================================================
+
+/// VERSION directive grammar rule.
+/// version_stmt ::= "VERSION" version_number
+/// version_number ::= number_literal "." number_literal [ "." number_literal ]
+TYPE VersionDirectiveRule @trace #AC-V2-001-01:
+    syntax: "VERSION version_number"
+    version_number: "number_literal '.' number_literal ('.' number_literal)?"
+    placement: "MUST be the first directive in the file"
+
+/// New lexer keywords for GASD 1.2.
+TYPE Gasd12LexerKeywords @trace #AC-V2-001-03:
+    VERSION_KW: "VERSION"
+    CONTRACT_KW: "CONTRACT"
+    MODEL_KW: "MODEL"
+    ASSUMPTION_KW: "ASSUMPTION"
+    POSTCONDITION_KW: "POSTCONDITION"
+    TIMEOUT_KW: "TIMEOUT"
+    DEPENDS_ON_KW: "DEPENDS_ON"
+    STEP_KW: "STEP"
+    BEHAVIORS_KW: "BEHAVIORS"
+    CASE_KW: "CASE"
+    THROWS_KW: "THROWS"
+    AFTER_KW: "AFTER"
+    IDEMPOTENT_KW: "IDEMPOTENT"
+    LOCAL_KW: "LOCAL"
+    GLOBAL_KW: "GLOBAL"
+    VERIFIES_KW: "VERIFIES"
+    ASSUMPTIONS_KW: "ASSUMPTIONS"
+    CONSEQUENCE_KW: "CONSEQUENCE"
+    FILE_KW: "FILE"
+
+// ===================================================================
+// Version Resolver Component
+// ===================================================================
+
+/// Resolves the GASD version from the AST and configures version-specific rules.
+COMPONENT VersionResolver @trace #AC-V2-001-02:
+    PATTERN: "Strategy"
+    DEPENDENCIES: []
+    INTERFACE:
+        resolveVersion(ast: GASDFile) -> String
+        isVersion12(ast: GASDFile) -> Boolean
+
+FLOW resolve_version(ast: GASDFile) -> String:
+    @trace #AC-V2-001-02
+    1. ACHIEVE "Check if VERSION directive exists in AST"
+    2. ENSURE "VERSION directive value is a valid version number"
+        OTHERWISE RETURN "1.1"
+    3. RETURN "Resolved version string"
+
+/// When 1.2 constructs appear in a 1.1 file, emit migration warning.
+FLOW check_version_compatibility(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-001-04
+    1. ACHIEVE "Detect 1.2 constructs: CONTRACT, MODEL, ASSUMPTION, POSTCONDITION, DEPENDS_ON, scoped INVARIANT, AS identifiers"
+    2. ACHIEVE "For each 1.2 construct in a 1.1 file, record a warning-level SemanticError"
+    3. ACHIEVE "For each missing REQUIRED construct in a 1.2 file, record an error-level SemanticError"
+    4. RETURN "List of SemanticErrors"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "VERSION MUST appear as the first directive, before CONTEXT and TARGET" @trace #AC-V2-001-01
+CONSTRAINT: "Files without VERSION SHALL be treated as VERSION 1.1" @trace #AC-V2-001-02
+CONSTRAINT: "New 1.2 constructs in a 1.1 file SHALL produce a lint warning, not a parse error" @trace #AC-V2-001-04
+CONSTRAINT: "Analyzers MUST support all GASD versions >= 1.0" @trace #AC-V2-001-03

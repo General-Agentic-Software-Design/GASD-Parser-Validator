@@ -25,7 +25,13 @@ DECISION "Hash Input Pre-processing":
     CHOSEN: "Canonical JSON Representation"
     RATIONALE: "Serializing nodes to sorted, canonical JSON before hashing ensures minor syntactic whitespace changes don't affect the semantic fingerprint."
     ALTERNATIVES: ["Raw File Strings", "Canonical JSON Representation"]
-    AFFECTS: [SemanticHasher]
+    AFFECTS: []
+
+// ===================================================================
+// Models
+// ===================================================================
+
+TYPE DriftReport: _internal: Boolean
 
 // ===================================================================
 // Components

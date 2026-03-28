@@ -1,0 +1,63 @@
+/*
+   Validation: GEP-6 Linting Engine (1.1 Syntax)
+   =============================================
+   Exhaustive validation of all 12 lint rules defined in GEP-6 §9.1.
+   Traces: US-V2-001 to US-V2-008
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Linting"
+CONTEXT: "Validation of Linting Rules and Severity Mapping"
+TARGET: "GASD Agent"
+TRACE: "US-V2-001"
+
+FLOW validate_lint_rules():
+    1. ACHIEVE "Validate LINT-001: ACHIEVE without POSTCONDITION"
+    2. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    3. ACHIEVE "Validate LINT-002: IMPORT without CONTRACT"
+    4. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    5. ACHIEVE "Validate LINT-003: INVARIANT without scope qualifier"
+    6. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Info'"
+        OTHERWISE THROW "Validation Failed"
+    
+    7. ACHIEVE "Validate LINT-004: @retry without @idempotent"
+    8. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    9. ACHIEVE "Validate LINT-005: @transaction_type without ASSUMPTION"
+    10. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    11. ACHIEVE "Validate LINT-006: GLOBAL INVARIANT only app enforcement"
+    12. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    13. ACHIEVE "Validate LINT-007: CONTRACT CASE without THROWS or POSTCONDITION"
+    14. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
+        OTHERWISE THROW "Validation Failed"
+    
+    15. ACHIEVE "Validate LINT-008: DEPENDS_ON non-existent step"
+    16. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
+        OTHERWISE THROW "Validation Failed"
+    
+    17. ACHIEVE "Validate LINT-009: DEPENDS_ON circular dependency"
+    18. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
+        OTHERWISE THROW "Validation Failed"
+    
+    19. ACHIEVE "Validate LINT-010: Obligation identifier collision"
+    20. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
+        OTHERWISE THROW "Validation Failed"
+    
+    21. ACHIEVE "Validate LINT-011: Annotation without AS identifier"
+    22. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Info'"
+        OTHERWISE THROW "Validation Failed"
+    
+    23. ACHIEVE "Validate LINT-012: Env-dep annotation without ASSUMPTION"
+    24. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+
+    25. ENSURE "All 12 rules are correctly mapped in the engine"
+        OTHERWISE THROW "Linting Rule Mapping Error"

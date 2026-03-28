@@ -105,7 +105,7 @@ def test_semast_match_exhaustiveness():
 
 def test_semast_ensure_otherwise():
     table = SymbolTable()
-    analyzer = FlowAnalyzer(table)
+    analyzer = FlowAnalyzer(table, version="1.2")
     
     step = generate_step("ENSURE", "condition", handler=None)
     flow_node = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "myFlow", [], TypeContract("Boolean"), [step])

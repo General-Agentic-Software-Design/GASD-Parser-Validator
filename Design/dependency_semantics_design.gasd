@@ -1,0 +1,82 @@
+/*
+   Design: DEPENDS_ON & Dependency Semantics
+   ===========================================
+   Defines the grammar and semantic rules for explicit step dependencies
+   and inferred dependency logic in GASD 1.2 FLOWs.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Dependency Semantics Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-005"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Dependency Override Semantics":
+    CHOSEN: "DEPENDS_ON overrides inferred dependencies"
+    RATIONALE: "Per GEP-6 §4.1, when DEPENDS_ON is present, it SHALL override inferred dependencies for that step."
+    ALTERNATIVES: ["DEPENDS_ON overrides", "DEPENDS_ON supplements"]
+    AFFECTS: [DependencyGraphBuilder]
+
+DECISION "Inference Fallback":
+    CHOSEN: "Variable usage + sequential ordering"
+    RATIONALE: "Per GEP-6 §4.2, when DEPENDS_ON is absent, dependencies are inferred from variable usage and sequential ordering."
+    ALTERNATIVES: ["Variable usage + sequential", "Sequential only", "No inference"]
+    AFFECTS: [DependsOnRule]
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// DEPENDS_ON clause grammar rule.
+TYPE DependsOnRule @trace #AC-V2-005-01:
+    syntax: "DEPENDS_ON step_ref (',' step_ref)*"
+    step_ref: "STEP INTEGER"
+
+// ===================================================================
+// Dependency Graph Builder
+// ===================================================================
+
+/// Builds a directed acyclic graph from FLOW step dependencies.
+COMPONENT DependencyGraphBuilder @trace #AC-V2-005-01:
+    PATTERN: "Builder"
+    DEPENDENCIES: []
+    INTERFACE:
+        buildGraph(flow: FlowRule) -> List<List<Integer>>
+        detectCycles(graph: List<List<Integer>>) -> List<List<Integer>>
+        getExecutionOrder(graph: List<List<Integer>>) -> List<Integer>
+
+/// Validates DEPENDS_ON references and detects cycles.
+FLOW validate_dependencies(ast: GASDFile) -> List<SemanticError>:
+    @trace #AC-V2-005-02, #AC-V2-005-03
+    1. ACHIEVE "Collect all FLOW definitions from AST"
+    2. ACHIEVE "For each FLOW, extract all DEPENDS_ON step references"
+    3. ACHIEVE "For each DEPENDS_ON, verify referenced step number exists in the same FLOW"
+    4. ENSURE "All DEPENDS_ON step references are valid"
+        OTHERWISE THROW "LINT-008: DEPENDS_ON references non-existent step"
+    5. ACHIEVE "Build dependency graph and run cycle detection"
+    6. ENSURE "No circular dependencies exist in graph"
+        OTHERWISE THROW "LINT-009: Circular dependency detected"
+    7. RETURN "List of errors"
+
+/// Infers dependencies when DEPENDS_ON is absent.
+FLOW infer_dependencies(flow: FlowRule) -> List<List<Integer>>:
+    @trace #AC-V2-005-04
+    1. ACHIEVE "Analyze variable usage: if step N uses output of step M, N depends on M"
+    2. ACHIEVE "Apply sequential ordering: step N implicitly depends on step N-1 unless overridden"
+    3. ENSURE "Inference produces deterministic results"
+        OTHERWISE THROW "Non-deterministic dependency inference"
+    4. RETURN "Inferred dependency graph"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "DEPENDS_ON MUST reference only step numbers that exist within the same FLOW" @trace #AC-V2-005-02
+CONSTRAINT: "LINT-008: Error if DEPENDS_ON references a non-existent step" @trace #AC-V2-005-02
+CONSTRAINT: "LINT-009: Error if DEPENDS_ON creates circular dependencies" @trace #AC-V2-005-03
+CONSTRAINT: "In VERSION 1.2, steps with unambiguous inferred dependencies MAY omit DEPENDS_ON" @trace #AC-V2-005-04
+CONSTRAINT: "Dependency inference MUST produce deterministic results" @trace #AC-V2-005-04

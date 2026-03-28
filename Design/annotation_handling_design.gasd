@@ -20,26 +20,21 @@ DECISION "Annotation Inheritance":
     CHOSEN: "Override Pattern"
     RATIONALE: "Annotations on sub-components (e.g., FIELDS) override those on the parent (e.g., TYPE) of the same name. This allows granular specification while preserving defaults."
     ALTERNATIVES: ["Additive Pattern", "Override Pattern"]
-    AFFECTS: [AnnotationResolver]
+    AFFECTS: [AnnotationProcessor]
 
 // ===================================================================
 // Annotation Model
 // ===================================================================
 
-TYPE ResolvedAnnotation @trace #AC-SEMAST-004-01:
-    name: String
-    arguments: Map<String, Any>
-    scope: Enum(SYSTEM, TYPE, COMPONENT, FLOW, STEP, FIELD)
-    source: SymbolLink // Where the annotation was first defined
-
+/// Unified representation of a resolved annotation.
 // ===================================================================
 // Components
 // ===================================================================
 
-COMPONENT AnnotationResolver @trace #AC-SEMAST-004-04:
+COMPONENT AnnotationProcessor @trace #AC-SEMAST-004-03, #AC-X-SEMAST-003-01:
     INTERFACE:
-        /// Resolve syntactic annotations into typed semantic data.
-        resolve(node: SemanticNodeBase) -> List<ResolvedAnnotation> @trace #AC-SEMAST-004-02
+        /// Parse and validate an annotation on a construct.
+        process(annotation: AnnotationRule) -> ResolvedAnnotation @trace #AC-SEMAST-004-02, #AC-X-SEMAST-003-01
         /// Validate annotation usage against scope and arguments.
         validate(annotation: ResolvedAnnotation, node: SemanticNodeBase) -> Void @trace #AC-SEMAST-004-03
         /// Extract specific annotation by name with hierarchy walking.

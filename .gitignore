@@ -1,4 +1,6 @@
 .DS_Store
 .venv
+.venv-test
 __pycache__
+.pytest_cache
 agent.md

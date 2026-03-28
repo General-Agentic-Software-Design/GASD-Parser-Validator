@@ -25,6 +25,9 @@ section
     | strategy_def
     | constraint_stmt
     | invariant_stmt
+    | contract_def
+    | model_def
+    | assumption_def
     | ensure_stmt
     | match_section
     | question_stmt
@@ -34,12 +37,15 @@ section
     | annotations NEWLINE
     // Skip extra newlines between sections
     | NEWLINE
+    | version_dir
     ;
 
 // ===================================================================
 // Directives
 // ===================================================================
 
+version_dir     : VERSION_KW (version_number | STRING_LITERAL) NEWLINE ;
+version_number  : FLOAT_LITERAL | (INTEGER DOT INTEGER (DOT INTEGER)?) ;
 context_dir     : CONTEXT_KW COLON value_list NEWLINE ;
 target_dir      : TARGET_KW COLON value_list NEWLINE ;
 trace_dir       : TRACE_KW COLON value_list NEWLINE ;
@@ -73,11 +79,11 @@ field_def
     ;
 
 type_expr
-    : (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
+    : ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
+    | OPTIONAL_KW LANGLE type_expr RANGLE
     | INTEGER              // Literal integer type, e.g. 42
     | FLOAT_LITERAL        // Literal float type, e.g. 3.14
-    | ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
-    | OPTIONAL_KW LANGLE type_expr RANGLE
+    | (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
     ;
 
 // ===================================================================
@@ -126,17 +132,56 @@ flow_def
     ;
 
 flow_step
-    : (STEP_NUM)? (control_flow | action | match_expr) annotations? NEWLINE? (internal_block)?
-    | annotations NEWLINE? (internal_block)?
+    : step_id (control_flow | action | match_expr)? depends_clause? annotations? NEWLINE? internal_block?
+    | (control_flow | action | match_expr) depends_clause? annotations? NEWLINE? internal_block?
+    | annotations NEWLINE? internal_block?
+    ;
+
+step_id
+    : STEP_NUM
+    | soft_id DOT
+    | (STEP_KW)? (soft_id | INTEGER) COLON
+    ;
+
+depends_clause
+    : DEPENDS_ON_KW step_ref (COMMA step_ref)*
+    ;
+
+depends_stmt
+    : depends_clause NEWLINE
+    ;
+    
+step_ref
+    : STEP_KW (STEP_NUM | INTEGER | STRING_LITERAL | soft_id)
     ;
 
 
 internal_block
-    : INDENT (otherwise_stmt | step_property NEWLINE | flow_step | match_expr | NEWLINE)+ DEDENT
+    : INDENT (depends_stmt | postcondition_stmt | on_error_clause | timeout_stmt | otherwise_stmt | step_property NEWLINE | flow_step | match_expr | NEWLINE)+ DEDENT
     ;
 
 otherwise_stmt
     : OTHERWISE_KW (THROW_KW | RETURN_KW) expr NEWLINE
+    ;
+
+postcondition_stmt
+    : POSTCONDITION_KW COLON (NEWLINE INDENT (postcondition_expr NEWLINE)+ DEDENT | postcondition_expr NEWLINE)
+    ;
+
+postcondition_expr
+    : expr
+    ;
+
+timeout_stmt
+    : TIMEOUT_KW COLON duration_literal NEWLINE
+    ;
+
+duration_literal
+    : INTEGER (MS_UNIT | S_UNIT | M_UNIT)
+    ;
+
+on_error_clause
+    : ON_ERROR_KW COLON action
     ;
 
 step_property
@@ -144,7 +189,7 @@ step_property
     ;
 
 permissive_token
-    : soft_id | STRING_LITERAL | BACKTICK | COMMA | LPAREN | RPAREN | SQUOTE | CARET | EQUALS | MINUS | PLUS | ASTERISK | HASH | LANGLE | RANGLE | LBRACKET | RBRACKET | LBRACE | RBRACE | ELLIPSIS | DOT | INTEGER | FLOAT_LITERAL | SLASH | EQ_OP | NE_OP | LE_OP | GE_OP | ARROW | COLON | OR_OP
+    : soft_id | STRING_LITERAL | BACKTICK | COMMA | LPAREN | RPAREN | SQUOTE | CARET | EQUALS | MINUS | PLUS | ASTERISK | HASH | LANGLE | RANGLE | LBRACKET | RBRACKET | LBRACE | RBRACE | ELLIPSIS | DOT | INTEGER | FLOAT_LITERAL | SLASH | EQ_OP | NE_OP | LE_OP | GE_OP | ARROW | COLON | OR_OP | AND_KW | OR_KW | NOT_KW | IS_KW | IS_NOT_KW | TO_KW | VIA_KW
     ;
 
 action
@@ -258,8 +303,63 @@ strategy_item
 // Constraints & Invariants
 // ===================================================================
 
-constraint_stmt : CONSTRAINT_KW soft_id? COLON (STRING_LITERAL | value) annotations? NEWLINE ;
-invariant_stmt  : INVARIANT_KW soft_id? COLON (STRING_LITERAL | value) annotations? NEWLINE ;
+constraint_stmt : CONSTRAINT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE ;
+invariant_stmt  : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE ;
+
+// --- GASD 1.2 NEW BLOCKS ---
+
+contract_def
+    : CONTRACT_KW (qualified_name | STRING_LITERAL) annotations? COLON NEWLINE
+      INDENT
+      (input_blk)?
+      (output_blk)?
+      (BEHAVIORS_KW COLON NEWLINE INDENT (case_blk)+ DEDENT)?
+      (case_blk)*
+      (idempotent_blk)?
+      (version_dir)?
+      DEDENT
+    ;
+
+input_blk : INPUT_KW COLON (NEWLINE INDENT (param NEWLINE)+ DEDENT | param_list NEWLINE) ;
+output_blk : OUTPUT_KW COLON type_expr NEWLINE ;
+idempotent_blk : IDEMPOTENT_KW COLON BOOLEAN_LITERAL NEWLINE ;
+
+case_blk
+    : CASE_KW (soft_id | STRING_LITERAL) COLON NEWLINE
+      INDENT
+      (case_clause NEWLINE | flow_step | action NEWLINE | ensure_stmt NEWLINE | NEWLINE)+
+      DEDENT
+    ;
+
+case_clause
+    : POSTCONDITION_KW COLON postcondition_expr
+    | THROWS_KW COLON soft_id
+    | AFTER_KW COLON (duration_literal | soft_id (LPAREN value_list RPAREN)?)
+    ;
+
+model_def
+    : MODEL_KW STRING_LITERAL annotations? COLON NEWLINE
+      INDENT
+      TYPE_KW COLON soft_id NEWLINE
+      FILE_KW COLON STRING_LITERAL NEWLINE
+      (VERIFIES_KW COLON NEWLINE INDENT (invariant_ref NEWLINE)+ DEDENT)?
+      (ASSUMPTIONS_KW COLON NEWLINE INDENT (STRING_LITERAL NEWLINE)+ DEDENT)?
+      DEDENT
+    ;
+
+invariant_ref : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW COLON STRING_LITERAL ;
+
+assumption_def
+    : ASSUMPTION_KW (STRING_LITERAL | soft_id) annotations? COLON NEWLINE
+      INDENT
+      (AFFECTS_KW COLON list_literal NEWLINE)?
+      (CONSEQUENCE_KW COLON STRING_LITERAL NEWLINE)?
+      DEDENT
+    | ASSUMPTION_KW (STRING_LITERAL | soft_id) annotations? NEWLINE
+    | ASSUMPTION_KW COLON STRING_LITERAL NEWLINE
+    ;
+
+qualified_name : soft_id (DOT soft_id)* ;
 
 // ===================================================================
 // Pattern Matching
@@ -366,8 +466,11 @@ annotations
     ;
 
 annotation
-    : AT soft_id (LPAREN value_list? RPAREN | value_list)?
+    : AT name=soft_id (LPAREN args=value_list? RPAREN | param_id=param_val (COMMA param_val)*)? (AS_KW alias=alias_val)?
     ;
+
+param_val : IDENTIFIER | STRING_LITERAL ;
+alias_val : soft_id | STRING_LITERAL ;
 // ===================================================================
 // Soft Identifier (Allows keywords to be used as IDs in certain contexts)
 // ===================================================================
@@ -386,8 +489,6 @@ soft_id
     | AFFECTS_KW
     | LIST_KW
     | MAP_KW
-    | ENUM_KW
-    | OPTIONAL_KW
     | COMPONENT_KW
     | INTERFACE_KW
     | PATTERN_KW
@@ -399,6 +500,7 @@ soft_id
     | RETURN_KW
     | LOG_KW
     | ENSURE_KW
+    | OTHERWISE_KW
     | THROW_KW
     | EXECUTE_KW
     | TRANSFORM_KW
@@ -431,22 +533,38 @@ soft_id
     | TYPE_KW
     | AS_KW
     | WITH_KW
-    | VIA_KW
     | TO_KW
     | HAS_KW
     | CONTAINS_KW
     | APPLY_KW
     | UPDATE_KW
-    | TRANSFORM_KW
     | RESOURCES_KW
     | IS_KW
     | NOT_KW
     | AND_KW
     | OR_KW
-    | UPDATE_KW
-    | APPLY_KW
-    | CONTAINS_KW
-    | HAS_KW
-    | TO_KW
-    | RESOURCES_KW
+    | VERSION_KW
+    | CONTRACT_KW
+    | CASE_KW
+    | THROWS_KW
+    | AFTER_KW
+    | LOCAL_KW
+    | GLOBAL_KW
+    | MODEL_KW
+    | FILE_KW
+    | VERIFIES_KW
+    | ASSUMPTIONS_KW
+    | ASSUMPTION_KW
+    | CONSEQUENCE_KW
+    | IDEMPOTENT_KW
+    | TIMEOUT_KW
+    | SET_KW
+    | DELETE_KW
+    | DEPENDS_ON_KW
+    | STEP_KW
+    | POSTCONDITION_KW
+    | BEHAVIORS_KW
+    | MS_UNIT
+    | S_UNIT
+    | M_UNIT
     ;

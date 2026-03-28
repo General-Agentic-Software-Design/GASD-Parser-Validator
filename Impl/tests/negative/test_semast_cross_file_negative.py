@@ -73,8 +73,13 @@ def test_negative_cross_file_constraint_conflict():
         "C2.gasd": 'CONTEXT: "Global"\nCONSTRAINT: "User.age < 0"\n',
         "M.gasd": 'CONTEXT: "Global"\nTYPE User:\n  age: Integer\n'
     }
-    with pytest.raises(SemanticError, match="ConstraintConflict"):
-        get_semantic_system(files)
+    from Impl.parser.ParseTreeAPI import ParseTreeAPI
+    from Impl.ast.ASTGenerator import ASTGenerator
+    api = ParseTreeAPI()
+    asts = [ASTGenerator(source_file=p).visit(api.parse(c)[0]) for p, c in files.items()]
+    pipeline = SemanticPipeline()
+    pipeline.run(asts)
+    assert any("ConstraintConflict" in e.message for e in pipeline.reporter.errors)
 
 def test_negative_cross_file_shadowing_builtin():
     # US-X-SEMAST-003 / RT-X-SEMAST-003-02

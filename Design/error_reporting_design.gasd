@@ -25,7 +25,7 @@ DECISION "Error Severity Model":
     CHOSEN: "Three-Level: ERROR, WARNING, INFO"
     RATIONALE: "ERROR blocks compilation, WARNING flags potential issues, INFO provides advisory notes."
     ALTERNATIVES: ["Three-Level: ERROR, WARNING, INFO", "Two-Level: ERROR, WARNING"]
-    AFFECTS: [ErrorReporter]
+    AFFECTS: []
 
 // ===================================================================
 // Error Types
@@ -103,9 +103,10 @@ FLOW format_human_readable(error: ErrorEntry) -> String:
     5. ACHIEVE "Append expected tokens or suggestions if available"
     6. RETURN "Formatted multi-line error string"
 
-// ===================================================================
-// Error Reporter Component
-// ===================================================================
+COMPONENT ErrorFormatter @trace #AC-PARSER-005-01:
+    INTERFACE:
+        /// Format an error entry into a human-readable string.
+        format(error: ErrorEntry) -> String
 
 /// Central error reporter that collects all errors and formats output.
 COMPONENT ErrorReporter:

@@ -32,16 +32,18 @@ class SourceRange:
 
 
 class ResolvedAnnotation:
-    def __init__(self, name: str, scope: ScopeEnum, arguments: Dict[str, Any]):
+    def __init__(self, name: str, scope: ScopeEnum, arguments: Dict[str, Any], alias: Optional[str] = None):
         self.name = name
         self.scope = scope
         self.arguments = arguments
-
+        self.alias = alias
+ 
     def to_dict(self):
         return {
             "name": self.name,
             "scope": self.scope.value,
-            "arguments": self.arguments
+            "arguments": self.arguments,
+            "alias": self.alias
         }
 
 
@@ -154,7 +156,11 @@ class ResolvedExpression:
 class SemanticFlowStep(SemanticNodeBase):
     def __init__(self, source_map: SourceRange, operation: str, target_expression: ResolvedExpression, bindings: Dict[str, SymbolLink], 
                  error_path: Optional['SemanticFlowStep'] = None, otherwise_path: Optional['SemanticFlowStep'] = None,
-                 sub_steps: Optional[List['SemanticFlowStep']] = None):
+                 sub_steps: Optional[List['SemanticFlowStep']] = None,
+                 postconditions: Optional[List[str]] = None,
+                 timeout: Optional[str] = None,
+                 depends_on: Optional[List[str]] = None,
+                 step_number: Optional[int] = None):
         super().__init__("SemanticFlowStep", source_map)
         self.operation = operation
         self.targetExpression = target_expression
@@ -162,13 +168,21 @@ class SemanticFlowStep(SemanticNodeBase):
         self.errorPath = error_path
         self.otherwisePath = otherwise_path
         self.subSteps = sub_steps or []
+        self.postconditions = postconditions or []
+        self.timeout = timeout
+        self.dependsOn = depends_on or []
+        self.stepNumber = step_number
 
     def to_dict(self):
         d = super().to_dict()
         d.update({
             "operation": self.operation,
             "targetExpression": self.targetExpression.to_dict() if self.targetExpression else None,
-            "bindings": {k: v.to_dict() for k, v in self.bindings.items()}
+            "bindings": {k: v.to_dict() for k, v in self.bindings.items()},
+            "postconditions": self.postconditions,
+            "timeout": self.timeout,
+            "dependsOn": self.dependsOn,
+            "stepNumber": self.stepNumber
         })
         if self.errorPath:
             d["errorPath"] = self.errorPath.to_dict()
@@ -224,8 +238,8 @@ class ResolvedTypeNode(SemanticNodeBase):
 
 
 class ResolvedMethodNode(SemanticNodeBase):
-    def __init__(self, source_map: SourceRange, name: str, inputs: List[ResolvedParameter], output: Optional[TypeContract]):
-        super().__init__("ResolvedMethod", source_map)
+    def __init__(self, source_map: SourceRange, name: str, inputs: List[ResolvedParameter], output: Optional[TypeContract], annotations: Optional[List[ResolvedAnnotation]] = None):
+        super().__init__("ResolvedMethod", source_map, annotations=annotations)
         self.name = name
         self.inputs = inputs
         self.output = output
@@ -464,25 +478,6 @@ class CompilationUnit(SemanticNodeBase):
         return d
 
 
-class SemanticSystem(SemanticNodeBase):
-    def __init__(self, namespaces: Dict[str, NamespaceNode], global_constraints: List[ResolvedConstraintNode], metadata: SystemMetadata, comp_unit: Optional[CompilationUnit] = None):
-        super().__init__("SemanticSystem", SourceRange("", 0, 0, 0, 0))
-        self.namespaces = namespaces
-        self.global_constraints = global_constraints
-        self.metadata = metadata
-        self.compilationUnit = comp_unit
-
-    def to_dict(self):
-        d = super().to_dict()
-        d.update({
-            "namespaces": {k: v.to_dict() for k, v in self.namespaces.items()},
-            "globalConstraints": [c.to_dict() for c in self.global_constraints],
-            "metadata": self.metadata.to_dict(),
-            "compilationUnit": self.compilationUnit.to_dict() if self.compilationUnit else None
-        })
-        return d
-
-
 class ResolvedQuestionNode(SemanticNodeBase):
     def __init__(self, source_map: SourceRange, text: str, is_blocking: bool = False, context: Optional[str] = None):
         super().__init__("ResolvedQuestion", source_map)
@@ -528,4 +523,81 @@ class ResolvedReviewNode(SemanticNodeBase):
     def to_dict(self):
         d = super().to_dict()
         d["text"] = self.text
+        return d
+
+class ResolvedContractNode(SemanticNodeBase):
+    def __init__(self, source_map: SourceRange, name: str, cases: List[Any]):
+        super().__init__("ResolvedContract", source_map)
+        self.name = name
+        self.cases = cases # List of cases with conditions and outcomes
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "name": self.name,
+            "cases": [c.to_dict() if hasattr(c, "to_dict") else str(c) for c in self.cases]
+        })
+        return d
+
+
+class ResolvedModelNode(SemanticNodeBase):
+    def __init__(self, source_map: SourceRange, name: str, fields: List[Any], verifies: Optional[str] = None):
+        super().__init__("ResolvedModel", source_map)
+        self.name = name
+        self.fields = fields
+        self.verifies = verifies
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "name": self.name,
+            "fields": [f.to_dict() if hasattr(f, "to_dict") else str(f) for f in self.fields],
+            "verifies": self.verifies
+        })
+        return d
+
+
+class ResolvedAssumptionNode(SemanticNodeBase):
+    def __init__(self, source_map: SourceRange, name: str, consequence: Optional[str] = None):
+        super().__init__("ResolvedAssumption", source_map)
+        self.name = name
+        self.consequence = consequence
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "name": self.name,
+            "name_val": self.name,
+            "consequence": self.consequence
+        })
+        return d
+
+class SemanticSystem(SemanticNodeBase):
+    def __init__(self, namespaces: Dict[str, NamespaceNode], global_constraints: List[ResolvedConstraintNode], metadata: SystemMetadata, 
+                 comp_unit: Optional[CompilationUnit] = None, 
+                 contracts: Optional[List[ResolvedContractNode]] = None,
+                 models: Optional[List[ResolvedModelNode]] = None,
+                 assumptions: Optional[List[ResolvedAssumptionNode]] = None,
+                 postconditions: Optional[List[str]] = None):
+        super().__init__("SemanticSystem", SourceRange("", 0, 0, 0, 0))
+        self.namespaces = namespaces
+        self.global_constraints = global_constraints
+        self.metadata = metadata
+        self.compilationUnit = comp_unit
+        self.contracts = contracts or []
+        self.models = models or []
+        self.assumptions = assumptions or []
+        self.postconditions = postconditions or []
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "namespaces": {k: v.to_dict() for k, v in self.namespaces.items()},
+            "globalConstraints": [c.to_dict() for c in self.global_constraints],
+            "metadata": self.metadata.to_dict(),
+            "compilationUnit": self.compilationUnit.to_dict() if self.compilationUnit else None,
+            "contracts": [c.to_dict() for c in self.contracts],
+            "models": [m.to_dict() for m in self.models],
+            "assumptions": [a.to_dict() for a in self.assumptions]
+        })
         return d

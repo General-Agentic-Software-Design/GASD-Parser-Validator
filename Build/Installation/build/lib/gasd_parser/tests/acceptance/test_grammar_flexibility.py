@@ -21,7 +21,7 @@ TYPE Node:
     
     generator = ASTGenerator()
     ast = generator.visit(tree)
-    fields = {f.name: f.typeExpr.baseType for f in ast.types[0].fields}
+    fields = {f.name: f.type.baseType for f in ast.types[0].fields}
     assert "CONTEXT" in fields
     assert "VALIDATE" in fields
     assert "TYPE" in fields
@@ -39,7 +39,7 @@ TYPE ActionNode:
     
     generator = ASTGenerator()
     ast = generator.visit(tree)
-    enum_values = ast.types[0].fields[0].typeExpr.enumValues
+    enum_values = ast.types[0].fields[0].type.enumValues
     assert "VALIDATE" in enum_values
     assert "ACHIEVE" in enum_values
     assert "CONTEXT" in enum_values

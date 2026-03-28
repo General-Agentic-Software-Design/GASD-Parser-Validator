@@ -1,0 +1,72 @@
+/*
+   Validation: Semantic AST — Architecture Dependency Tests
+   ========================================================
+   Verifies component wiring, cyclic dependencies, and interfaces.
+   Based on Design/architecture_deps_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Architecture Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-005", "US-X-SEMAST-005"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_arch_dependency_graph():
+    @trace #AT-SEMAST-005-01, #AC-SEMAST-005-01
+    1. ACHIEVE "Define multiple COMPONENTs with DEPENDENCIES"
+    2. ENSURE "DependencyAnalyzer builds valid directed graph"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_dependency_analysis():
+    @trace #AT-SEMAST-005-02, #AC-SEMAST-005-02
+    1. ACHIEVE "Analyze connected system"
+    2. ENSURE "Edges represent CALLS, EXTENDS, or USES accurately"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_interface_compliance():
+    @trace #AT-SEMAST-005-03, #AC-SEMAST-005-03, #AC-X-SEMAST-005-04
+    1. ACHIEVE "Define COMPONENT with unimplemented Interface method defined in another file"
+    2. ENSURE "Analyzer throws MissingMethod semantic error"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_architecture_cycles():
+    @trace #AT-SEMAST-005-04, #AC-SEMAST-005-04, #AC-X-SEMAST-005-03
+    1. ACHIEVE "Create circular DEPENDENCIES (FileA.CompA -> FileB.CompB -> FileA.CompA)"
+    2. ENSURE "Analyzer detects and reports cross-file cycle path"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_dependency_symbol_linking():
+    @trace #AT-SEMAST-005-05, #AC-SEMAST-005-06
+    1. ACHIEVE "Define dependencies across namespaces"
+    2. ENSURE "SymbolTable correctly links remote architectural nodes"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_arch_resource_linkage():
+    @trace #AT-SEMAST-005-06, #AC-SEMAST-005-07
+    1. ACHIEVE "Add RESOURCES requirement to COMPONENT"
+    2. ENSURE "Resource is treated as an edge in DependencyGraph"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_interface_mismatch():
+    @trace #AT-SEMAST-005-07, #AC-SEMAST-005-08, #AC-X-SEMAST-005-04
+    1. ACHIEVE "Implement method with wrong parameter type compared to remote INTERFACE"
+    2. ENSURE "Semantic Error is raised for interface violation"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_provides_requires_balance():
+    @trace #AT-X-SEMAST-005-01, #AC-X-SEMAST-005-04
+    1. ACHIEVE "Component in File A REQUIRES 'ServiceX' provided in File B"
+    2. ENSURE "Analyzer validates the matching of PROVIDES and REQUIRES globally"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_architecture_regression_self_dep():
+    @trace #RT-SEMAST-005-01
+    1. ACHIEVE "Make COMPONENT depend on itself directly"
+    2. ENSURE "Immediate cycle detection flag triggered"
+        OTHERWISE THROW "Validation Failed"

@@ -1,3 +1,3 @@
 """GASD Parser & Validator Package"""
-__version__ = "1.4.0"
-__build_time__ = "2026-03-22T04:50:59Z"
+__version__ = "2.0.0"
+__build_time__ = "2026-03-28T02:04:51Z"

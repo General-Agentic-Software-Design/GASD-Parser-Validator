@@ -1,0 +1,39 @@
+/*
+   Validation: Negative Tests (1.1 Syntax)
+   ========================================
+   Exhaustive validation of all failure cases and lint errors.
+   Traces: NT-GEP6-001 to NT-GEP6-006
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Testing and Error Path Validation"
+TARGET: "GASD Agent"
+TRACE: "US-V2-001"
+
+FLOW validate_negative_cases():
+    1. ACHIEVE "Validate NT-GEP6-001: DEPENDS_ON non-existent step"
+    2. ENSURE "result.error == 'Error LINT-008'"
+        OTHERWISE THROW "Validation Failed"
+    
+    3. ACHIEVE "Validate NT-GEP6-002: DEPENDS_ON circular dependency"
+    4. ENSURE "result.error == 'Error LINT-009'"
+        OTHERWISE THROW "Validation Failed"
+    
+    5. ACHIEVE "Validate NT-GEP6-003: Duplicate AS identifier collision"
+    6. ENSURE "result.error == 'Error LINT-010'"
+        OTHERWISE THROW "Validation Failed"
+    
+    7. ACHIEVE "Validate NT-GEP6-004: CONTRACT CASE without outcome"
+    8. ENSURE "result.error == 'Error LINT-007'"
+        OTHERWISE THROW "Validation Failed"
+    
+    9. ACHIEVE "Validate NT-GEP6-005: AS identifier with invalid lowercase"
+    10. ENSURE "result.error == 'Regex Match Error'"
+        OTHERWISE THROW "Validation Failed"
+    
+    11. ACHIEVE "Validate NT-GEP6-006: POSTCONDITION outside ACHIEVE"
+    12. ENSURE "result.error == 'Syntax Error'"
+        OTHERWISE THROW "Validation Failed"
+
+    13. ENSURE "All negative cases trigger expected error states"
+        OTHERWISE THROW "Validation Failed"
