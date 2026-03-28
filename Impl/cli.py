@@ -71,6 +71,12 @@ def main():
         action="store_true",
         help="Combine multiple ASTs into a single JSON output.",
     )
+    parser.add_argument(
+        "--gasd-ver",
+        choices=["1.1", "1.2"],
+        default=None,
+        help="Specify the authoritative GASD version (1.1 or 1.2). Overrides internal VERSION directives.",
+    )
     args = parser.parse_args()
 
     if not args.files:
@@ -190,7 +196,7 @@ def main():
 
         try:
             # Pass only the GASDFile ast objects
-            semantic_system = sem_pipeline.run([ast for _, ast in valid_asts])
+            semantic_system = sem_pipeline.run([ast for _, ast in valid_asts], global_version=args.gasd_ver)
             sem_rep = sem_pipeline.get_reporter()
             for sem_err in sem_rep.errors:
                 file_key = sem_err.location.file if sem_err.location and sem_err.location.file else "unknown"
@@ -239,9 +245,27 @@ def main():
                 ))
 
     # === Final Output for Per-file processing ===
+    exit_code = 0
     for file_path in target_files:
         reporter = reporters[file_path]
-        is_failure = reporter.has_errors() or reporter.get_warning_count() > 0
+        
+        # Determine the effective version for THIS file to decide exit code strictness
+        # AC-V2-009-08: Warnings are non-fatal in 1.1, but often fatal in 1.2 strict mode
+        file_ver = "1.2" # Default
+        if args.ast_sem and 'sem_pipeline' in locals():
+             file_ver = sem_pipeline.file_versions.get(file_path, args.gasd_ver or "1.2")
+        else:
+             # Try to find the AST for this file
+             for ast in collected_asts:
+                 if getattr(ast, "sourceFile", None) == file_path:
+                     file_ver = getattr(ast, "version", None) or args.gasd_ver or "1.2"
+                     break
+        
+        has_warnings = reporter.get_warning_count() > 0
+        is_failure = reporter.has_errors() or (file_ver == "1.2" and has_warnings)
+        
+        if is_failure:
+            exit_code = 1
         
         # Per-file AST export if not combining and not JSON output
         # ONLY DO THIS FOR syntactic AST (--ast) since Semantic AST is cross-file
@@ -281,6 +305,8 @@ def main():
                 success_count += 1
             warning_total += reporter.get_warning_count()
         else:
+            is_failure = (reporter.has_errors() or 
+                      (reporter.get_warning_count() > 0 and args.gasd_ver == "1.2"))
             if reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
                 if is_failure:
                     print(f"ERROR: {file_path} failed validation", file=sys.stderr)

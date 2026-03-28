@@ -83,6 +83,7 @@ gasd_parser/tests/acceptance/test_semast_resources.py
 gasd_parser/tests/acceptance/test_semast_strategy.py
 gasd_parser/tests/acceptance/test_semast_symbol_resolution.py
 gasd_parser/tests/acceptance/test_semast_type_binding.py
+gasd_parser/tests/acceptance/test_v20_cli_versioning_acceptance.py
 gasd_parser/tests/acceptance/test_v2_acceptance.py
 gasd_parser/tests/regression/__init__.py
 gasd_parser/tests/regression/test_ast.py
@@ -105,6 +106,7 @@ gasd_parser/tests/regression/test_semast_architecture_regression.py
 gasd_parser/tests/regression/test_semast_builtin_regression.py
 gasd_parser/tests/regression/test_semast_cli_regression.py
 gasd_parser/tests/regression/test_semast_cli_version_regression.py
+gasd_parser/tests/regression/test_semast_cli_version_regression_v2.py
 gasd_parser/tests/regression/test_semast_decision_regression.py
 gasd_parser/tests/regression/test_semast_diagnostics_regression.py
 gasd_parser/tests/regression/test_semast_directive_regression.py

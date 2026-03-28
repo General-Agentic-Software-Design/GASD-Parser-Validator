@@ -217,4 +217,4 @@ class GASDFile(ASTNodeBase):
     approvals: Optional[List[ApprovalNode]] = None
     todos: Optional[List[TodoNode]] = None
     reviews: Optional[List[ReviewNode]] = None
-    version: str = "1.1" # Default to 1.1 if not specified
+    version: Optional[str] = None # Defaults to None to allow pipeline to determine default

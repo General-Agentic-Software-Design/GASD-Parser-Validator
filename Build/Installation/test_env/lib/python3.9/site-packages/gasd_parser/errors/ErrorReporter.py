@@ -117,7 +117,12 @@ class ErrorReporter:
             output.append("")
 
         for err in self.semantic_errors:
-            tag = "error" if err.severity == "ERROR" else "warning"
+            if err.severity == "ERROR":
+                tag = "error"
+            elif err.severity == "WARNING":
+                tag = "warning"
+            else:
+                tag = "info"
             output.append(f"{tag}[SEMANTIC {err.code}]: {err.message}")
             output.append(f"  --> {self.source_file}:{err.line}:{err.column}")
             if err.context:

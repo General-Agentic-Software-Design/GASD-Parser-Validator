@@ -8,7 +8,7 @@ NAMESPACE: "GASD-Parser-Validator-v2.0"
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "ANTLR4", "Python3"
-TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008"
+TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008", "US-V2-009"
 
 CONSTRAINT: "GASD agent MUST only execute one phase and pause by default, unless explicitly instructed by a human."
 CONSTRAINT: "GASD agent MUST read and master 'GASD/GASD-1.2/GASD_Specification.md' and 'GASD/GASD-1.1/GASD_Specification-1.1.md' before generating any GASD files."
@@ -47,9 +47,10 @@ FLOW phase2_generate_validations():
     6. ACHIEVE "Exhaustive validation of Negative Tests of all cases; output to Validation/Negative/"
     7. ACHIEVE "Exhaustive validation of Annotation Semantic Registry (all 21 triples); output to Validation/SemanticRegistry/" @trace #US-V2-002
     8. ACHIEVE "Exhaustive validation of GEP-6 Linting Engine (Rules LINT-001 to LINT-012); output to Validation/Linting/" @trace #US-V2-001
-    9. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting) passes 'gasd-parser --ast-sem' with no errors"
+    9. ACHIEVE "Exhaustive validation of Command-Line Versioning and LINT-013; output to Validation/CLI/" @trace #US-V2-009
+    10. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting, Validation/CLI) passes 'gasd-parser --ast-sem' with no errors"
         OTHERWISE THROW "Validation Syntax or Semantic Error Detected"
-    10. ENSURE "All steps 1-9 are completed correctly, faithfully, and thoroughly"
+    11. ENSURE "All steps 1-10 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Validation Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -98,9 +99,14 @@ FLOW phase3_generate_tests():
     15. ENSURE "Linting tests verify all 12 rules with version-sensitive severity"
         OTHERWISE THROW "Linting Engine Coverage Failure"
 
-    16. ENSURE "100% Traceability and Coverage for all AC, AT, RT, and Semantic Triples"
+    // --- Command-Line Versioning ---
+    16. ACHIEVE "Generate exhaustive acceptance tests for Command-Line Versioning and LINT-013 from Validation/CLI/" @trace #US-V2-009
+    17. ENSURE "CLI tests verify --gasd-ver flag, version mismatch, and defaulting"
+        OTHERWISE THROW "CLI Versioning Coverage Failure"
+
+    18. ENSURE "100% Traceability and Coverage for all AC, AT, RT, and Semantic Triples"
         OTHERWISE THROW "Testing Coverage Gap Detected"
-    17. ENSURE "All steps 1-16 are completed correctly, faithfully, and thoroughly"
+    19. ENSURE "All steps 1-18 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Testing Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -117,12 +123,13 @@ FLOW phase4_generate_implementation():
     3. ACHIEVE "Implement Impl/semantic/LintEngine.py with 12 validation rules" @trace #US-V2-001
     4. ACHIEVE "Enhance Impl/semantic/ to support CONTRACT, CASE and POSTCONDITION enforcement"
     5. ACHIEVE "Implement ENVIRONMENTAL vs ASSUMPTION validation logic"
+    6. ACHIEVE "Implement --gasd-ver {1.1 | 1.2} flag with version-sensitive validation and LINT-013 logic" @trace #US-V2-009
     
-    6. ENSURE "No information from the Requirements/ folder is used for implementation"
+    7. ENSURE "No information from the Requirements/ folder is used for implementation"
         OTHERWISE THROW "Design Violation: Implementation Leakage"
-    7. ENSURE "Implementation compiles successfully and passes all unit tests"
+    8. ENSURE "Implementation compiles successfully and passes all unit tests"
         OTHERWISE THROW "Build Failed: Compilation or Unit Test Error"
-    8. ENSURE "All steps 1-7 are completed correctly, faithfully, and thoroughly"
+    9. ENSURE "All steps 1-8 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Implementation Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -138,10 +145,11 @@ FLOW phase5_full_quality_gate():
     5. ACHIEVE "Fix trace identifier format rules (Category 4) resolving LINT-003 constraints per GASD 1.2"
     6. ACHIEVE "Fix AST location metadata extraction errors (Category 5) to resolve IndexErrors during translation"
     7. ACHIEVE "Re-run all tests until the baseline becomes 100% passing"
-    8. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Design"
-    9. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Validation"
-    10. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/*"
-    11. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
+    8. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Design --gasd-ver 1.1"
+    9. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Validation --gasd-ver 1.1"
+    10. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/gasd-1.1 --gasd-ver 1.1"
+    11. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/gasd-1.2 --gasd-ver 1.2"
+    12. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================

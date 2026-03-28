@@ -36,6 +36,8 @@ def test_lint_engine_trace_format_v11():
     
     # In 1.1, trace format wasn't strictly enforced, so it remains a warning or might not be tested as strictly,
     # but based on our implementation, it warns anyway. BUT it DOES NOT warn about mandatory AS, because that's 1.2 only
-    assert len(reporter.errors) == 1
+    # In 1.1, trace format warns, and missing AS is now an INFO hint
+    assert len(reporter.errors) == 2
     assert reporter.errors[0].message == "Trace identifier 'INVALID_ID!' must be alphanumeric with hyphens."
+    assert reporter.errors[1].level.value == "INFO"
 

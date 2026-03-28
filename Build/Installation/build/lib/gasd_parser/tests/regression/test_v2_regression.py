@@ -29,12 +29,12 @@ def create_gasd(path, content):
         f.write(content)
 
 @pytest.mark.parametrize("case_id, content, expected_exit", [
-    ("RT-V2-201", "CONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nTYPE T: f: String\n", 0), # No VERSION defaults to 1.1
-    ("RT-V2-202", "CONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'Task'\n", 0), # 1.1 ACHIEVE without POSTCONDITION is OK (Warning LINT-001)
-    ("RT-V2-203", "CONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n", 0), # 1.1 INVARIANT without scope is OK (Warning LINT-003)
-    ("RT-V2-204", "CONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'T'\n  2. ENSURE 'ID generated'\n", 0), # Auto-ID generation
+    ("RT-V2-201", "VERSION 1.2\nCONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\n", 0),
+    ("RT-V2-202", "VERSION 1.1\nCONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'Task'\n", 0), # Default ACHIEVE OK in 1.1
+    ("RT-V2-203", "VERSION 1.1\nCONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n", 0), # Local INVARIANT OK in 1.1 (deprecated warning only)
+    ("RT-V2-204", "VERSION 1.1\nCONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'T'\n  2. ENSURE 'ID generated'\n", 0),
     ("RT-V2-205", "CONTEXT: 'Test'\nNAMESPACE: 'Test'\nTARGET: 'Python'\nTYPE T: s: String\n", 0), # EBNF compatibility
-    ("RT-V2-206", "CONTEXT: 'T'\nNAMESPACE: 'T'\nTARGET: 'P'\n@retry(3)\nTYPE T: s: String\n", 0), # 1.1 doesn't require AS ID
+    ("RT-V2-206", "VERSION 1.1\nCONTEXT: 'T'\nNAMESPACE: 'T'\nTARGET: 'P'\n@retry(3)\nTYPE T: s: String\n", 0), # 1.1 doesn't require AS ID
 ])
 def test_v2_regression_comprehensive(run_cli, case_id, content, expected_exit):
     with tempfile.TemporaryDirectory() as tmpdir:

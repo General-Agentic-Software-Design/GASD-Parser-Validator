@@ -13,6 +13,10 @@ class ReferenceResolutionPass(ValidationPass):
     def validate(self, ast: GASDFile) -> List[SemanticError]:
         errors = []
         
+        # Determine file version (GEP-6)
+        file_version = getattr(ast, "version", None) or "1.2"
+        warning_level = 'INFO' if file_version == "1.1" else 'WARNING'
+
         # Build symbol table
         declared_components = {c.name for c in ast.components}
         declared_types = {t.name for t in ast.types}
@@ -50,7 +54,7 @@ class ReferenceResolutionPass(ValidationPass):
             if expr.baseType and expr.baseType not in primitive_types and expr.baseType not in declared_types and "." not in expr.baseType:
                 errors.append(SemanticError(
                     code='V008',
-                    severity='WARNING',
+                    severity=warning_level,
                     message=f"Unknown type reference: '{expr.baseType}'",
                     line=location_node.line, column=location_node.column,
                     context=context_name
@@ -66,7 +70,7 @@ class ReferenceResolutionPass(ValidationPass):
                     if dep not in declared_components:
                         errors.append(SemanticError(
                             code='V009',
-                            severity='WARNING',
+                            severity=warning_level,
                             message=f"COMPONENT '{comp.name}' references unknown DEPENDENCY '{dep}'",
                             line=comp.line, column=comp.column,
                             context=comp.name
@@ -84,7 +88,7 @@ class ReferenceResolutionPass(ValidationPass):
                     if affect != "*" and affect not in declared_constructs:
                         errors.append(SemanticError(
                             code='V010',
-                            severity='WARNING',
+                            severity=warning_level,
                             message=f"DECISION '{dec.name}' affects unknown construct '{affect}'",
                             line=dec.line, column=dec.column,
                             context=dec.name

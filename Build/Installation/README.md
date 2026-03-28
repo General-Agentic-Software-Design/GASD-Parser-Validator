@@ -74,6 +74,7 @@ gasd-parser path/to/file.gasd --json
 - `--ast-output <path>`: Path to save the extracted AST JSON file.
 - `--ast-combine`: Combine multiple ASTs into a single JSON output.
 - `--no-validate`: Skip semantic validation, only check syntax.
+- `--gasd-ver <version>`: Specify the authoritative GASD version (1.1 or 1.2).
 - `--version`: Show the version and build time.
 
 ## Verification

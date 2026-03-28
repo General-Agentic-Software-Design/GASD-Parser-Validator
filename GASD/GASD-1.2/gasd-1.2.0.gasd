@@ -9,6 +9,8 @@
    This file MUST be interpreted as the ground truth for GASD agents.
 */
 
+VERSION 1.1
+
 CONTEXT: "Metamodeling / Language Definition"
 TARGET: "GASD Agent / Transpiler / Verifier"
 TRACE: "GASD_Specification.md"

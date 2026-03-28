@@ -37,14 +37,19 @@ class ASTGenerator(GASDParserVisitor):
         reviews = []
         ensures = []
         matches = []
-        version = "1.1"
+        version = None # Default to None to allow pipeline to determine default
 
         for section in ctx.section():
             node = self.visit(section)
             if not node: continue
             
             if isinstance(node, str) and getattr(section, 'version_dir', None) and section.version_dir():
+                # print(f"!!!! DEBUG: visitGasd_file found version '{node}' !!!!")
                 version = node
+            elif isinstance(node, str):
+                # Check for other string-yielding sections that might be VERSION
+                # In standard ANTLR4, if section : version_dir, then section.version_dir() should work.
+                pass
             elif isinstance(node, Directive): directives.append(node)
             elif isinstance(node, Decision): decisions.append(node)
             elif isinstance(node, TypeDefinition): types.append(node)

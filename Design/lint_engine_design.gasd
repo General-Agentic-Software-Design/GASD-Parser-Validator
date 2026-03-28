@@ -1,3 +1,4 @@
+VERSION 1.1
 /*
    Design: GASD 1.2 Linting Engine
    =================================
@@ -9,7 +10,7 @@
 
 CONTEXT: "Compiler / Language Tooling — Linting Engine Design"
 TARGET: "Python3"
-TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008"
+TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008", "US-V2-009"
 
 // ===================================================================
 
@@ -60,9 +61,10 @@ TYPE LintResult:
 /// LINT-010: Obligation identifier collision — v1.2 ERROR, v1.1 Error
 /// LINT-011: Annotation without AS identifier — v1.2 ERROR, v1.1 Info
 /// LINT-012: Env-dep annotation without ASSUMPTION — v1.2 ERROR, v1.1 Warning
+/// LINT-013: VERSION Mismatch between CLI and file — v1.2 ERROR, v1.1 Error
 TYPE LintRuleRegistry:
     rules: List<LintRule>
-    count: Integer @default("12")
+    count: Integer @default("13")
 
 // ===================================================================
 // Lint Engine Component
@@ -90,12 +92,13 @@ FLOW run_lint_engine(ast: GASDFile, version: String) -> List<LintResult>:
     10. ACHIEVE "Run LINT-010: Check all AS identifiers for collisions"
     11. ACHIEVE "Run LINT-011: Check all annotations for AS identifier presence"
     12. ACHIEVE "Run LINT-012: Check all environmental annotations for ASSUMPTION"
-    13. RETURN "Merged list of all LintResults"
+    13. ACHIEVE "Run LINT-013: Check for version mismatch between CLI and internal directive" @trace #AC-V2-009-02
+    14. RETURN "Merged list of all LintResults"
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Lint engine MUST implement all 12 rules from GEP-6 §9.1"
+CONSTRAINT: "Lint engine MUST implement all 13 rules from GEP-6 §9.1 (Rules 1-12) and US-V2-009 (Rule 13)" @trace #AC-V2-009-10
 CONSTRAINT: "Each rule MUST apply version-sensitive severity (ERROR in 1.2, Warning/Info in 1.1)"
 CONSTRAINT: "Lint results MUST include rule ID, severity, message, and location metadata"

@@ -1,0 +1,52 @@
+VERSION 1.1
+/*
+   Validation: Command-Line Versioning & LINT-013
+   ================================================
+   Exhaustive validation of CLI version overrides, defaulting behavior,
+   and GEP-6 enforcement logic as defined in US-V2-009.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.CLI"
+CONTEXT: "Validation of CLI Versioning and Multi-Version Enforcement"
+TARGET: "GASD Agent"
+TRACE: "US-V2-009"
+
+IMPORT "Design/cli_design.gasd"
+IMPORT "Design/version_directive_design.gasd"
+
+FLOW validate_cli_versioning():
+    /// Test Case: CLI Override (AT-V2-118)
+    1. ACHIEVE "Validate: --gasd-ver 1.1 vs file with VERSION 1.2" @trace #AT-V2-118
+    2. ENSURE "Result is LINT-013 (VERSION_MISMATCH) Error"
+        OTHERWISE THROW "Validation Failed: AT-V2-118"
+
+    /// Test Case: CLI Override (AT-V2-119)
+    3. ACHIEVE "Validate: --gasd-ver 1.2 vs file with VERSION 1.1" @trace #AT-V2-119
+    4. ENSURE "Result is LINT-013 (VERSION_MISMATCH) Error"
+        OTHERWISE THROW "Validation Failed: AT-V2-119"
+
+    /// Test Case: Defaulting (AT-V2-120)
+    5. ACHIEVE "Validate: No flag vs file with no VERSION directive" @trace #AT-V2-120
+    6. ENSURE "Effective version is 1.2 AND GEP-6 strict rules applied"
+        OTHERWISE THROW "Validation Failed: AT-V2-120"
+
+    /// Test Case: Batch Consistency (AT-V2-121)
+    7. ACHIEVE "Validate: --gasd-ver 1.1 on multiple files (some with VERSION 1.1, some empty)" @trace #AT-V2-121
+    8. ENSURE "All files evaluated with 1.1 legacy semantics"
+        OTHERWISE THROW "Validation Failed: AT-V2-121"
+
+    /// GEP-6 Strict Enforcement Scenarios (AT-V2-122 to AT-V2-124)
+    9. ACHIEVE "Validate: --gasd-ver 1.2 on file with ACHIEVE (missing postcondition)" @trace #AT-V2-122
+    10. ENSURE "Result is LINT-001 (Missing POSTCONDITION) Error"
+        OTHERWISE THROW "Validation Failed: AT-V2-122"
+
+    11. ACHIEVE "Validate: --gasd-ver 1.2 on file with IMPORT (missing contract)" @trace #AT-V2-123
+    12. ENSURE "Result is LINT-002 (Missing CONTRACT) Error"
+        OTHERWISE THROW "Validation Failed: AT-V2-123"
+
+    13. ACHIEVE "Validate: --gasd-ver 1.2 on file with @retry (missing AS ID)" @trace #AT-V2-124
+    14. ENSURE "Result is LINT-011 (Missing AS identifier) Error"
+        OTHERWISE THROW "Validation Failed: AT-V2-124"
+
+    15. ENSURE "All CLI versioning scenarios are covered by these validations"
+        OTHERWISE THROW "Validation Coverage Gap"

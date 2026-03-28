@@ -27,6 +27,8 @@ from .HumanInLoopResolver import HumanInLoopResolver
 from .SemanticHasher import SemanticHasher
 from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticError, ErrorLevel
 from .NamespaceResolver import DependencyError
+from .ConstraintValidator import ConstraintValidator
+from .LintEngine import LintEngine
 
 class SemanticPipeline:
     def __init__(self, validate_built_in_types: bool = True):
@@ -36,19 +38,20 @@ class SemanticPipeline:
         self.annotation_resolver = AnnotationResolver()
         self.type_binder = BinderEngine(self.symbol_table)
         self.flow_analyzer = FlowAnalyzer(self.symbol_table, None)
-        self.strategy_resolver = StrategyResolver()
         self.decision_resolver = DecisionResolver()
         self.namespace_resolver = NamespaceResolver()
+        self.strategy_resolver = StrategyResolver()
+        from .DependencyGraphBuilder import DependencyAnalyzer
+        self.constraint_validator = ConstraintValidator(DependencyAnalyzer(self.symbol_table))
+        self.global_version = "1.2"
+        self.file_versions = {}
         self.import_resolver = ImportResolver(self.symbol_table)
         self.directive_resolver = DirectiveResolver()
         self.resource_resolver = ResourceResolver()
         self.hil_resolver = HumanInLoopResolver(self.symbol_table)
         self.hasher = SemanticHasher()
-        self.reporter = SemanticErrorReporter() # Reset per run
+        self.reporter = SemanticErrorReporter() 
         self.flow_analyzer.reporter = self.reporter
-        from .ConstraintValidator import ConstraintValidator
-        from .DependencyGraphBuilder import DependencyAnalyzer
-        self.constraint_validator = ConstraintValidator(DependencyAnalyzer(self.symbol_table))
 
     def get_reporter(self) -> SemanticErrorReporter:
         return self.reporter
@@ -56,16 +59,11 @@ class SemanticPipeline:
     def _get_range(self, node: Any, file: str) -> SourceRange:
         return SourceRange(file or "", node.line, node.column, node.endLine or node.line, node.endColumn or node.column)
 
-    def _res_type_expr(self, expr: Optional[TypeExpression]) -> Optional[TypeContract]:
+    def _res_type_expr(self, expr, file: str = "unknown") -> Optional[TypeContract]:
+        """Convert a syntactic type expression into its semantic form."""
         if not expr: return None
-        if expr.baseType == "List":
-            if len(expr.genericArgs or []) != 1:
-                raise SemanticError(f"GenericArityMismatch: 'List' requires exactly 1 type argument, got {len(expr.genericArgs or [])}")
-        elif expr.baseType == "Map":
-            if len(expr.genericArgs or []) != 2:
-                raise SemanticError(f"GenericArityMismatch: 'Map' requires exactly 2 type arguments, got {len(expr.genericArgs or [])}")
         
-        args = [self._res_type_expr(a) for a in (expr.genericArgs or [])]
+        args = [self._res_type_expr(a, file) for a in getattr(expr, "genericArgs", []) or []]
         
         # GASD 1.1: Literal types (baseType == "literal") are self-resolving; skip resolution.
         # @trace #AC-X-SEMAST-004-05
@@ -76,13 +74,43 @@ class SemanticPipeline:
         symbol = self.symbol_table.resolve(expr.baseType)
         if not symbol:
              # Builtins are already registered in global_scope, so if not found, it's truly unknown
-             raise SemanticError(f"UnknownType: Unknown type reference: '{expr.baseType}'")
+             file_ver = self.file_versions.get(file, self.global_version)
+             level = ErrorLevel.INFO if file_ver == "1.1" else ErrorLevel.ERROR
+             # V008: Unknown type reference
+             from .SemanticErrorReporter import StructuredSemanticError
+             err = StructuredSemanticError(
+                 code="V008",
+                 message=f"UnknownType reference: '{expr.baseType}'",
+                 level=level,
+                 location=SourceRange(file, 1, 1, 1, 1) # Fallback range
+             )
+             self.reporter.report(err)
+             if level == ErrorLevel.ERROR:
+                 raise SemanticError(err.message, location=err.location)
+             return TypeContract(expr.baseType, args=args) # Non-resolving but preserved
              
+        # AC-SEMAST-019-03: Built-in Generic Argument Validation
+        from .SymbolTable import BuiltinTypeRegistry
+        arity_err = BuiltinTypeRegistry.validateGenerics(symbol.name, len(args))
+        if arity_err:
+             file_ver = self.file_versions.get(file, self.global_version)
+             level = ErrorLevel.INFO if file_ver == "1.1" else ErrorLevel.ERROR
+             from .SemanticErrorReporter import StructuredSemanticError
+             err = StructuredSemanticError(
+                 code="V004",
+                 message=f"GenericArityMismatch: {arity_err}",
+                 level=level,
+                 location=SourceRange(file, 1, 1, 1, 1)
+             )
+             self.reporter.report(err)
+             if level == ErrorLevel.ERROR:
+                 raise SemanticError(err.message, location=err.location)
+
         # Use the canonical name (FQN) for the type reference
         return TypeContract(symbol.name, args=args)
 
-    def _res_params(self, params: List[Parameter]) -> List[ResolvedParameter]:
-        return [ResolvedParameter(p.name, self._res_type_expr(p.type)) for p in params]
+    def _res_params(self, params: List[Parameter], file: str = "unknown") -> List[ResolvedParameter]:
+        return [ResolvedParameter(p.name, self._res_type_expr(p.type, file)) for p in params]
 
     def _res_match(self, node: MatchNode, file: str) -> SemanticFlowStep:
         """Resolve a MATCH node into a SemanticFlowStep tree."""
@@ -208,12 +236,13 @@ class SemanticPipeline:
             
         return True
 
-    def run(self, ast: Union[GASDFile, List[GASDFile]]) -> SemanticSystem:
+    def run(self, ast: Union[GASDFile, List[GASDFile]], global_version: Optional[str] = None) -> SemanticSystem:
         """§13. Execute the full semantic pipeline and return the enriched system AST"""
         if self.reporter is None:
             self.reporter = SemanticErrorReporter()
         self.reporter.reset()
         self.flow_analyzer.reporter = self.reporter
+        self.global_version = global_version or "1.2"
         
         asts = [ast] if isinstance(ast, GASDFile) else ast
         
@@ -359,14 +388,14 @@ class SemanticPipeline:
             for t in ast.types:
                 fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
                 res_t: ResolvedTypeNode = self.symbol_table.resolve(fqn).nodeLink
-                res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.type), f.type.isOptional) for f in t.fields}
+                res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.type, fpath), f.type.isOptional) for f in t.fields}
                 
             for c in ast.components:
                 fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
                 res_c: ResolvedComponentNode = self.symbol_table.resolve(fqn).nodeLink
                 res_c.methods = {
                     m.name: ResolvedMethodNode(
-                        self._get_range(m, fpath), m.name, self._res_params(m.parameters), self._res_type_expr(m.returnType),
+                        self._get_range(m, fpath), m.name, self._res_params(m.parameters, fpath), self._res_type_expr(m.returnType, fpath),
                         annotations=self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
                     ) for m in c.methods
                 }
@@ -406,14 +435,14 @@ class SemanticPipeline:
                 fqn = f"{node.namespace}.{f.name}" if node.namespace != "global" else f.name
                 res_f: ResolvedFlowNode = self.symbol_table.resolve(fqn).nodeLink
                 res_f.inputs = self._res_params(f.parameters)
-                res_f.output = self._res_type_expr(f.returnType)
+                res_f.output = self._res_type_expr(f.returnType, fpath)
                 res_f.pipeline = [self._res_step(s, fpath) for s in f.steps]
 
             for s in ast.strategies:
                 fqn = f"{node.namespace}.{s.name}" if node.namespace != "global" else s.name
                 res_s: ResolvedStrategyNode = self.symbol_table.resolve(fqn).nodeLink
                 res_s.inputs = self._res_params(s.inputs)
-                res_s.output = self._res_type_expr(s.output)
+                res_s.output = self._res_type_expr(s.output, fpath)
 
             self.symbol_table.exit_scope()
 
@@ -496,22 +525,34 @@ class SemanticPipeline:
 
         metadata.files = list(file_nodes.values())
 
-        # Determine system version (highest version among files)
-        version = "1.1"
-        file_versions = {}
+        # Determine system version
+        # AC-V2-009-02: global_version (CLI flag) is authoritative if provided.
+        # AC-V2-009-03: Default to 1.2 if neither flag nor directive provides it.
+        effective_version = global_version or "1.2"
+        
+        # Pass 3b: Collect explicit file versions and check for LINT-013
+        self.file_versions = {}
         for fn in file_nodes.values():
             if fn.syntacticRoot:
-                fver = getattr(fn.syntacticRoot, 'version', '1.1')
-                file_versions[fn.filePath] = fver
-                if fver == "1.2":
-                    version = "1.2"
+                # Use effective_version as the default for files without a VERSION directive
+                fver = getattr(fn.syntacticRoot, 'version', None) or effective_version
+                self.file_versions[fn.filePath] = fver
+                
+        # If no global override, system version is the highest explicit version found
+        if not global_version:
+            for fn in file_nodes.values():
+                if getattr(fn.syntacticRoot, 'version', None) == "1.2":
+                    effective_version = "1.2"
         
-        self.flow_analyzer.version = version
+        self.flow_analyzer.version = effective_version
         
-        for f in all_flows:
-            if f:
-                self.flow_analyzer.analyze(f)
-                self.flow_analyzer.check_consistency(f)
+        for ns in ns_nodes.values():
+            for flow in ns.flows.values():
+                # Determine file version for this flow
+                flow_file = getattr(flow.sourceMap, "file", "") if flow.sourceMap else ""
+                flow_version = self.file_versions.get(flow_file, effective_version)
+                self.flow_analyzer.set_version(flow_version)
+                self.flow_analyzer.check_consistency(flow)
         
         # Collect top-level annotations and postconditions
         system_annotations = []
@@ -531,12 +572,10 @@ class SemanticPipeline:
         system.annotations = system_annotations
         
         # Pass 4: Linting Engine (GEP-6)
-        from .LintEngine import LintEngine
-        linter = LintEngine(self.reporter, version=version)
-        linter.file_versions = file_versions
+        linter = LintEngine(self.reporter, version=effective_version)
+        linter.file_versions = self.file_versions
         linter.lint_system(system)
         
-        from .SemanticErrorReporter import ErrorLevel
         constraint_errors = self.constraint_validator.validate_system(system)
         for msg in constraint_errors:
             self.reporter.report(StructuredSemanticError("CONSTRAINT-ERR", msg, ErrorLevel.ERROR, SourceRange("",0,0,0,0)))

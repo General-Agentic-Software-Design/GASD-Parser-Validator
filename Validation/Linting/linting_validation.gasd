@@ -60,5 +60,9 @@ FLOW validate_lint_rules():
     24. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
         OTHERWISE THROW "Validation Failed"
 
-    25. ENSURE "All 12 rules are correctly mapped in the engine"
+    25. ACHIEVE "Validate LINT-013: VERSION_MISMATCH between CLI and File" @trace #AC-V2-009-02, #AC-V2-009-06
+    26. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
+        OTHERWISE THROW "Validation Failed"
+
+    27. ENSURE "All 13 rules are correctly mapped in the engine"
         OTHERWISE THROW "Linting Rule Mapping Error"
