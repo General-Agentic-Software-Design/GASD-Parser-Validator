@@ -1,0 +1,49 @@
+VERSION 1.2
+CONTEXT: "Payment Service Integration"
+TARGET: "Rust / Axum"
+NAMESPACE: "org.gasd.examples.v1_2.payments"
+
+/* 
+   Showcase: Formal Contract Modeling
+   ==================================
+   This file demonstrates:
+   1. CONTRACT blocks for formal interface semantics
+   2. POSTCONDITION and THROWS clauses in CONTRACTs
+   3. TRANSFORM and Result<T> usage
+*/
+
+TYPE TransactionData:
+    id: UUID
+    amount: Decimal @range(0.01, 10000.0) AS VALID_AMOUNT
+    currency: String @min_length(3) @max_length(3) AS CURRENCY_CODE
+
+COMPONENT PaymentProvider:
+    INTERFACE:
+        process_payment(data: TransactionData) -> Result<String>
+
+/// Formal modeling of the PaymentProvider behavior
+CONTRACT PaymentService.create_charge:
+    INPUT: amount: Decimal, currency: String, method: PaymentMethod
+    OUTPUT: Result<ChargeResult>
+    BEHAVIORS:
+        CASE payment_success:
+            POSTCONDITION: result.status == "SUCCEEDED"
+            POSTCONDITION: result.charge_id IS UUID
+        CASE insufficient_funds:
+            THROWS: InsufficientFundsException
+        CASE network_timeout:
+            THROWS: GatewayTimeoutException
+            AFTER: 5000ms
+        CASE rate_limit:
+            THROWS: RateLimitException
+            AFTER: retry(3)
+    IDEMPOTENT: true
+    VERSION: "1.0.0"
+
+FLOW execute_payment(data: TransactionData) -> Result<String>:
+    1. VALIDATE data AS TYPE.TransactionData
+    2. ACHIEVE "Prepare payload"
+        POSTCONDITION: result.prepared == true
+    3. ACHIEVE "Call PaymentProvider.process_payment"
+        POSTCONDITION: result.is_success == true
+    4. RETURN result_of(step 3)

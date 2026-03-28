@@ -108,8 +108,8 @@ def test_semast_model_regression_empty():
     sem = get_semantic_ast('')
     assert sem.kind == "SemanticSystem"
     ns = sem.namespaces["global"]
-    # 16 built-in types are always registered
-    assert len(ns.types) == 16
+    # 18 built-in types (v1.2 adds Date, Int32)
+    assert len(ns.types) == 18
     assert len(ns.components) == 0
 
 # ===================================================================

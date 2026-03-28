@@ -1,0 +1,8 @@
+CONTEXT: "Reproduction"
+TARGET: "Parser"
+
+TYPE StandardAnnotation:
+    @transaction_type(t: Enum("SAGA", "ACID"))
+    @config(opt: Optional<String>)
+    @meta(type: List<String>)
+    field: String

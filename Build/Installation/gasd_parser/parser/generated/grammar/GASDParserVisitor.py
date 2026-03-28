@@ -64,13 +64,48 @@ class GASDParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GASDParser#type_body_item.
+    def visitType_body_item(self, ctx:GASDParser.Type_body_itemContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GASDParser#field_def.
     def visitField_def(self, ctx:GASDParser.Field_defContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by GASDParser#type_expr.
-    def visitType_expr(self, ctx:GASDParser.Type_exprContext):
+    # Visit a parse tree produced by GASDParser#GenericType.
+    def visitGenericType(self, ctx:GASDParser.GenericTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#RecordType.
+    def visitRecordType(self, ctx:GASDParser.RecordTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#EnumType.
+    def visitEnumType(self, ctx:GASDParser.EnumTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#OptionalType.
+    def visitOptionalType(self, ctx:GASDParser.OptionalTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#SimpleType.
+    def visitSimpleType(self, ctx:GASDParser.SimpleTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#IntType.
+    def visitIntType(self, ctx:GASDParser.IntTypeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#FloatType.
+    def visitFloatType(self, ctx:GASDParser.FloatTypeContext):
         return self.visitChildren(ctx)
 
 
@@ -294,6 +329,11 @@ class GASDParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GASDParser#tech_id.
+    def visitTech_id(self, ctx:GASDParser.Tech_idContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GASDParser#question_stmt.
     def visitQuestion_stmt(self, ctx:GASDParser.Question_stmtContext):
         return self.visitChildren(ctx)
@@ -316,6 +356,11 @@ class GASDParserVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by GASDParser#value.
     def visitValue(self, ctx:GASDParser.ValueContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#primary_expr.
+    def visitPrimary_expr(self, ctx:GASDParser.Primary_exprContext):
         return self.visitChildren(ctx)
 
 

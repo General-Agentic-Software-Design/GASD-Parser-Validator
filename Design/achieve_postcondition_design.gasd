@@ -1,3 +1,4 @@
+VERSION 1.2
 /*
    Design: ACHIEVE POSTCONDITION & TIMEOUT
    =========================================
@@ -26,17 +27,17 @@ DECISION "POSTCONDITION Enforcement Model":
 // ===================================================================
 
 /// ACHIEVE body grammar rule (GASD 1.2 addition).
-TYPE AchieveBodyRule @trace #AC-V2-003-01:
+TYPE AchieveBodyRule @trace("#AC-V2-003-01") AS TRACE_01:
     syntax: "ACHIEVE STRING_LITERAL (':' achieve_body)?"
     achieve_body: "INDENT (POSTCONDITION ':' INDENT postcondition_expr+ DEDENT)? on_error_clause? (TIMEOUT ':' duration_literal)? DEDENT"
 
 /// Postcondition expression grammar.
-TYPE PostconditionExprRule @trace #AC-V2-003-02:
+TYPE PostconditionExprRule @trace("#AC-V2-003-02") AS TRACE_02:
     syntax: "expr comparison_op expr"
     comparison_ops: "IS | == | != | > | < | >= | <="
 
 /// Duration literal grammar.
-TYPE DurationLiteralRule @trace #AC-V2-003-03:
+TYPE DurationLiteralRule @trace("#AC-V2-003-03") AS TRACE_03:
     syntax: "number_literal ('ms' | 's' | 'm')"
     examples: "3000ms, 5s, 2m"
 
@@ -46,12 +47,17 @@ TYPE DurationLiteralRule @trace #AC-V2-003-03:
 
 /// Validates ACHIEVE constructs for POSTCONDITION presence based on version.
 FLOW validate_achieve_postconditions(ast: GASDFile, version: String) -> List<SemanticError>:
-    @trace #AC-V2-003-04
+    @trace("#AC-V2-003-04") AS TRACE_04
     1. ACHIEVE "Collect all ACHIEVE nodes from AST"
+        POSTCONDITION: "AST parsed"
     2. ACHIEVE "For each ACHIEVE, check if POSTCONDITION block exists"
+        POSTCONDITION: "Block presence checked"
     3. ACHIEVE "For VERSION 1.2: emit LINT-001 ERROR for each ACHIEVE missing POSTCONDITION"
+        POSTCONDITION: "Error emitted"
     4. ACHIEVE "For VERSION 1.1: emit WARNING for each ACHIEVE missing POSTCONDITION"
+        POSTCONDITION: "Warning emitted"
     5. ACHIEVE "List of errors or warnings"
+        POSTCONDITION: "Report generated"
 
 // ===================================================================
 // Constraints

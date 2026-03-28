@@ -52,6 +52,9 @@ class ErrorReporter:
     def get_warning_count(self) -> int:
         return sum(1 for e in self.semantic_errors if e.severity == "WARNING")
 
+    def get_info_count(self) -> int:
+        return sum(1 for e in self.semantic_errors if e.severity == "INFO")
+
     def to_json(self) -> str:
         """Machine-readable output format @trace #AC-PARSER-005-03"""
         report = {

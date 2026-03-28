@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-011: Inline field_def in type_def"
+TARGET: "Python"
+
+TYPE Point: x: Integer
+TYPE Circle: radius: Float
+TYPE Point3D:
+    z: Integer
+
+COMPONENT Math:
+    INTERFACE:
+        add(a: Integer, b: Integer) -> Result<Integer>

@@ -69,8 +69,8 @@ class SemanticPipeline:
         
         # GASD 1.1: Literal types (baseType == "literal") are self-resolving; skip resolution.
         # @trace #AC-X-SEMAST-004-05
-        if expr.baseType == "literal":
-            return TypeContract("literal", args=args)
+        if expr.baseType in ("literal", "Record", "Enum"):
+            return TypeContract(expr.baseType, args=args)
 
         # AC-X-SEMAST-004-04: Resolve type reference
         symbol = self.symbol_table.resolve(expr.baseType)
@@ -188,12 +188,19 @@ class SemanticPipeline:
         if len(flow.inputs) != len(method.inputs):
             return False
         for p1, p2 in zip(flow.inputs, method.inputs):
-            if p1.typeRef.baseType != p2.typeRef.baseType:
+            t1 = getattr(p1, "typeRef", None)
+            t2 = getattr(p2, "typeRef", None)
+            if t1 and t2:
+                if t1.baseType != t2.baseType:
+                    return False
+            elif t1 != t2: # Both None is OK, one None is not
                 return False
         
         # Also check return type if both exist
         if flow.output and method.output:
-            if flow.output.baseType != method.output.baseType:
+            t1 = getattr(flow.output, "baseType", None)
+            t2 = getattr(method.output, "baseType", None)
+            if t1 != t2:
                 return False
         elif flow.output or method.output:
             # One has return type and the other doesn't
@@ -437,6 +444,12 @@ class SemanticPipeline:
         for f in all_flows:
             for c in all_comps:
                 if f and c and hasattr(c, 'methods') and f.name in c.methods:
+                    # AC-X-SEMAST-004-06: Only compare if they are in the same namespace
+                    f_ns = f.fqn.rsplit('.', 1)[0] if '.' in f.fqn else "global"
+                    c_ns = c.fqn.rsplit('.', 1)[0] if '.' in c.fqn else "global"
+                    if f_ns != c_ns:
+                        continue
+                        
                     m = c.methods[f.name]
                     if not self._signatures_match(f, m):
                         raise SemanticError(f"SignatureMismatch: Flow '{f.name}' signature doesn't match component method in '{c.name}'")
@@ -485,10 +498,13 @@ class SemanticPipeline:
 
         # Determine system version (highest version among files)
         version = "1.1"
+        file_versions = {}
         for fn in file_nodes.values():
-            if fn.syntacticRoot and getattr(fn.syntacticRoot, 'version', '1.1') == "1.2":
-                version = "1.2"
-                break
+            if fn.syntacticRoot:
+                fver = getattr(fn.syntacticRoot, 'version', '1.1')
+                file_versions[fn.filePath] = fver
+                if fver == "1.2":
+                    version = "1.2"
         
         self.flow_analyzer.version = version
         
@@ -517,6 +533,7 @@ class SemanticPipeline:
         # Pass 4: Linting Engine (GEP-6)
         from .LintEngine import LintEngine
         linter = LintEngine(self.reporter, version=version)
+        linter.file_versions = file_versions
         linter.lint_system(system)
         
         from .SemanticErrorReporter import ErrorLevel

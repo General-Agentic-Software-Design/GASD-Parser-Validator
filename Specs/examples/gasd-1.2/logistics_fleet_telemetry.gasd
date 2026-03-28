@@ -1,0 +1,39 @@
+VERSION 1.2
+CONTEXT: "Fleet Telemetry & Logistics Tracking"
+TARGET: "Rust / NATS / TimescaleDB"
+NAMESPACE: "org.gasd.realistic.logistics"
+
+/* 
+   Scenario: Real-time Vehicle Tracking
+   ====================================
+   Monitoring commercial fleet movements.
+   Features:
+   - CONSTRAINT on vehicle speed and geo-fencing.
+   - AS IDs for vehicle telemetry auditing.
+   - POSTCONDITION on database persistence.
+*/
+
+TYPE VehicleState:
+    vin: String @pii_redact AS VEHICLE_ID_AUDIT
+    lat: Float @range(-90.0, 90.0) AS LATITUDE_RANGE
+    lng: Float @range(-180.0, 180.0) AS LONGITUDE_RANGE
+    speed_kmh: Float @max(120.0) AS SPEED_LIMIT_GUARD
+    cargo_temp_c: Float
+
+/// Geo-fencing constraint: vehicle must stay within delivery zone
+CONSTRAINT zone_boundary: "Geofence('ZONE-A').contains(lat, lng)" @audit AS GEOFENCE_VIOLATION_AUDIT
+
+COMPONENT TelemetryHub:
+    INTERFACE:
+        process_ping(state: VehicleState) -> Result<Void>
+
+FLOW ingest_vehicle_ping(state: VehicleState) -> Result<Void>:
+    1. VALIDATE state AS TYPE.VehicleState
+        ON_ERROR: LOG("Invalid telemetry data from {{state.vin}}")
+    2. ACHIEVE "Check Speed and Zone"
+        POSTCONDITION: state.speed_kmh <= 120.0
+        POSTCONDITION: "Geofence check passed"
+    3. ACHIEVE "Persist Telemetry to TimescaleDB"
+        POSTCONDITION: "Row inserted into hypertable"
+        @retention("90 days") AS DATA_RETENTION_POLICY
+    4. RETURN Void

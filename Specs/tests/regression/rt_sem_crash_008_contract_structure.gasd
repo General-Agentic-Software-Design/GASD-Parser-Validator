@@ -1,0 +1,17 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-008: Contract structure validation"
+TARGET: "Python"
+
+COMPONENT PayService:
+    INTERFACE:
+        execute_payment(amount: Integer, currency: String) -> Result<String>
+
+CONTRACT PayService.execute_payment:
+    INPUT: amount: Integer, currency: String
+    OUTPUT: Result<String>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "SUCCESS"
+        CASE failure:
+            THROWS: PaymentError
+    IDEMPOTENT: true

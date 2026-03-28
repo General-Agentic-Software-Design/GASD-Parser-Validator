@@ -1,0 +1,49 @@
+VERSION 1.2
+CONTEXT: "Smart Grid Energy Distribution"
+TARGET: "C++ / Scada / MQTT"
+NAMESPACE: "org.gasd.realistic.energy"
+
+/* 
+   Scenario: Dynamic Load Balancing for the Power Grid
+   ===================================================
+   Managing energy flow between substations and consumers.
+   Features:
+   - INVARIANT GLOBAL for grid frequency stability.
+   - MODEL linking to TLA+ for load redistribution safety.
+   - ASSUMPTION on sensor accuracy.
+*/
+
+TYPE PowerNode:
+    id: String
+    capacity: Float
+    current_load: Float
+    frequency_hz: Float @range(49.0, 51.0) AS GRID_FREQ_STABILITY
+
+COMPONENT GridController:
+    INTERFACE:
+        get_node_status(node_id: String) -> Result<PowerNode>
+        redistribute_load(from_node: String, to_node: String, amount: Float) -> Result<Void>
+
+/// Global invariant: aggregate frequency across the grid must stay within 1% of 50Hz
+INVARIANT GLOBAL: "Average(PowerNode.frequency_hz) >= 49.5 AND Average(PowerNode.frequency_hz) <= 50.5"
+
+/// Formal model for load balancing safety (preventing blackout cascades)
+MODEL "Grid Stability Model":
+    TYPE: TLA+
+    FILE: "models/grid_stability.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Grid frequency must never diverge under peak load"
+    ASSUMPTIONS:
+        "Node telemetry is refreshed every 100ms"
+        "Reserve capacity is at least 20% of peak demand"
+
+FLOW balance_substation(node_id: String) -> Result<Void>:
+    1. ACHIEVE "GridController.get_node_status"
+        POSTCONDITION: result.current_load < result.capacity
+    2. IF result_of(step 1).current_load > 0.9 * result_of(step 1).capacity:
+        ACHIEVE "Find available neighbor node"
+            POSTCONDITION: result.available_capacity > 0
+        ACHIEVE "GridController.redistribute_load"
+            DEPENDS_ON: [step 2.1]
+            POSTCONDITION: "Load on node_id decreased to 80%"
+    3. RETURN Void

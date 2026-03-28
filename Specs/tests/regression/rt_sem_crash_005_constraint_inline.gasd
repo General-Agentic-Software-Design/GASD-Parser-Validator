@@ -1,0 +1,5 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-005: Constraint inline string"
+TARGET: "Python"
+
+CONSTRAINT speed_limit: "speed_kmh <= 120.0" @audit AS SPEED_LIMIT_GUARD

@@ -1,0 +1,60 @@
+VERSION 1.2
+CONTEXT: "Global Supply Chain Provenance"
+TARGET: "Solidity / Hyperledger / Node.js"
+NAMESPACE: "org.gasd.realistic.supplychain"
+
+/* 
+   Scenario: Blockchain-based Product Traceability
+   ===============================================
+   Tracking a product from raw materials to consumer.
+   Features:
+   - INVARIANT GLOBAL for provenance chain integrity.
+   - CONTRACT for multiple participant types (Supplier, Factory, Logistic).
+   - AS IDs for regulatory compliance auditing.
+*/
+
+TYPE Address: String
+
+TYPE ProductBatch:
+    batch_id: UUID @pii_redact AS BATCH_ID_AUDIT
+    origin_supplier_id: String
+    current_owner: Address
+    transformation_history: List<{step: String, time: DateTime}>
+    compliance_certs: List<String>
+
+COMPONENT SupplyChainRegistry:
+    INTERFACE:
+        record_transfer(batch_id: UUID, from: Address, to: Address) -> Result<Void>
+        add_transformation(batch_id: UUID, details: String) -> Result<Void>
+
+/// Invariant: total supply quantity must equal sum of component quantities
+INVARIANT GLOBAL: "Sum(Product.Components.Quantity) == Product.Quantity"
+
+MODEL "Supply Chain Conservation":
+    TYPE: TLA+
+    FILE: "models/supply_chain.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Sum(Product.Components.Quantity) == Product.Quantity"
+    ASSUMPTIONS:
+        "Standardized unit conversion for weight and volume"
+
+/// Contract for logistic partners
+CONTRACT SupplyChainRegistry.record_transfer:
+    INPUT: batch_id: UUID, from: Address, to: Address
+    OUTPUT: Result<Void>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: "Smart contract event emitted"
+            POSTCONDITION: "Owner updated on-chain"
+        CASE unauthorized:
+            THROWS: UnauthorizedError
+            POSTCONDITION: "Revert transaction"
+
+FLOW log_product_milestone(batch_id: UUID, details: String) -> Result<Void>:
+    1. ACHIEVE "Verify On-chain Ownership"
+        POSTCONDITION: msg.sender == current_owner
+    2. ACHIEVE "SupplyChainRegistry.add_transformation"
+        DEPENDS_ON: [step 1]
+        POSTCONDITION: "Step added to transformation_history"
+        @compliance("ISO-22005") AS FOOD_TRACEABILITY_AUDIT
+    3. RETURN Void

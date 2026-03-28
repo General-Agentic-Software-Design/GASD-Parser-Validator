@@ -1,0 +1,55 @@
+VERSION 1.2
+CONTEXT: "Personalized Recommendation Engine"
+TARGET: "Python / PyTorch / Redis"
+NAMESPACE: "org.gasd.realistic.recs"
+
+/* 
+   Scenario: Collaborative Filtering Service
+   =========================================
+   Generating real-time product recommendations.
+   Features:
+   - CONTRACT for the feature engineering service.
+   - POSTCONDITION on result diversity (shuffling).
+   - ASSUMPTION on Redis cache hit rate.
+*/
+
+TYPE UserContext:
+    user_id: UUID
+    browsing_history: List<String>
+    purchase_history: List<String>
+
+TYPE RecItem:
+    id: UUID
+    score: Float @range(0.0, 1.0) AS SCORE_RANGE
+    category: String
+
+COMPONENT FeatureService:
+    INTERFACE:
+        get_user_vector(user_id: UUID) -> Result<List<Float>>
+
+/// Formal contract for data enrichment
+CONTRACT FeatureService.get_user_vector:
+    INPUT: user_id: UUID
+    OUTPUT: Result<List<Float>>
+    BEHAVIORS:
+        CASE cached:
+            POSTCONDITION: result.length == 512
+            AFTER: 10ms
+        CASE cold_start:
+            POSTCONDITION: result.all(v -> v == 0.1)
+            AFTER: 200ms
+
+ASSUMPTION "Redis Cache Hit Rate > 85%":
+    AFFECTS: [RecommendationLoop.generate_top_n]
+    CONSEQUENCE: "Inference latency spike if DB falls back too often"
+
+FLOW generate_top_n(user_id: UUID, n: Integer) -> Result<List<RecItem>>:
+    1. ACHIEVE "FeatureService.get_user_vector"
+        POSTCONDITION: result != null
+    2. ACHIEVE "Model Inference"
+        DEPENDS_ON: [step 1]
+        POSTCONDITION: result.length >= n
+    3. ACHIEVE "Diversity Filter"
+        POSTCONDITION: "Result contains at least 3 distinct categories"
+        POSTCONDITION: "Top item is not in purchase_history"
+    4. RETURN Slice(result, 0, n)

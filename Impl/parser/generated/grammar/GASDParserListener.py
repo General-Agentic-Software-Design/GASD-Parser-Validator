@@ -107,6 +107,15 @@ class GASDParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GASDParser#type_body_item.
+    def enterType_body_item(self, ctx:GASDParser.Type_body_itemContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#type_body_item.
+    def exitType_body_item(self, ctx:GASDParser.Type_body_itemContext):
+        pass
+
+
     # Enter a parse tree produced by GASDParser#field_def.
     def enterField_def(self, ctx:GASDParser.Field_defContext):
         pass
@@ -116,12 +125,66 @@ class GASDParserListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by GASDParser#type_expr.
-    def enterType_expr(self, ctx:GASDParser.Type_exprContext):
+    # Enter a parse tree produced by GASDParser#GenericType.
+    def enterGenericType(self, ctx:GASDParser.GenericTypeContext):
         pass
 
-    # Exit a parse tree produced by GASDParser#type_expr.
-    def exitType_expr(self, ctx:GASDParser.Type_exprContext):
+    # Exit a parse tree produced by GASDParser#GenericType.
+    def exitGenericType(self, ctx:GASDParser.GenericTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#RecordType.
+    def enterRecordType(self, ctx:GASDParser.RecordTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#RecordType.
+    def exitRecordType(self, ctx:GASDParser.RecordTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#EnumType.
+    def enterEnumType(self, ctx:GASDParser.EnumTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#EnumType.
+    def exitEnumType(self, ctx:GASDParser.EnumTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#OptionalType.
+    def enterOptionalType(self, ctx:GASDParser.OptionalTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#OptionalType.
+    def exitOptionalType(self, ctx:GASDParser.OptionalTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#SimpleType.
+    def enterSimpleType(self, ctx:GASDParser.SimpleTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#SimpleType.
+    def exitSimpleType(self, ctx:GASDParser.SimpleTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#IntType.
+    def enterIntType(self, ctx:GASDParser.IntTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#IntType.
+    def exitIntType(self, ctx:GASDParser.IntTypeContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#FloatType.
+    def enterFloatType(self, ctx:GASDParser.FloatTypeContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#FloatType.
+    def exitFloatType(self, ctx:GASDParser.FloatTypeContext):
         pass
 
 
@@ -521,6 +584,15 @@ class GASDParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GASDParser#tech_id.
+    def enterTech_id(self, ctx:GASDParser.Tech_idContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#tech_id.
+    def exitTech_id(self, ctx:GASDParser.Tech_idContext):
+        pass
+
+
     # Enter a parse tree produced by GASDParser#question_stmt.
     def enterQuestion_stmt(self, ctx:GASDParser.Question_stmtContext):
         pass
@@ -563,6 +635,15 @@ class GASDParserListener(ParseTreeListener):
 
     # Exit a parse tree produced by GASDParser#value.
     def exitValue(self, ctx:GASDParser.ValueContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#primary_expr.
+    def enterPrimary_expr(self, ctx:GASDParser.Primary_exprContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#primary_expr.
+    def exitPrimary_expr(self, ctx:GASDParser.Primary_exprContext):
         pass
 
 

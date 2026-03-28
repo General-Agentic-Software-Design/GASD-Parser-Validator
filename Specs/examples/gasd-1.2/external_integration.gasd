@@ -1,0 +1,44 @@
+VERSION 1.2
+CONTEXT: "External System Integration"
+TARGET: "Go / Cloud Functions"
+NAMESPACE: "org.gasd.examples.v1_2.external"
+
+/* 
+   Showcase: Environmental Assumptions and Contract Binding
+   =======================================================
+   This file demonstrates:
+   1. ASSUMPTION blocks for declaring environmental dependencies
+   2. IMPORT AS with associated CONTRACT binding
+   3. AFFECTS and CONSEQUENCE clauses in ASSUMPTIONs
+*/
+
+IMPORT "payment_service_interface.gasd" AS Pay
+
+/// Contract for the external payment provider
+CONTRACT Pay.execute_payment:
+    INPUT: amount: Decimal, currency: String
+    OUTPUT: Result<String>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "SUCCESS"
+    IDEMPOTENT: true
+
+/// Environmental dependency for the payment gateway
+ASSUMPTION "Payment Gateway":
+    AFFECTS: [Pay.execute_payment]
+    CONSEQUENCE: "Connection failure if the gateway is down or unreachable"
+
+ASSUMPTION "RSA key pair available in Secrets Manager":
+    AFFECTS: [AuthService.sign_token]
+    CONSEQUENCE: "Cryptographic signature failure"
+
+COMPONENT AuthService:
+    INTERFACE:
+        sign_token(payload: String) -> Result<String>
+
+FLOW process_external_request(data: String) -> Result<String>:
+    1. ACHIEVE "Verify Authentication"
+        POSTCONDITION: result.is_authenticated == true
+    2. ACHIEVE "Process with Pay"
+        POSTCONDITION: result.is_success == true
+    3. RETURN result_of(step 2)

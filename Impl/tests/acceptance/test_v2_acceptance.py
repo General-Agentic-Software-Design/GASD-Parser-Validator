@@ -51,7 +51,7 @@ def create_gasd(path, content):
     ("AT-V2-109", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n", 1, "LINT-003"),
     
     # 7. GLOBAL INVARIANT - Enforcement (AT-V2-110)
-    ("AT-V2-110", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nGLOBAL INVARIANT 'Inv': counts > 0\n", 1, "LINT-006"),
+    ("AT-V2-110", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nGLOBAL INVARIANT 'Inv': counts > 0\n", 0, "LINT-006"),
     
     # 8. ANNOTATION IDs (AT-V2-111, 112, 113)
     ("AT-V2-111", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\n@retry(3)\nTYPE T: s: String\n", 1, "LINT-011"),

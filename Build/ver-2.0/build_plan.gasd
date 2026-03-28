@@ -131,9 +131,17 @@ FLOW phase4_generate_implementation():
 // ===================================================================
 
 FLOW phase5_full_quality_gate():
-    1. ACHIEVE "Execute full test suite including acceptance, regression, negative, and design validation tests"
-    2. ACHIEVE "If any tests fail, iteratively fix the implementation based on Design/ and re-run all tests until 100% pass"
-    3. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
+    1. ACHIEVE "Execute full test suite including acceptance, regression, negative, and design validation tests via pytest Impl/tests/ -v"
+    2. ACHIEVE "Fix grammar edge cases (Category 1) allowing keywords to be used safely as field names and enum values"
+    3. ACHIEVE "Fix literal type AST generation (Category 2) for properly mapping integer and string literal constraints"
+    4. ACHIEVE "Fix semantic regression issues (Category 3) including circular dependency crashes and cross-file UnknownType handling"
+    5. ACHIEVE "Fix trace identifier format rules (Category 4) resolving LINT-003 constraints per GASD 1.2"
+    6. ACHIEVE "Fix AST location metadata extraction errors (Category 5) to resolve IndexErrors during translation"
+    7. ACHIEVE "Re-run all tests until the baseline becomes 100% passing"
+    8. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Design"
+    9. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Validation"
+    10. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/*"
+    11. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================

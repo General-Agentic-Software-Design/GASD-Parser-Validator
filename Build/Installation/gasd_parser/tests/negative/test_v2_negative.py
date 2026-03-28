@@ -47,8 +47,8 @@ def create_gasd(path, content):
     # NT-GEP6-006: Top-level Postcondition violation
     ("NT-GEP6-006", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nPOSTCONDITION: outside_achieve == true\n", 1),
     
-    # NT-GEP6-007: Version Mismatch in Imports (LINT-012 Warning, treated as failure per codebase convention)
-    ("NT-GEP6-007", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nIMPORT 'legacy.gasd'\n", 1), # Fails with Warning (LINT-012) — codebase treats warnings as failures
+    # NT-GEP6-007: Version Mismatch in Imports (LINT-012 INFO, success)
+    ("NT-GEP6-007", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nIMPORT 'legacy.gasd'\n", 0), # Now INFO (LINT-012) — success
 ])
 def test_v2_negative_comprehensive(run_cli, case_id, content, expected_exit):
     with tempfile.TemporaryDirectory() as tmpdir:

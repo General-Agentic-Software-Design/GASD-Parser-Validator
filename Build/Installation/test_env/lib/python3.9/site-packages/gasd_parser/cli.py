@@ -179,10 +179,11 @@ def main():
 
     # === Phase 4: Semantic AST Generation (Cross-File) ===
     semantic_system = None
-    do_full_sem = args.ast_sem or (not args.ast and not args.json and not args.ast_output)
+    do_full_sem = args.ast_sem or (not args.no_validate and not args.ast and not args.json and not args.ast_output)
     if do_full_sem and valid_asts:
         from .semantic.SemanticPipeline import SemanticPipeline
         from .semantic.SymbolTable import SemanticError
+        from .semantic.AnnotationResolver import SemanticError as AnnotationSemanticError
         from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
         
         sem_pipeline = SemanticPipeline(validate_built_in_types=not args.no_validate)
@@ -214,7 +215,7 @@ def main():
                         endColumn=sem_err.location.endCol,
                         sourceFile=file_key
                     ))
-        except SemanticError as e:
+        except (SemanticError, AnnotationSemanticError) as e:
             # Catch catastrophic pipeline failures
             loc = e.location
             file_key = loc.file if loc and loc.file else None
@@ -280,7 +281,7 @@ def main():
                 success_count += 1
             warning_total += reporter.get_warning_count()
         else:
-            if reporter.has_errors() or reporter.get_warning_count() > 0:
+            if reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
                 if is_failure:
                     print(f"ERROR: {file_path} failed validation", file=sys.stderr)
                 else:

@@ -1,17 +1,17 @@
 # GASD Parser & Validator
 
-The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1**).
+The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.2**).
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
 ## Project Structure
 
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
-- **[Design/](Design/)**: GASD-level specifications for each parser component.
+- **[Design/](Design/)**: GASD-level specifications for each parser component (100% compliant).
 - **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
-  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 512 acceptance and regression tests.
-- **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria.
-- **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo.
+  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 565 acceptance and regression tests.
+- **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria (GEP-6 aligned).
+- **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo (Includes GASD 1.2 examples).
 
 ## The Hallucination Problem & Agent Self-Verification
 
@@ -127,8 +127,10 @@ The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Buil
 
 1. **Design**: User stories mapped to formal designs.
 2. **Implementation**: Code generated from designs.
-3. **Testing**: Acceptance and regression verification (512 tests).
-4. **Packaging**: Standalone distributable creation (v1.2.2).
+3. **Testing**: Acceptance and regression verification (565 tests).
+4. **Validation**: Full suite validation on all content directories (110+ files).
+5. **Quality Gate**: Final sign-off on GASD 1.2 compliance (Failed: 0).
+6. **Packaging**: Standalone distributable creation (v2.0.0).
 
 ## License
 

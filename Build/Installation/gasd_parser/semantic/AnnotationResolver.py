@@ -1,8 +1,7 @@
 from typing import Dict, Any, List, Optional
 from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, ScopeEnum
 
-class SemanticError(Exception):
-    pass
+from .SymbolTable import SemanticError
 
 class AnnotationResolver:
     def __init__(self):

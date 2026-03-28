@@ -199,7 +199,23 @@ class ASTGenerator(GASDParserVisitor):
         name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
         anns = self.pending_annotations + self._visit_anns(ctx.annotations())
         self.pending_annotations = []
-        fields = [self.visit(f) for f in ctx.field_def()] if ctx.field_def() else []
+        fields = []
+        # Process indented block (type_body_item)
+        if hasattr(ctx, 'type_body_item') and ctx.type_body_item():
+            for tbi in ctx.type_body_item():
+                if tbi.field_def():
+                    fields.append(self.visit(tbi.field_def()))
+                elif tbi.annotations():
+                    self.pending_annotations += self._visit_anns(tbi.annotations())
+        
+        # Process inline field (field_def)
+        fd_ctx = ctx.field_def()
+        if fd_ctx:
+            if isinstance(fd_ctx, list):
+                fields.extend([self.visit(f) for f in fd_ctx])
+            else:
+                fields.append(self.visit(fd_ctx))
+        
         # Detect enum: ENUM_KW lives in the inline type_expr child, not in type_def itself
         is_enum = False
         if ctx.type_expr():
@@ -212,82 +228,71 @@ class ASTGenerator(GASDParserVisitor):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
         anns = self.pending_annotations + self._visit_anns(ctx.annotations())
-        self.pending_annotations = [] # Fields usually don't have separate pending anns but for safety
+        self.pending_annotations = []
         type_expr = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Unknown", **loc)
         return FieldDefinition(name=name, type=type_expr, annotations=anns, **loc)
 
-    # Labeled expression visitors are defined later in the class
+    # === Labeled Type Expression Visitors ===
 
-    def visitType_expr(self, ctx: GASDParser.Type_exprContext):
+    def visitGenericType(self, ctx: GASDParser.GenericTypeContext):
         loc = self._get_loc(ctx)
+        segments = [id.getText() for id in ctx.soft_id() if id]
+        base = ".".join(segments)
+        args = [self.visit(a) for a in ctx.type_expr() if a]
         
-        # 1. Special case: ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
-        if ctx.ENUM_KW():
-            # Collect all identifiers and string literals from the enum list
-            values = []
-            for i in range(ctx.getChildCount()):
-                child = ctx.getChild(i)
-                # Check for either soft_id (identifier) or STRING_LITERAL
-                if isinstance(child, GASDParser.Soft_idContext):
-                    values.append(child.getText())
-                elif hasattr(child, 'getSymbol') and child.getSymbol().type == GASDParser.STRING_LITERAL:
-                    values.append(child.getText())
-                elif hasattr(child, 'getText') and child.getText().startswith('"'):
-                    # Fallback for string literals if getSymbol() is not available or mismatch
-                    values.append(child.getText())
-            
-            return TypeExpression(baseType="Enum", enumValues=values, **loc)
-            
-        # 2. Special case: OPTIONAL_KW LANGLE type_expr RANGLE
-        if ctx.OPTIONAL_KW():
-            args = [self.visit(a) for a in ctx.type_expr() if a]
-            if args:
-                # Wrap the inner type as optional, preserving all its attributes
-                inner = args[0]
-                return TypeExpression(
-                    baseType=inner.baseType, 
-                    genericArgs=inner.genericArgs, 
-                    isOptional=True, 
-                    literalValue=inner.literalValue,
-                    enumValues=inner.enumValues,
-                    **loc
-                )
-            return TypeExpression(baseType="Any", isOptional=True, **loc)
+        is_optional = base == "Optional"
+        return TypeExpression(baseType=base, genericArgs=args, isOptional=is_optional, **loc)
 
-        # 3. Unified Generics branch: (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
-        if ctx.soft_id() or (ctx.STRING_LITERAL() and ctx.LANGLE()):
-            segments = [id.getText() for id in ctx.soft_id() if id]
-            base = ".".join(segments)
-            args = [self.visit(a) for a in ctx.type_expr() if a]
-            
-            is_optional = base == "Optional"
-            if is_optional and args:
-                inner = args[0]
-                return TypeExpression(
-                    baseType=inner.baseType, 
-                    genericArgs=inner.genericArgs, 
-                    isOptional=True, 
-                    literalValue=inner.literalValue,
-                    enumValues=inner.enumValues,
-                    **loc
-                )
-            
-            # For List and Map, we should also propagate something if relevant, 
-            # but usually they are containers for other types.
-            return TypeExpression(baseType=base, genericArgs=args, isOptional=is_optional, **loc)
+    def visitRecordType(self, ctx: GASDParser.RecordTypeContext):
+        loc = self._get_loc(ctx)
+        args = []
+        if hasattr(ctx, 'param_list') and ctx.param_list():
+             # self.visit() on param just returns a Parameter object
+             args = [self.visit(p).type for p in ctx.param_list().param()]
+        return TypeExpression(baseType="Record", genericArgs=args, **loc)
 
-        # 4. Literal types
-        if ctx.STRING_LITERAL():
-            literal_value = ctx.STRING_LITERAL(0).getText()
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        elif ctx.INTEGER():
-            literal_value = str(ctx.INTEGER().getText())
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        elif ctx.FLOAT_LITERAL():
-            literal_value = str(ctx.FLOAT_LITERAL().getText())
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
+    def visitEnumType(self, ctx: GASDParser.EnumTypeContext):
+        loc = self._get_loc(ctx)
+        values = []
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            if isinstance(child, GASDParser.Soft_idContext):
+                values.append(child.getText())
+            elif hasattr(child, 'getSymbol') and child.getSymbol().type == GASDParser.STRING_LITERAL:
+                values.append(child.getText())
+        return TypeExpression(baseType="Enum", enumValues=values, **loc)
 
-        return TypeExpression(baseType="unknown", **loc)
+    def visitOptionalType(self, ctx: GASDParser.OptionalTypeContext):
+        loc = self._get_loc(ctx)
+        inner = self.visit(ctx.type_expr())
+        if inner:
+            return TypeExpression(
+                baseType=inner.baseType, 
+                genericArgs=inner.genericArgs, 
+                isOptional=True, 
+                **loc
+            )
+        return TypeExpression(baseType="Any", isOptional=True, **loc)
+
+    def visitSimpleType(self, ctx: GASDParser.SimpleTypeContext):
+        loc = self._get_loc(ctx)
+        segments = [id.getText() for id in ctx.soft_id() if id]
+        base = ".".join(segments)
+        if hasattr(ctx, 'STRING_LITERAL') and ctx.STRING_LITERAL():
+            return TypeExpression(baseType="literal", literalValue=ctx.STRING_LITERAL().getText(), **loc)
+        return TypeExpression(baseType=base, **loc)
+
+    def visitIntType(self, ctx: GASDParser.IntTypeContext):
+        loc = self._get_loc(ctx)
+        return TypeExpression(baseType="literal", literalValue=ctx.INTEGER().getText(), **loc)
+
+    def visitFloatType(self, ctx: GASDParser.FloatTypeContext):
+        loc = self._get_loc(ctx)
+        return TypeExpression(baseType="literal", literalValue=ctx.FLOAT_LITERAL().getText(), **loc)
+
+    # Fallback for the rule itself if needed
+    def visitType_expr(self, ctx: GASDParser.Type_exprContext):
+        return self.visitChildren(ctx)
 
     def visitComponent_def(self, ctx: GASDParser.Component_defContext):
         loc = self._get_loc(ctx)
@@ -796,11 +801,15 @@ class ASTGenerator(GASDParserVisitor):
     def visitModel_def(self, ctx: GASDParser.Model_defContext):
         loc = self._get_loc(ctx)
         name = ctx.STRING_LITERAL(0).getText().strip('"\'')
-        model_type = ctx.soft_id().getText()
+        model_type = ctx.tech_id().getText() if ctx.tech_id() else "Unknown"
         file_path = ctx.STRING_LITERAL(1).getText().strip('"\'')
         verifies = []
         if ctx.VERIFIES_KW():
-            verifies = [v.getText() for v in ctx.invariant_ref()]
+            for ir in ctx.invariant_ref():
+                scope = "GLOBAL"
+                if "LOCAL" in ir.getText(): scope = "LOCAL"
+                elif "GLOBAL" in ir.getText(): scope = "GLOBAL"
+                verifies.append(f"{scope} {ir.STRING_LITERAL().getText()}")
         assumptions = []
         if ctx.ASSUMPTIONS_KW():
             assumptions = [a.getText().strip('"\'') for a in ctx.STRING_LITERAL()[2:]] # Skip first name and path
@@ -809,18 +818,21 @@ class ASTGenerator(GASDParserVisitor):
 
     def visitAssumption_def(self, ctx: GASDParser.Assumption_defContext):
         loc = self._get_loc(ctx)
-        name = ""
-        if ctx.soft_id(): name = ctx.soft_id().getText()
-        elif ctx.STRING_LITERAL(0): name = ctx.STRING_LITERAL(0).getText().strip('"\'')
+        sl = ctx.STRING_LITERAL()
+        if ctx.soft_id():
+            name = ctx.soft_id().getText()
+        else:
+            name = sl[0].getText().strip('"\'') if sl else "Unknown"
         
         affects = []
-        if ctx.AFFECTS_KW():
-            affects = [v.strip('"\'') for v in ctx.list_literal().getText().replace('[','').replace(']','').split(',')]
-            
+        if ctx.AFFECTS_KW() and ctx.list_literal():
+            for v in ctx.list_literal().value():
+                affects.append(v.getText().strip('"\''))
+        
         consequence = None
-        if ctx.CONSEQUENCE_KW():
-            consequence = ctx.STRING_LITERAL(1).getText().strip('"\'') if len(ctx.STRING_LITERAL()) > 1 else ""
-
+        if ctx.CONSEQUENCE_KW() and sl:
+            consequence = sl[-1].getText().strip('"\'')
+        
         return AssumptionDefinition(name=name, affects=affects, consequence=consequence, **loc)
 
     def visitConstraint_stmt(self, ctx: GASDParser.Constraint_stmtContext):
@@ -845,8 +857,9 @@ class ASTGenerator(GASDParserVisitor):
 
     def visitInvariant_stmt(self, ctx: GASDParser.Invariant_stmtContext):
         scope = None
-        if ctx.GLOBAL_KW(): scope = "GLOBAL"
-        elif ctx.LOCAL_KW(): scope = "LOCAL"
+        full_text = ctx.getText()
+        if ctx.GLOBAL_KW() or "GLOBAL" in full_text: scope = "GLOBAL"
+        elif ctx.LOCAL_KW() or "LOCAL" in full_text: scope = "LOCAL"
         
         name = None
         text = ""

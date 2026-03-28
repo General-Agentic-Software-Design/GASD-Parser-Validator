@@ -8,7 +8,14 @@ class LintEngine:
     def __init__(self, reporter: SemanticErrorReporter, version: str = "1.1"):
         self.reporter = reporter
         self.version = version
+        self.file_versions: Dict[str, str] = {}
         self.system: Optional[SemanticSystem] = None
+
+    def _get_version(self, node: Optional[SemanticNodeBase]) -> str:
+        """Returns the version for a specific node's source file, or the system default."""
+        if node and node.sourceMap and node.sourceMap.file in self.file_versions:
+            return self.file_versions[node.sourceMap.file]
+        return self.version
 
     def lint_system(self, system: SemanticSystem):
         """Runs all LINT rules across the entire semantic system."""
@@ -18,8 +25,10 @@ class LintEngine:
         self.lint_node(system)
         
         # Check for top-level postconditions (NT-GEP6-006)
+        # Note: top-level postconditions are system-wide, so we use system version
         if hasattr(system, "postconditions") and system.postconditions and self.version == "1.2":
-            self._report_at("LINT-001", "POSTCONDITION is only allowed for ACHIEVE steps in GASD 1.2.", 1, 1, system.metadata.files[0].filePath if system.metadata.files else "unknown")
+            main_file = system.metadata.files[0].filePath if system.metadata.files else "unknown"
+            self._report_at("LINT-001", "POSTCONDITION is only allowed for ACHIEVE steps in GASD 1.2.", 1, 1, main_file)
 
         # Pass 1: Global LINT-002 check and LINT-012 Version Mismatch
         file_to_node = {f.filePath: f for f in system.metadata.files}
@@ -41,7 +50,7 @@ class LintEngine:
                                 other_ver = other_node.syntacticRoot.version or "1.1"
                             
                             if other_ver != self.version:
-                                self._report_at("LINT-012", f"Version mismatch: Importing {other_ver} into {self.version} system.", 1, 1, fnode.filePath, level=ErrorLevel.WARNING)
+                                self._report_at("LINT-012", f"Version mismatch: Importing {other_ver} into {self.version} system.", 1, 1, fnode.filePath, level=ErrorLevel.INFO)
                                 has_mismatch = True
                             break
                 
@@ -92,10 +101,11 @@ class LintEngine:
         """Runs relevant LINT rules for a specific node."""
         aliases = set()
         
+        version = self._get_version(node)
         for ann in node.annotations:
             self._check_trace_format(node, ann)
             # LINT-011: Missing 'AS' identifier in GASD 1.2
-            if self.version == "1.2" and not ann.alias:
+            if version == "1.2" and not ann.alias:
                 # Check if it's a structural annotation that needs ID
                 if ann.name in ["retry", "timeout", "circuit_breaker", "transaction_type", "idempotent", "trace"]:
                     self._report("LINT-011", f"Annotation @{ann.name} is missing mandatory 'AS' identifier in GASD 1.2", node)
@@ -136,12 +146,12 @@ class LintEngine:
 
         if node.kind == "Invariant":
             # LINT-003: Invariant missing SCOPE
-            if self.version == "1.2" and not getattr(node, "scope", None):
+            if version == "1.2" and not getattr(node, "scope", None):
                 self._report("LINT-003", f"INVARIANT '{getattr(node, 'name', 'unnamed')}' is missing mandatory SCOPE (GLOBAL or LOCAL).", node)
             
             # LINT-006: Global Invariant enforcement
             if getattr(node, "scope", None) == "GLOBAL":
-                self._report("LINT-006", f"GLOBAL INVARIANT '{getattr(node, 'name', 'unnamed')}' detected; enforcing global constraints.", node)
+                self._report("LINT-006", f"GLOBAL INVARIANT '{getattr(node, 'name', 'unnamed')}' detected; enforcing global constraints.", node, ErrorLevel.INFO)
 
     def _lint_flow(self, flow: ResolvedFlowNode):
         self.lint_node(flow)
@@ -213,7 +223,7 @@ class LintEngine:
 
             # LINT-001: ACHIEVE missing POSTCONDITION
             if op == "ACHIEVE":
-                if not has_post and self.version == "1.2":
+                if not has_post and self._get_version(step) == "1.2":
                     self._report("LINT-001", f"ACHIEVE step in '{flow_name}' is missing mandatory POSTCONDITION (ENSURE).", step)
             elif has_post:
                 # GEP-6 restriction: POSTCONDITION only for ACHIEVE
@@ -238,5 +248,5 @@ class LintEngine:
     def _check_trace_format(self, node: SemanticNodeBase, ann: ResolvedAnnotation):
         if ann.name == "trace":
             val = ann.arguments.get("value")
-            if val and isinstance(val, str) and not re.match(r"^#?[a-zA-Z0-9- .]+$", val):
-                self._report("LINT-013", f"Trace identifier '{val}' must be alphanumeric with hyphens, dots, or spaces.", node, ErrorLevel.WARNING)
+            if val and isinstance(val, str) and not re.match(r"^#?[a-zA-Z0-9-]+$", val):
+                self._report("LINT-013", f"Trace identifier '{val}' must be alphanumeric with hyphens.", node, ErrorLevel.WARNING)

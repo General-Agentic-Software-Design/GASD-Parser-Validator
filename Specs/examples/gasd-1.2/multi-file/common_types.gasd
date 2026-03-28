@@ -1,0 +1,23 @@
+VERSION 1.2
+NAMESPACE: "org.gasd.examples.multifile.common"
+
+/* 
+   Shared Data Models
+   ==================
+   Base types used across the distributed system.
+*/
+
+TYPE Money:
+    amount: Decimal
+    currency: String @min_length(3) @max_length(3) AS CURRENCY_CODE_LEN
+
+TYPE OrderItem:
+    sku: String
+    quantity: Integer @min(1) AS MIN_QTY_GUARD
+
+TYPE Order:
+    id: UUID
+    items: List<OrderItem>
+    total: Money
+    customer_id: String
+    status: Enum("PENDING", "PAID", "SHIPPED", "CANCELLED") AS ORDER_STATUS_ENUM

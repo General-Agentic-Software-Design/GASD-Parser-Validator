@@ -1,0 +1,49 @@
+VERSION 1.2
+CONTEXT: "Multi-Agent Supervisor/Worker Orchestration"
+TARGET: "TypeScript / AutoGen / LangGraph"
+NAMESPACE: "org.gasd.agentic.multiagent"
+
+/* 
+   Scenario: Complex Research & Drafting
+   ====================================
+   A supervisor agent coordinates specialized Researcher and Editor agents.
+   Features:
+   - CONTRACT for sub-agent behavior.
+   - DEPENDS_ON for worker synchronization.
+   - AS IDs for delegation tracking.
+*/
+
+TYPE ResearchPaper:
+    title: String
+    sections: List<{title: String, content: String}>
+    references: List<String>
+
+COMPONENT Researcher:
+    INTERFACE:
+        search_topic(query: String) -> Result<List<String>>
+
+COMPONENT Editor:
+    INTERFACE:
+        draft_section(facts: List<String>) -> Result<String>
+
+/// Supervisor defines the delegation contract
+CONTRACT Researcher.search_topic:
+    INPUT: query: String
+    OUTPUT: Result<List<String>>
+    BEHAVIORS:
+        CASE high_quality:
+            POSTCONDITION: result.length >= 5
+            POSTCONDITION: "All links are verified"
+
+FLOW orchestrate_paper(topic: String) -> Result<ResearchPaper>:
+    1. ACHIEVE "Decompose Topic into Questions"
+        POSTCONDITION: result.length > 0
+    2. ACHIEVE "Parallel: Researcher.search_topic"
+        FOR EACH q IN result_of(step 1)
+        @delegate("Researcher-Alpha") AS TASK_DELEGATION
+        POSTCONDITION: result.length >= 0
+    3. ACHIEVE "Editor.draft_section"
+        DEPENDS_ON: [step 2]
+        @delegate("Editor-Omega") AS SYNTHESIS_STEP
+        POSTCONDITION: result.length > 0
+    4. RETURN Final synthesized paper

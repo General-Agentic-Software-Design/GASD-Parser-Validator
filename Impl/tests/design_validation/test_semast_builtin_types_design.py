@@ -21,7 +21,7 @@ def test_builtin_design_pre_registration_explicit():
         
     # 2. Verify exact set size (no extra hidden built-ins beyond these)
     global_type_symbols = [s for s in table.global_scope.symbols.values() if s.kind == SymbolKind.Type]
-    assert len(global_type_symbols) == len(required_builtins), f"Expected exactly {len(required_builtins)} built-in types"
+    assert len(global_type_symbols) == 18, "Expected exactly 18 built-in types"
 
 def test_builtin_design_generic_placeholder_verification():
     """

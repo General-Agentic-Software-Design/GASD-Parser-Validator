@@ -44,7 +44,7 @@ section
 // Directives
 // ===================================================================
 
-version_dir     : VERSION_KW (version_number | STRING_LITERAL) NEWLINE ;
+version_dir     : VERSION_KW COLON? (version_number | STRING_LITERAL) NEWLINE ;
 version_number  : FLOAT_LITERAL | (INTEGER DOT INTEGER (DOT INTEGER)?) ;
 context_dir     : CONTEXT_KW COLON value_list NEWLINE ;
 target_dir      : TARGET_KW COLON value_list NEWLINE ;
@@ -71,19 +71,26 @@ decision_blk
 // ===================================================================
 
 type_def
-    : TYPE_KW soft_id annotations? COLON (NEWLINE INDENT (field_def | annotations | NEWLINE)+ DEDENT | field_def | type_expr)
+    : TYPE_KW soft_id annotations? COLON (NEWLINE INDENT (type_body_item | NEWLINE)+ DEDENT | field_def | type_expr)
+    ;
+
+type_body_item
+    : field_def
+    | annotations NEWLINE
     ;
 
 field_def
-    : soft_id COLON type_expr annotations? NEWLINE
+    : soft_id COLON type_expr (AS_KW alias_val)? (annotations? NEWLINE | NEWLINE INDENT (annotation | NEWLINE)+ DEDENT)
     ;
 
 type_expr
-    : ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
-    | OPTIONAL_KW LANGLE type_expr RANGLE
-    | INTEGER              // Literal integer type, e.g. 42
-    | FLOAT_LITERAL        // Literal float type, e.g. 3.14
-    | (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
+    : (soft_id | STRING_LITERAL) (DOT soft_id)* LANGLE type_expr (COMMA type_expr)* RANGLE      #GenericType
+    | LBRACE param_list? RBRACE                                                               #RecordType
+    | ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN      #EnumType
+    | OPTIONAL_KW LANGLE type_expr RANGLE                                                      #OptionalType
+    | (soft_id | STRING_LITERAL) (DOT soft_id)*                                                #SimpleType
+    | INTEGER                                                                                  #IntType
+    | FLOAT_LITERAL                                                                            #FloatType
     ;
 
 // ===================================================================
@@ -190,6 +197,7 @@ step_property
 
 permissive_token
     : soft_id | STRING_LITERAL | BACKTICK | COMMA | LPAREN | RPAREN | SQUOTE | CARET | EQUALS | MINUS | PLUS | ASTERISK | HASH | LANGLE | RANGLE | LBRACKET | RBRACKET | LBRACE | RBRACE | ELLIPSIS | DOT | INTEGER | FLOAT_LITERAL | SLASH | EQ_OP | NE_OP | LE_OP | GE_OP | ARROW | COLON | OR_OP | AND_KW | OR_KW | NOT_KW | IS_KW | IS_NOT_KW | TO_KW | VIA_KW
+    | GLOBAL_KW | LOCAL_KW
     ;
 
 action
@@ -304,7 +312,9 @@ strategy_item
 // ===================================================================
 
 constraint_stmt : CONSTRAINT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE ;
-invariant_stmt  : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE ;
+invariant_stmt  : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE 
+                | INVARIANT_KW (GLOBAL_KW | LOCAL_KW) (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE
+                ;
 
 // --- GASD 1.2 NEW BLOCKS ---
 
@@ -340,14 +350,16 @@ case_clause
 model_def
     : MODEL_KW STRING_LITERAL annotations? COLON NEWLINE
       INDENT
-      TYPE_KW COLON soft_id NEWLINE
+      TYPE_KW COLON tech_id NEWLINE
       FILE_KW COLON STRING_LITERAL NEWLINE
       (VERIFIES_KW COLON NEWLINE INDENT (invariant_ref NEWLINE)+ DEDENT)?
       (ASSUMPTIONS_KW COLON NEWLINE INDENT (STRING_LITERAL NEWLINE)+ DEDENT)?
       DEDENT
     ;
 
-invariant_ref : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW COLON STRING_LITERAL ;
+invariant_ref : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW COLON STRING_LITERAL 
+              | INVARIANT_KW (GLOBAL_KW | LOCAL_KW) COLON STRING_LITERAL
+              ;
 
 assumption_def
     : ASSUMPTION_KW (STRING_LITERAL | soft_id) annotations? COLON NEWLINE
@@ -360,6 +372,8 @@ assumption_def
     ;
 
 qualified_name : soft_id (DOT soft_id)* ;
+
+tech_id : (soft_id | PLUS | ASTERISK | HASH | DOT | MINUS)+ ;
 
 // ===================================================================
 // Pattern Matching
@@ -402,12 +416,17 @@ review_stmt
 // ===================================================================
 
 value
+    : primary_expr
+    | value DOT (soft_id | INTEGER)
+    | value LPAREN value_list? RPAREN
+    | value IS_KW value
+    | value TO_KW value
+    | value ARROW expr
+    | soft_id LANGLE type_expr (COMMA type_expr)* RANGLE
+    ;
+
+primary_expr
     : annotation
-    | soft_id ARROW expr
-    | base_value TO_KW value
-    | base_value (DOT (soft_id | INTEGER))+ (LPAREN value_list? RPAREN)? (IS_KW value)?
-    | base_value (LPAREN value_list? RPAREN) (IS_KW value)?
-    | base_value (IS_KW value)
     | base_value
     ;
 
@@ -489,6 +508,8 @@ soft_id
     | AFFECTS_KW
     | LIST_KW
     | MAP_KW
+    | ENUM_KW
+    | OPTIONAL_KW
     | COMPONENT_KW
     | INTERFACE_KW
     | PATTERN_KW
