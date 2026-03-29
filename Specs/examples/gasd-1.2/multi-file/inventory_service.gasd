@@ -1,0 +1,35 @@
+VERSION 1.2
+NAMESPACE: "org.gasd.examples.multifile.inventory"
+
+IMPORT "common_types.gasd" AS Common
+
+/* 
+   Inventory Service Provider
+   ==========================
+   Defines the formal contract for stock management.
+*/
+
+COMPONENT InventoryService:
+    INTERFACE:
+        reserve_stock(items: List<Common.OrderItem>) -> Result<Void>
+        release_stock(items: List<Common.OrderItem>) -> Result<Void>
+
+ASSUMPTION "Inventory DB is strongly consistent" @transaction_type("ACID") AS STOCK_RESERVATION_ATOMIC:
+    AFFECTS: [InventoryService.reserve_stock]
+    CONSEQUENCE: "Over-selling could occur if DB isolation is relaxed"
+
+CONTRACT InventoryService.reserve_stock:
+    INPUT: items: List<Common.OrderItem>
+    OUTPUT: Result<Void>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: "Stock units decremented and locked"
+        CASE out_of_stock:
+            THROWS: InsufficientStock
+            POSTCONDITION: "No changes to inventory state"
+    IDEMPOTENT: false
+
+CONTRACT InventoryService.release_stock:
+    INPUT: items: List<Common.OrderItem>
+    OUTPUT: Result<Void>
+    IDEMPOTENT: true

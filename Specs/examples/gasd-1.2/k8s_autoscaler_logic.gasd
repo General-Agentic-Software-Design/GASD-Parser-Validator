@@ -1,0 +1,60 @@
+VERSION 1.2
+CONTEXT: "Custom K8s Horizontal Pod Autoscaler"
+TARGET: "Go / Kubernetes Controller-Runtime"
+NAMESPACE: "org.gasd.realistic.k8s"
+
+/* 
+   Scenario: Resource-Aware Cloud Scaling
+   ======================================
+   Enforcing safety during aggressive scale-up/down.
+   Features:
+   - INVARIANT GLOBAL on aggregate cluster capacity.
+   - MODEL linking to TLA+ for oscillation avoidance verification.
+   - POSTCONDITION on replica count adjustments.
+*/
+
+TYPE ClusterState:
+    nodes: Integer
+    cpu_utilization: Float @range(0.0, 1.0) AS CPU_UTIL_RANGE
+    ram_utilization: Float @range(0.0, 1.0) AS RAM_UTIL_RANGE
+    current_replicas: Integer
+
+TYPE ExternalService:
+    status: String @status("REQUIRED") AS SERVICE_STATUS
+    url: String @format("url") AS SERVICE_URL
+
+COMPONENT K8sClient:
+    INTERFACE:
+        get_status(namespace: String, deployment: String) -> Result<ClusterState>
+        update_replicas(count: Integer) -> Result<Void>
+
+/// Global invariant: aggregate requested CPU cannot exceed 95% of total capacity
+INVARIANT GLOBAL: "Sum(Deployment.CPURequests) / Sum(Node.CPUCapacity) <= 0.95"
+
+/// Formal model to verify scaling stability (preventing thrashing)
+MODEL "Autoscaler Stability Model":
+    TYPE: TLA+
+    FILE: "models/autoscaler_stability.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Cluster must not enter an infinite scaling loop"
+    ASSUMPTIONS:
+        "Metrics may be delayed by up to 30 seconds"
+        "Deployment image is reachable and healthy"
+
+FLOW eval_scaling_logic(deployment: String) -> Result<Void>:
+    1. ACHIEVE "K8sClient.get_status"
+        POSTCONDITION: result.cpu_utilization >= 0.0
+    2. MATCH result_of(step 1).cpu_utilization:
+        CASE > 0.8:
+            ACHIEVE "Calculate Scale Up"
+                POSTCONDITION: result > current_replicas
+            REACH step 3
+        CASE < 0.2:
+            ACHIEVE "Calculate Scale Down"
+                POSTCONDITION: result < current_replicas
+            REACH step 3
+        OTHERWISE:
+            RETURN Void
+    3. ACHIEVE "K8sClient.update_replicas"
+        POSTCONDITION: "K8s API acknowledged mutation"
+    4. RETURN Void

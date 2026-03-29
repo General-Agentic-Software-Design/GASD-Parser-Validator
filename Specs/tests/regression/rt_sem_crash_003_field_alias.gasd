@@ -1,0 +1,9 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-003: Field alias and annotation parsing"
+TARGET: "Python"
+
+TYPE Student:
+    id: UUID @pii_redact AS STUDENT_ID_AUDIT
+    exam_id: UUID
+    score: Float @range(0.0, 100.0) AS SCORE_RANGE
+    name: String

@@ -1,0 +1,91 @@
+VERSION 1.1
+/*
+   Validation: Semantic AST — Flow Logic Analysis Tests
+   ====================================================
+   Verifies CFG generation, reachability, and error handling checks.
+   Based on Design/flow_semantic_analysis_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Flow Semantic Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-006", "US-X-SEMAST-006"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_cfg_generation():
+    @trace #AT-SEMAST-006-01, #AC-SEMAST-006-01, #AC-X-SEMAST-006-01
+    1. ACHIEVE "Parse FLOW definition with steps targeting remote components"
+    2. ENSURE "Converts to ResolvedFlowNode with linear CFG"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_step_compatibility():
+    @trace #AT-SEMAST-006-02, #AC-SEMAST-006-02, #AC-X-SEMAST-006-02
+    1. ACHIEVE "Validate sequenced steps where output matches next input across file boundaries"
+    2. ENSURE "FlowAnalyzer confirms parameter type compatibility"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_unreachable_code():
+    @trace #AT-SEMAST-006-03, #AC-SEMAST-006-03
+    1. ACHIEVE "Place step after RETURN action"
+    2. ENSURE "checkConsistency flags unreachable step"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_achieve_reachability():
+    @trace #AT-SEMAST-006-04, #AC-SEMAST-006-07
+    1. ACHIEVE "Analyze ACHIEVE step target"
+    2. ENSURE "Target string resolves logically or generates warning"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_match_exhaustiveness():
+    @trace #AT-SEMAST-006-05, #AC-SEMAST-006-08
+    1. ACHIEVE "Create MATCH block over ENUM missing one case"
+    2. ENSURE "Analyzer flags non-exhaustive MATCH block"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_ensure_otherwise():
+    @trace #AT-SEMAST-006-06, #AC-SEMAST-006-11
+    1. ACHIEVE "Create ENSURE block without OTHERWISE"
+    2. ENSURE "Analyzer flags missing error recovery path"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_on_error_scope():
+    @trace #AT-SEMAST-006-07, #AC-SEMAST-006-12
+    1. ACHIEVE "Define ON_ERROR block at FLOW scope"
+    2. ENSURE "Exception handling wraps all inner block executions"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cfg_branching():
+    @trace #AT-SEMAST-006-08
+    1. ACHIEVE "Parse IF/ELSE nested logic"
+    2. ENSURE "Branches correctly fork and merge in CFG model"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cross_file_flow_binding():
+    @trace #AT-X-SEMAST-006-01, #AC-X-SEMAST-006-01, #AC-X-SEMAST-006-02
+    1. ACHIEVE "Bind FLOW to COMPONENT method in another file"
+    2. ENSURE "Binding succeeds if signatures match exactly"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_unbound_flow_error():
+    @trace #AT-X-SEMAST-006-02, #AC-X-SEMAST-006-03
+    1. ACHIEVE "Provide FLOW targeting a non-existent remote method"
+    2. ENSURE "Semantic error reported for unbound flow resolution"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_flow_regression_empty_flow():
+    @trace #RT-SEMAST-006-01
+    1. ACHIEVE "Analyze FLOW with zero steps"
+    2. ENSURE "FlowAnalyzer gracefully accepts or warns based on contract"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_flow_regression_infinite_loop():
+    @trace #RT-SEMAST-006-02
+    1. ACHIEVE "Create looping logic reference"
+    2. ENSURE "Static analysis halts execution projection safely"
+        OTHERWISE THROW "Validation Failed"

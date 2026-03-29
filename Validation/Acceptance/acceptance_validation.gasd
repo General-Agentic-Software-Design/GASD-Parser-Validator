@@ -1,0 +1,84 @@
+/*
+   Validation: Acceptance Tests (1.1 Syntax)
+   ==========================================
+   Exhaustive validation of all 17 Acceptance Tests from User_story.md.
+   Traces: AT-V2-101 to AT-V2-117
+*/
+
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Criteria Validation for v2.0"
+TARGET: "GASD Agent"
+TRACE: "US-V2-001"
+
+FLOW validate_acceptance_tests():
+    1. ACHIEVE "Verify AT-V2-101: VERSION 1.2 at top parses correctly"
+    2. ENSURE "result.parsed == TRUE"
+        OTHERWISE THROW "Validation Failed"
+    
+    3. ACHIEVE "Verify AT-V2-102: ACHIEVE (no post) -> Error LINT-001 in v1.2"
+    4. ENSURE "result.error_code == 'LINT-001'"
+        OTHERWISE THROW "Validation Failed"
+    
+    5. ACHIEVE "Verify AT-V2-103: ACHIEVE with POSTCONDITION"
+    6. ENSURE "result.validated == TRUE"
+        OTHERWISE THROW "Validation Failed"
+    
+    7. ACHIEVE "Verify AT-V2-104: IMPORT (no contract) -> Error LINT-002 in v1.2"
+    8. ENSURE "result.error_code == 'LINT-002'"
+        OTHERWISE THROW "Validation Failed"
+    
+    9. ACHIEVE "Verify AT-V2-105: CONTRACT CASE with POSTCONDITION"
+    10. ENSURE "result.validated == TRUE"
+        OTHERWISE THROW "Validation Failed"
+    
+    11. ACHIEVE "Verify AT-V2-106: CASE (missing THROWS/POST) -> Error LINT-007"
+    12. ENSURE "result.error_code == 'LINT-007'"
+        OTHERWISE THROW "Validation Failed"
+    
+    13. ACHIEVE "Verify AT-V2-107: FLOW DEPENDS_ON STEP (non-existent) -> Error LINT-008"
+    14. ENSURE "result.error_code == 'LINT-008'"
+        OTHERWISE THROW "Validation Failed"
+    
+    15. ACHIEVE "Verify AT-V2-108: FLOW Circular Dependency -> Error LINT-009"
+    16. ENSURE "result.error_code == 'LINT-009'"
+        OTHERWISE THROW "Validation Failed"
+    
+    17. ACHIEVE "Verify AT-V2-109: INVARIANT (no scope) -> Error LINT-003 in v1.2"
+    18. ENSURE "result.error_code == 'LINT-003'"
+        OTHERWISE THROW "Validation Failed"
+    
+    19. ACHIEVE "Verify AT-V2-110: GLOBAL INVARIANT (no DB/Model) -> Error LINT-006"
+    20. ENSURE "result.error_code == 'LINT-006'"
+        OTHERWISE THROW "Validation Failed"
+    
+    21. ACHIEVE "Verify AT-V2-111: @retry (no AS ID) -> Error LINT-011 in v1.2"
+    22. ENSURE "result.error_code == 'LINT-011'"
+        OTHERWISE THROW "Validation Failed"
+    
+    23. ACHIEVE "Verify AT-V2-112: @retry AS lower_case -> Regex ERROR"
+    24. ENSURE "result.outcome == 'ERROR'"
+        OTHERWISE THROW "Validation Failed"
+    
+    25. ACHIEVE "Verify AT-V2-113: AS ID collision -> Error LINT-010"
+    26. ENSURE "result.error_code == 'LINT-010'"
+        OTHERWISE THROW "Validation Failed"
+    
+    27. ACHIEVE "Verify AT-V2-114: @transaction_type (no ASSUMPTION) -> Error LINT-005 in v1.2"
+    28. ENSURE "result.error_code == 'LINT-005'"
+        OTHERWISE THROW "Validation Failed"
+    
+    29. ACHIEVE "Verify AT-V2-115: @retry (no @idempotent) -> Error LINT-004 in v1.2"
+    30. ENSURE "result.error_code == 'LINT-004'"
+        OTHERWISE THROW "Validation Failed"
+    
+    31. ACHIEVE "Verify AT-V2-116: MODEL missing file -> Path ERROR"
+    32. ENSURE "result.outcome == 'ERROR'"
+        OTHERWISE THROW "Validation Failed"
+    
+    33. ACHIEVE "Verify AT-V2-117: Semantic Registry lookup for @circuit_breaker"
+    34. ENSURE "result.triple_found == TRUE"
+        OTHERWISE THROW "Validation Failed"
+
+    35. ENSURE "All 17 acceptance tests are covered"
+        OTHERWISE THROW "Validation Failed"

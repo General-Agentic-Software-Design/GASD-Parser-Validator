@@ -55,7 +55,7 @@ def test_reference_resolution_all_builtins_explicit():
     This test iterates over all 15 types to ensure they are all in the 'primitive_types' set.
     """
     from Impl.validation.passes.ReferenceResolutionPass import ReferenceResolutionPass
-    from Impl.ast.ASTNodes import GASDFile, TypeDefinition, FieldNode, TypeExpression
+    from Impl.ast.ASTNodes import GASDFile, TypeDefinition, FieldDefinition, TypeExpression
     
     builtins = [
         "String", "Integer", "Int", "Boolean", "Float", "Decimal", "Bytes", "UUID", 
@@ -67,7 +67,7 @@ def test_reference_resolution_all_builtins_explicit():
     for b in builtins:
         # Create a field with the specific built-in type
         tx = TypeExpression(baseType=b)
-        field = FieldNode(f"field_{b}", tx)
+        field = FieldDefinition(f"field_{b}", tx)
         type_def = TypeDefinition(f"Container_{b}", [field])
         file_ast = GASDFile(types=[type_def])
         
@@ -80,12 +80,12 @@ def test_reference_resolution_builtin_complex_result():
     AT-SEMAST-019-02: Structural types (Result) resolve correctly with arguments.
     """
     from Impl.validation.passes.ReferenceResolutionPass import ReferenceResolutionPass
-    from Impl.ast.ASTNodes import GASDFile, TypeDefinition, FieldNode, TypeExpression
+    from Impl.ast.ASTNodes import GASDFile, TypeDefinition, FieldDefinition, TypeExpression
     
     # Result<String>
     inner_tx = TypeExpression(baseType="String")
     type_expr = TypeExpression(baseType="Result", genericArgs=[inner_tx])
-    field = FieldNode("operation_result", type_expr)
+    field = FieldDefinition("operation_result", type_expr)
     type_def = TypeDefinition("Outcome", [field])
     file_ast = GASDFile(types=[type_def])
     

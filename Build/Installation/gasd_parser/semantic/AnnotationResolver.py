@@ -1,8 +1,7 @@
 from typing import Dict, Any, List, Optional
 from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, ScopeEnum
 
-class SemanticError(Exception):
-    pass
+from .SymbolTable import SemanticError
 
 class AnnotationResolver:
     def __init__(self):
@@ -34,23 +33,17 @@ class AnnotationResolver:
 
                     args[key] = val
                     
-            res_ann = ResolvedAnnotation(ann.name, scope, args)
+            res_ann = ResolvedAnnotation(ann.name, scope, args, alias=getattr(ann, 'alias', None))
             self.validate(res_ann)
             resolved.append(res_ann)
             
         return resolved
 
     def validate(self, annotation: ResolvedAnnotation) -> None:
-        if annotation.name == "trace":
-            val = annotation.arguments.get("value")
-            if val is not None and not isinstance(val, str):
-                raise SemanticError(f"@trace annotation expects a string argument, got {type(val)}")
-        elif annotation.name == "sensitive":
-            pass # No specific validation defined for now
-        elif annotation.name == "secure":
-            pass
-        elif annotation.name == "deprecated":
-            pass
+        from .AnnotationRegistry import validate_annotation_semantics
+        error = validate_annotation_semantics(annotation.name, annotation.scope, annotation.arguments)
+        if error:
+            raise SemanticError(error)
 
     def get(self, node: SemanticNodeBase, name: str, parent_node: Optional[SemanticNodeBase] = None) -> Optional[ResolvedAnnotation]:
         # Local annotation

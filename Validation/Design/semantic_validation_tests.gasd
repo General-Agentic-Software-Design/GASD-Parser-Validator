@@ -1,0 +1,74 @@
+VERSION 1.1
+/*
+   Validation: Semantic Validation Engine Tests
+   ==========================================
+   Verifies multi-pass semantic analysis rules.
+   Based on Design/semantic_validation_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-PARSER-004"
+
+// ===================================================================
+// Pass 1: Duplicate Name Detection
+// ===================================================================
+
+FLOW test_duplicate_names():
+    @trace #AC-PARSER-004-01, #AT-PARSER-004-01
+    1. ACHIEVE "Submit file with two FLOWs named 'Login'"
+    2. ENSURE "ValidationPipeline returns a SemanticError"
+        OTHERWISE THROW "Validation Failed"
+    3. ENSURE "Error code is V001 (Duplicate Name)"
+        OTHERWISE THROW "Validation Failed"
+    4. ACHIEVE "Submit file with two TYPEs named 'User'"
+    5. ENSURE "ValidationPipeline returns a SemanticError"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Pass 2: Required Sections Validation
+// ===================================================================
+
+FLOW test_required_sections():
+    @trace #AC-PARSER-004-02, #AT-PARSER-004-02
+    1. ACHIEVE "Submit file missing CONTEXT directive"
+    2. ENSURE "Validation fails with error for missing mandatory directive"
+        OTHERWISE THROW "Validation Failed"
+    3. ACHIEVE "Submit empty file"
+    4. ENSURE "Validation fails: 'At least one TYPE, COMPONENT, or FLOW exists'"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Pass 3: Reference Resolution
+// ===================================================================
+
+FLOW test_reference_resolution():
+    @trace #AC-PARSER-004-03, #AT-PARSER-004-03
+    1. ACHIEVE "Submit FLOW referencing unknown TYPE 'Nonexistent'"
+    2. ENSURE "Validation returns a WARNING (Unknown reference)"
+        OTHERWISE THROW "Validation Failed"
+    3. ACHIEVE "Submit COMPONENT referencing unknown DEPENDENCY"
+    4. ENSURE "Validation returns a WARNING"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// GEP-5 Semantic Tests
+// ===================================================================
+
+FLOW test_validate_as_type_resolution():
+    @trace #AC-PARSER-008-05, #AT-VALIDATE-001, #NT-VALIDATE-002
+    1. ACHIEVE "Submit VALIDATE user AS TYPE.User where 'User' exists"
+    2. ENSURE "Validation succeeds (resolution successful)"
+        OTHERWISE THROW "Validation Failed"
+    3. ACHIEVE "Submit VALIDATE user AS TYPE.MissingType"
+    4. ENSURE "Validation returns SemanticError (Unresolved type binding)"
+        OTHERWISE THROW "Validation Failed"
+    5. ENSURE "Error code is V011 (Unresolved VALIDATE binding)"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every SemanticError MUST include line, column, and context" @trace #AC-PARSER-004-04
+CONSTRAINT: "Validation pipeline MUST NOT halt on the first error" @trace #AC-PARSER-004-01

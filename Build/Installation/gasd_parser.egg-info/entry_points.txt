@@ -1,2 +1,2 @@
 [console_scripts]
-gasd-parser = gasd_parser.cli:main
+gasd_parser = gasd_parser.cli:main

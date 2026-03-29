@@ -1,0 +1,43 @@
+VERSION 1.1
+/*
+   Validation: Semantic AST — Cross-File Test Matrix Validation
+   ============================================================
+   Verifies the comprehensive test matrix and coverage requirements.
+   Based on Design/cross_file_test_matrix.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Test Matrix Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-X-SEMAST-012"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_matrix_coverage():
+    @trace #AT-X-SEMAST-012-01, #AC-X-SEMAST-012-01
+    1. ACHIEVE "Verify the full cross-file test matrix is populated"
+    2. ENSURE "Covers all 12 user stories and 50+ acceptance criteria"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_negative_scenario_coverage():
+    @trace #AT-X-SEMAST-012-02, #AC-X-SEMAST-012-02
+    1. ACHIEVE "Run the mutation fuzzer to generate negative cross-file scenarios"
+    2. ENSURE "All generated negative cases are captured and validated by the reported error set"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_stress_load_validation():
+    @trace #AT-X-SEMAST-012-03, #AC-X-SEMAST-012-02
+    1. ACHIEVE "Run the stress tester with 100+ interdependent files"
+    2. ENSURE "Memory usage remains stable and all references resolve within performance SLAs"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Golden File Tests
+// ===================================================================
+
+FLOW test_semast_golden_file_consistency():
+    @trace #RT-X-SEMAST-012-01
+    1. ACHIEVE "Compare current cross-file output against golden master"
+    2. ENSURE "Zero regression on exported semantic structure"
+        OTHERWISE THROW "Validation Failed"

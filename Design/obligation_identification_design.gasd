@@ -1,0 +1,80 @@
+/*
+   Design: Obligation Identification (AS Identifiers)
+   ====================================================
+   Defines the grammar and semantic rules for the AS identifier system
+   that provides stable, cross-referenceable names for all obligations.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Obligation Identification Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-007"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Identifier Pattern":
+    CHOSEN: "[A-Z][A-Z0-9_]* (uppercase with underscores)"
+    RATIONALE: "Per GEP-6 §6.1, identifiers MUST match [A-Z][A-Z0-9_]* and SHOULD be semantically descriptive."
+    ALTERNATIVES: ["Uppercase with underscores", "Camel case", "Any identifier"]
+    AFFECTS: [ObligationResolver]
+
+DECISION "Auto-ID Generation for 1.1":
+    CHOSEN: "Deterministic: PO-TYPE-FIELD-ANNOTATION"
+    RATIONALE: "Per GEP-6 §6.2, tools MUST generate deterministic identifiers from parent TYPE/FLOW name, field name, and annotation type."
+    ALTERNATIVES: ["Deterministic PO-TYPE-FIELD-ANNOTATION", "UUID-based", "Sequential numbering"]
+    AFFECTS: []
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// Extended annotation grammar with AS identifier.
+TYPE AnnotationAsRule @trace #AC-V2-007-01:
+    syntax: "'@' IDENTIFIER ('(' value_list ')')? ('AS' IDENTIFIER)?"
+
+// ===================================================================
+// Obligation Resolver Component
+// ===================================================================
+
+/// Resolves and validates obligation identifiers across a GASD file.
+COMPONENT ObligationResolver @trace #AC-V2-007-01:
+    PATTERN: "Resolver"
+    DEPENDENCIES: []
+    INTERFACE:
+        resolveIdentifiers(ast: GASDFile) -> Map<String, String>
+        generateAutoId(parentName: String, fieldName: String, annotationType: String) -> String
+        detectCollisions(identifiers: List<String>) -> List<String>
+
+/// Validates AS identifiers based on version.
+FLOW validate_obligation_identifiers(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace #AC-V2-007-03
+    1. ACHIEVE "Collect all annotations from AST"
+    2. ACHIEVE "For each annotation, check if AS identifier is present"
+    3. ACHIEVE "For VERSION 1.2: emit LINT-011 ERROR for annotation without AS"
+    4. ACHIEVE "For VERSION 1.1: auto-generate deterministic identifier PO-TYPE-FIELD-ANNOTATION"
+    5. RETURN "List of errors or auto-generated IDs"
+
+/// Validates AS identifier format and uniqueness.
+FLOW validate_identifier_format_and_uniqueness(ast: GASDFile) -> List<SemanticError>:
+    @trace #AC-V2-007-02, #AC-V2-007-05
+    1. ACHIEVE "Collect all AS identifiers from AST"
+    2. ACHIEVE "For each identifier, validate against regex [A-Z][A-Z0-9_]*"
+    3. ENSURE "All identifiers match the required pattern"
+        OTHERWISE THROW "Invalid identifier format: must match [A-Z][A-Z0-9_]*"
+    4. ACHIEVE "Check for identifier collisions within file scope"
+    5. ENSURE "All identifiers are unique within file scope"
+        OTHERWISE THROW "LINT-010: Identifier collision detected"
+    6. RETURN "List of errors"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "AS identifiers MUST match [A-Z][A-Z0-9_]*" @trace #AC-V2-007-02
+CONSTRAINT: "LINT-011: Missing AS identifier in VERSION 1.2 is an ERROR" @trace #AC-V2-007-03
+CONSTRAINT: "LINT-010: Identifier collisions within file scope are an ERROR" @trace #AC-V2-007-05
+CONSTRAINT: "In VERSION 1.1, auto-generated IDs MUST be deterministic and stable across runs" @trace #AC-V2-007-04
+CONSTRAINT: "Auto-generated IDs MUST NOT collide with author-assigned identifiers" @trace #AC-V2-007-04

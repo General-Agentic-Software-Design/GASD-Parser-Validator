@@ -1,3 +1,4 @@
+VERSION 1.1
 /*
    Design: Type Contract & Binding
    ===============================
@@ -26,7 +27,7 @@ DECISION "Bound Property Visibility":
     CHOSEN: "Merged Semantic Object"
     RATIONALE: "Bound properties (e.g., constants from a validated type) are merged into the local symbol scope for the remainder of the FLOW."
     ALTERNATIVES: ["Scoped Property Access", "Merged Semantic Object"]
-    AFFECTS: [SymbolTable]
+    AFFECTS: []
 
 // ===================================================================
 // Type Contracts

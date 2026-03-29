@@ -1,3 +1,4 @@
+VERSION 1.1
 /*
    Design: Semantic Validation Engine
    ====================================
@@ -25,24 +26,7 @@ DECISION "Error Collection Strategy":
     CHOSEN: "Accumulate All Errors (Non-Halting)"
     RATIONALE: "Users benefit from seeing all validation errors at once rather than fixing one error at a time."
     ALTERNATIVES: ["Accumulate All Errors", "Halt on First Error"]
-    AFFECTS: [ValidationPipeline, SemanticError]
-
-// ===================================================================
-// Validation Error Model
-// ===================================================================
-
-/// A semantic validation error with full location metadata.
-TYPE SemanticError @trace #AC-PARSER-004-04:
-    code: String
-    severity: Enum(ERROR, WARNING, INFO)
-    message: String
-    line: Integer
-    column: Integer
-    endLine: Integer @optional
-    endColumn: Integer @optional
-    sourceFile: String @optional
-    context: String @optional
-    suggestions: List<String> @optional
+    AFFECTS: [SemanticError]
 
 // ===================================================================
 // Validation Passes
@@ -86,9 +70,7 @@ FLOW validate_references() -> List<SemanticError>:
     2. ACHIEVE "Resolve COMPONENT.DEPENDENCIES to known COMPONENTs"
     3. ACHIEVE "Resolve DECISION.AFFECTS to known constructs"
     4. ACHIEVE "Resolve FLOW parameter types to known TYPEs"
-    5. ACHIEVE "Resolve FLOW return types to known TYPEs"
-    6. ACHIEVE "Resolve COMPONENT method parameter types"
-    7. ACHIEVE "Resolve COMPONENT method return types"
+    7. ACHIEVE "Verify that every resource reference in FLOW steps is bound to a COMPONENT RESOURCE"
     8. ACHIEVE "Resolve TYPE field types to primitives or declared TYPEs"
     9. ACHIEVE "Resolve FLOW VALIDATE statements' AS TYPE binding" @trace #AC-PARSER-008-05, #AT-VALIDATE-001
     10. ACHIEVE "Verify IMPORT targets exist"

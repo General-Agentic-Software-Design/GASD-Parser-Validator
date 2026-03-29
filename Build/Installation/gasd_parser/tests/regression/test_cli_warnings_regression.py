@@ -41,7 +41,7 @@ def test_cli_ast_warnings():
 
 def test_cli_ast_sem_warnings():
     """Validates RT-PARSER-008-02: Warning tracking is passed to --ast-sem"""
-    gasd_content = 'CONTEXT: "Test"\nTARGET: "Any"\nNAMESPACE: "n"\nFLOW F:\n  // missing otherwise\n  STEP s1:\n    ENSURE "Condition"'
+    gasd_content = 'VERSION 1.2\nCONTEXT: "Test"\nTARGET: "Any"\nNAMESPACE: "n"\nFLOW F:\n  // missing otherwise\n  1. ENSURE "Condition"'
     tmp = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
     tmp.write(gasd_content)
     tmp.close()

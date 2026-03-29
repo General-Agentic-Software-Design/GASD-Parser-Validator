@@ -1,0 +1,14 @@
+VERSION 1.2
+NAMESPACE: "regression"
+
+TYPE Metadata:
+    created_at: String
+    last_login: Optional<String>
+
+TYPE UserProfile:
+    id: String
+    metadata: Metadata
+
+COMPONENT IdentityManager:
+    INTERFACE:
+        create_profile(username: String, email: String) -> UserProfile

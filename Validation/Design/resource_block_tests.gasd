@@ -1,0 +1,43 @@
+VERSION 1.1
+/*
+   Validation: Semantic AST — Resource Block Tests
+   ===============================================
+   Verifies resource linking and dependency checks.
+   Based on Design/resource_block_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Resource Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-015"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_resource_resolution():
+    @trace #AT-SEMAST-015-01, #AC-SEMAST-015-01, #AC-SEMAST-015-03
+    1. ACHIEVE "Define RESOURCES 'MainDB' as kind DB"
+    2. ENSURE "Produces ResolvedResourceNode with correct enum classification"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_resource_linkage():
+    @trace #AT-SEMAST-015-02, #AC-SEMAST-015-02
+    1. ACHIEVE "Reference 'MainDB' in COMPONENT RESOURCES block"
+    2. ENSURE "Dependency graph registers USES_RESOURCE edge"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_resource_invalid_kind():
+    @trace #AT-SEMAST-015-03, #AC-SEMAST-015-04
+    1. ACHIEVE "Define RESOURCES 'Queue' as kind MAGIC"
+    2. ENSURE "Parser rejects non-standard resource kind classification"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_resource_regression_uri():
+    @trace #RT-SEMAST-015-01
+    1. ACHIEVE "Define resource with malformed URI"
+    2. ENSURE "Optional validation flags URI but preserves node definition"
+        OTHERWISE THROW "Validation Failed"

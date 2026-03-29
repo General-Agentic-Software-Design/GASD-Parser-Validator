@@ -1,0 +1,1019 @@
+```text
+GEP: 0006
+Title: GASD 1.2 — Formal Semantics, Contract Modeling, and Verification Support
+Author: Agentic Software Design (https://github.com/agentic-software-design)
+Status: Accepted
+Type: Standards Track
+Created: 2026-03-21
+```
+
+---
+
+# Abstract
+
+This GEP proposes eight enhancements to GASD 1.1 that formalize annotation semantics, introduce contract modeling, and strengthen specification precision — enabling machine-driven static analysis, adversarial testing, and explicit assumption tracking. All changes are fully backward compatible: existing GASD 1.1 files parse and behave identically under GASD 1.1 processing. **New constructs are REQUIRED in GASD 1.2 files.** A file declaring `VERSION 1.2` MUST include these constructs where applicable.
+
+---
+
+# Specification Integrity Rule
+
+> [!CAUTION]
+> **GASD 1.2 is STRICTLY ADDITIVE.** This GEP MUST NOT alter, remove, or redefine any existing GASD 1.1 grammar rule, construct, keyword, annotation, or semantic definition. All changes in this document are new additions only.
+>
+> When implementing this GEP:
+> - **DO NOT** delete, modify, or reorder any existing GASD 1.1 EBNF production rule
+> - **DO NOT** change the meaning of any existing keyword or annotation
+> - **DO NOT** add text that contradicts or overrides existing specification text
+> - **DO** add new production rules, constructs, and sections clearly marked as `(* GASD 1.2 addition *)`
+> - **DO** preserve the complete GASD 1.1 Formal EBNF Grammar verbatim in any updated grammar appendix
+> - **DO** verify that the complete grammar compiles and is not corrupted after every edit
+>
+> Any implementer updating the GASD specification from this GEP MUST perform a diff verification confirming zero deletions or modifications to existing GASD 1.1 text. Only pure additions are permitted.
+
+# Motivation
+
+GASD 1.1 provides structural precision sufficient for deterministic code generation. However, several gaps limit its suitability for **formal verification and automated quality analysis**:
+
+1. **`ACHIEVE` is undecidable.** It is the only GASD construct that cannot be mechanically verified — it expresses a liveness property with no formal postcondition. Tools that analyze GASD specifications must treat every `ACHIEVE` as an opaque assumption.
+
+2. **Annotations lack formal semantics.** `@retry(3)` and `@transaction_type(ACID)` have implementation-level descriptions but no formal decomposition into what is structurally verifiable, what requires runtime testing, and what must be assumed about the environment. This makes mechanical analysis of annotation compliance imprecise.
+
+3. **IMPORT boundaries have no behavioral contract.** Two components referencing the same TYPE may disagree on edge-case behavior (e.g., does `findByEmail` return `Optional.empty()` or throw when not found?). GASD has no syntax to formalize these behavioral expectations.
+
+4. **Dependencies are implicit.** Step ordering in FLOWs relies on sequential numbering and variable usage inference. No explicit mechanism exists for authors to override inferred dependencies when the inference is wrong.
+
+5. **INVARIANTs have no scope distinction.** A component-local invariant (`balance >= 0`) and a system-wide invariant (`User.email UNIQUE across all entry points`) use the same syntax, making it unclear which requires cross-component verification.
+
+6. **No stable obligation identifiers.** Constraints cannot be named by the author, making traceability between specifications and verification artifacts fragile.
+
+7. **No external model integration.** Distributed protocol correctness (saga compensation, eventual consistency) cannot be verified through code analysis alone. GASD has no mechanism to reference companion formal models (TLA+, Alloy) that verify these properties.
+
+8. **No version declaration.** Tooling cannot determine which GASD version a file targets, preventing version-aware processing.
+
+---
+
+# Specification
+
+## EPIC 1 — Annotation Semantic Triples
+
+### 1.1 Semantic Triple Definition
+
+Every annotation in the Standard Annotation Library (§14 of GASD 1.1) SHALL be defined by a **semantic triple**: `(structural_predicate, runtime_contract, environmental_dependency)`.
+
+| Component | Definition | Verification Method |
+|---|---|---|
+| **Structural Predicate** | A first-order predicate verifiable by static analysis of the AST, CFG, or call graph | Deterministic — pattern matching, control flow analysis |
+| **Runtime Behavior Contract** | A universally-quantified property testable by systematic adversarial input generation | Property-based testing (SmallCheck/QuickCheck semantics) |
+| **Environmental Dependency** | A conditional proposition whose truth depends on the deployment environment | Explicit assumption statement |
+
+**Formal semantic triples for all Standard Annotations:**
+
+#### Data Validation Annotations
+
+| Annotation | Structural Predicate | Runtime Contract | Environmental Dependency |
+|---|---|---|---|
+| `@range(min, max)` | Guard clause present: `∀x ∈ dom(f). guard(x) → min ≤ x ≤ max` | Boundary inputs (min-1, min, max, max+1, null) produce correct accept/reject | None |
+| `@min_length(n)` | Length guard present: `∀x ∈ dom(f). len(x) ≥ n enforced` | Input of length n-1 rejected, length n accepted | None |
+| `@max_length(n)` | Length guard present: `∀x ∈ dom(f). len(x) ≤ n enforced` | Input of length n accepted, length n+1 rejected | None |
+| `@format(fmt)` | Regex/validator constant present matching the named format | 10,000+ adversarial inputs per format type all handled correctly | None |
+| `@unique(scope)` | Uniqueness check call routed through specified scope | Duplicate input correctly rejected; concurrent duplicates handled | DB-level unique constraint exists and is enforced |
+| `@default(val)` | Default value assignment present in constructor/factory | Missing input receives exactly `val` | None |
+| `@constraint(desc)` | Validation logic present matching described constraint | Systematic inputs violating the constraint are rejected | None |
+
+#### Architectural Annotations
+
+| Annotation | Structural Predicate | Runtime Contract | Environmental Dependency |
+|---|---|---|---|
+| `@injectable` | DI-compatible constructor generated (no `new` instantiation) | Component resolved from DI container at runtime | DI container configured correctly |
+| `@mockable` | Interface abstraction generated; no concrete class dependency | Mock implementation substitutable in tests | None |
+| `@transaction_type(ACID)` | `@Transactional` annotation present, scope correct | Forced rollback scenarios roll back all writes within scope | DB isolation ≥ READ COMMITTED; connection pool configured; no cross-service TX propagation |
+| `@transaction_type(SAGA)` | Saga orchestrator/choreography pattern present | Compensation logic executes on partial failure | All saga participants implement compensating transactions |
+
+#### Implementation Modifier Annotations
+
+| Annotation | Structural Predicate | Runtime Contract | Environmental Dependency |
+|---|---|---|---|
+| `@async` | Return type is Future/Promise/Void; non-blocking dispatch | Async operation does not block synchronous caller; completes eventually | Thread pool size ≥ required concurrency |
+| `@retry(n)` | Retry wrapper present in code with count = n | Under injected failures 1..n: retries occur; failure n+1: exception propagates | Operations are idempotent OR compensation logic present |
+| `@timeout(ms)` | Timeout parameter present in client/call configuration | Under induced latency > ms: TimeoutException thrown within tolerance | External service latency distribution within configured bounds |
+| `@external` | Network boundary error handling present (try/catch or equivalent) | Connection failure, timeout, and malformed response all handled | External service reachable at configured endpoint |
+| `@hash(algo)` | Named algorithm implementation present; no alternative hash functions reachable in call graph | Hash output matches expected format for named algorithm | Algorithm library available in runtime classpath |
+| `@circuit_breaker` | Circuit breaker wrapper present with open/half-open/closed states | After N consecutive failures, circuit opens; after timeout, half-open test | None |
+| `@cacheable(ttl)` | Cache annotation present with correct TTL value | Cache hit returns consistent value within TTL window; expiry triggers refresh | Cache infrastructure available; eviction policy compatible |
+| `@idempotent` | No side-effect duplication on repeated calls with same input | Repeated identical calls produce identical system state | None |
+
+#### Extended Annotations
+
+| Annotation | Structural Predicate | Runtime Contract | Environmental Dependency |
+|---|---|---|---|
+| `@sensitive` | Field masked in all log output; encryption at rest applied | Sensitive value never appears in plaintext logs under any code path | Encryption key management configured |
+| `@authorized(role)` | Role check present before protected operation | Unauthorized role correctly rejected; authorized role correctly admitted | Authentication/authorization service available |
+
+### 1.2 Semantic Registry
+
+A centralized **Annotation Semantic Registry** SHALL store all semantic triples.
+
+**Format:**
+
+```gasd
+// Registry entry (internal representation)
+ANNOTATION_SEMANTIC @retry(n):
+    STRUCTURAL:
+        "Retry wrapper present in code with count = n"
+        VERIFICATION: AST_PATTERN_MATCH
+    RUNTIME:
+        "Under injected failures 1..n: retries; failure n+1: throws"
+        VERIFICATION: PROPERTY_BASED_TEST
+    ENVIRONMENTAL:
+        "Operations are idempotent OR compensation logic present"
+        VERIFICATION: ASSUMPTION_STATEMENT
+```
+
+**Rules:**
+- Registry MUST support lookup by annotation type
+- Registry MUST support versioning (semantic definitions may evolve across GASD versions)
+- Resolution MUST be deterministic — same annotation always resolves to same triple
+- Registry MUST be accessible to all processing modules (parsers, analyzers, linters)
+
+---
+
+## EPIC 2 — ACHIEVE Outcome Formalization
+
+### 2.1 POSTCONDITION Block
+
+A new **REQUIRED** block `POSTCONDITION` MUST be present under all `ACHIEVE` constructs in GASD 1.2 files.
+
+**Syntax:**
+
+```gasd
+ACHIEVE "Create payment customer"
+    POSTCONDITION:
+        result.customerId IS UUID
+        result.status == "ACTIVE"
+    ON_ERROR: THROW BadGatewayException("Payment setup failed")
+    TIMEOUT: 3000ms
+```
+
+**Grammar addition:**
+```ebnf
+achieve_stmt  ::= "ACHIEVE" string_literal [ ":" achieve_body ] [ annotations ]
+achieve_body  ::= indent
+                  [ "POSTCONDITION" ":" indent { postcondition_expr } dedent ]
+                  [ on_error_clause ]
+                  [ "TIMEOUT" ":" duration_literal ]
+                  dedent
+
+postcondition_expr ::= expr ( "IS" | "==" | "!=" | ">" | "<" | ">=" | "<=" ) expr
+duration_literal   ::= number_literal ( "ms" | "s" | "m" )
+```
+
+**Semantic impact:**
+
+| ACHIEVE variant | Structural Predicate | Verification Strength |
+|---|---|---|
+| Without POSTCONDITION (GASD 1.1) | None — undecidable | Assumption only; warning emitted |
+| With POSTCONDITION (GASD 1.2) | Each postcondition expression maps to a decidable predicate | Static analysis verifies structure; adversarial testing verifies runtime behavior |
+
+**POSTCONDITION expressions support:**
+
+| Operator | Example | Verification |
+|---|---|---|
+| `IS` | `result.id IS UUID` | Type check on return value |
+| `==` | `result.status == "ACTIVE"` | Equality assertion |
+| `!=` | `result.error != null` | Inequality assertion |
+| `>`, `<`, `>=`, `<=` | `result.count >= 1` | Numeric comparison |
+
+**TIMEOUT** specifies a maximum execution duration. If present, the structural predicate includes timeout wrapper presence; the runtime contract includes timeout behavior testing.
+
+### 2.2 Backward Compatibility for ACHIEVE
+
+- In `VERSION 1.1` files: ACHIEVE without POSTCONDITION MUST remain valid (no parsing failure)
+- In `VERSION 1.2` files: ACHIEVE without POSTCONDITION SHALL produce an **error**, not a warning
+- Analyzers MUST emit error: `"ACHIEVE without POSTCONDITION — REQUIRED in GASD 1.2"`
+
+---
+
+## EPIC 3 — Contract Modeling
+
+### 3.1 CONTRACT Block
+
+A new top-level block `CONTRACT` SHALL define formal behavioral specifications for component interfaces, particularly at IMPORT boundaries.
+
+**Syntax:**
+
+```gasd
+CONTRACT PaymentService.createCustomer:
+    INPUT: email: String
+    OUTPUT: PaymentCustomer
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "ACTIVE"
+            POSTCONDITION: result.customerId IS UUID
+        CASE service_failure:
+            THROWS: PaymentGatewayException
+            AFTER: retry(2)
+        CASE timeout:
+            THROWS: PaymentGatewayException
+            AFTER: 3000ms
+        CASE null_input:
+            THROWS: IllegalArgumentException
+    IDEMPOTENT: true
+    VERSION: "1.0.0"
+```
+
+**Grammar addition:**
+```ebnf
+contract_def  ::= "CONTRACT" qualified_name ":" indent
+                  "INPUT" ":" param_list
+                  "OUTPUT" ":" type_expr
+                  "BEHAVIORS" ":" indent { case_def } dedent
+                  [ "IDEMPOTENT" ":" boolean_literal ]
+                  [ "VERSION" ":" string_literal ]
+                  dedent
+
+case_def      ::= "CASE" identifier ":" indent
+                  { case_clause }
+                  dedent
+
+case_clause   ::= "POSTCONDITION" ":" postcondition_expr
+                | "THROWS" ":" identifier
+                | "AFTER" ":" ( duration_literal | identifier "(" value_list ")" )
+
+qualified_name ::= identifier { "." identifier }
+```
+
+**Rules:**
+- CONTRACT MUST define at least one CASE under BEHAVIORS
+- Each CASE MUST specify either POSTCONDITION or THROWS (or both for partial outcomes)
+- CONTRACTs SHALL be linkable to IMPORT aliases: `CONTRACT Pay.createCustomer` references `IMPORT "payment.gasd" AS Pay`
+- CONTRACTs MUST cover all observable behaviors including error cases, timeout behavior, and null handling
+
+**Verification impact:** When a CONTRACT is defined for an IMPORT boundary, both provider and consumer specifications can be independently verified against the same behavioral definition — closing the "mock gap" where component-level tests pass against mocks that disagree with real implementations.
+
+### 3.2 Contract Registry
+
+- Each CONTRACT SHALL have a deterministic hash computed from its content
+- The hash MUST be stable: identical CONTRACT content always produces the identical hash
+- Both provider and consumer MUST compile against the same CONTRACT hash
+- A change to either side that invalidates a CONTRACT clause SHALL trigger re-verification
+
+### 3.3 Contract Requirement at IMPORT Boundaries
+
+- In `VERSION 1.2` files: every IMPORT MUST have a corresponding CONTRACT definition
+- Missing CONTRACT at an IMPORT boundary SHALL produce an **error**: `"IMPORT without CONTRACT — REQUIRED in GASD 1.2"`
+- In `VERSION 1.1` files: missing CONTRACT SHALL NOT cause parsing failure (signature-only agreement applies)
+
+---
+
+## EPIC 4 — Dependency Semantics
+
+### 4.1 Explicit Step Dependencies
+
+A new `DEPENDS_ON` clause SHALL allow FLOW steps to declare explicit dependencies.
+
+**Syntax:**
+
+```gasd
+FLOW process_order(order: Order) -> Receipt:
+    1. VALIDATE order AS TYPE.Order
+    2. ACHIEVE "Check inventory"
+        POSTCONDITION: result.available == true
+    3. ACHIEVE "Reserve payment" DEPENDS_ON STEP 2
+        POSTCONDITION: result.reserved == true
+    4. ACHIEVE "Ship order" DEPENDS_ON STEP 2, STEP 3
+        POSTCONDITION: result.shipped == true
+    5. RETURN Receipt
+```
+
+**Grammar addition:**
+```ebnf
+flow_step     ::= step_number "." ( action | control_flow ) [ depends_clause ] [ annotations ]
+depends_clause ::= "DEPENDS_ON" step_ref { "," step_ref }
+step_ref      ::= "STEP" step_number
+```
+
+**Rules:**
+- DEPENDS_ON MUST reference only step numbers that exist within the same FLOW
+- DEPENDS_ON MUST NOT create circular dependencies
+- When DEPENDS_ON is present, it SHALL override inferred dependencies for that step
+- In `VERSION 1.2` files: steps whose dependencies cannot be unambiguously inferred MUST use explicit DEPENDS_ON
+- Steps with unambiguous sequential dependencies (each step uses output of previous step) MAY omit DEPENDS_ON
+
+**Verification impact:** Explicit dependencies allow tools to construct a precise dependency graph — a directed acyclic graph of obligations ordered by dependency. This determines which obligations can be verified in parallel and which must be verified sequentially.
+
+### 4.2 Dependency Inference (Backward Compatible)
+
+- When DEPENDS_ON is absent, dependencies SHALL be inferred from:
+  - Variable usage: if step N uses the output of step M, then N depends on M
+  - Sequential ordering: step N implicitly depends on step N-1 unless DEPENDS_ON overrides
+- Inference MUST produce deterministic results
+- Analyzers SHOULD emit info: `"Step N: inferred dependency on Step M via variable 'x'"`
+
+---
+
+## EPIC 5 — Invariant Scoping
+
+### 5.1 Scoped Invariants
+
+The `INVARIANT` construct SHALL support an explicit scope qualifier.
+
+**Syntax:**
+
+```gasd
+// Component-scoped: verified within this component's boundary
+INVARIANT LOCAL:
+    "Account balance must never be negative"
+
+// System-scoped: verified across all components and entry points
+INVARIANT GLOBAL:
+    "User email must be unique in the system at all times"
+```
+
+**Grammar addition:**
+```ebnf
+invariant_def ::= "INVARIANT" [ scope_qualifier ] ":" string_literal
+
+scope_qualifier ::= "LOCAL" | "GLOBAL"
+```
+
+**Semantic difference:**
+
+| Scope | Verification Scope | Example |
+|---|---|---|
+| `LOCAL` (default) | Single component boundary; tested against component interfaces | `"balance >= 0"` — verifiable by testing the service that manages balances |
+| `GLOBAL` | All components, all entry points, database constraints, admin bypass paths | `"User.email UNIQUE"` — requires application check + DB constraint + absence of bypass paths |
+
+**Rules:**
+- In `VERSION 1.2` files: scope qualifier is **REQUIRED** — `INVARIANT` without `LOCAL` or `GLOBAL` SHALL produce an error
+- In `VERSION 1.1` files: missing scope qualifier SHALL default to `LOCAL`
+- GLOBAL invariants MUST include a GASD-level comment identifying all enforcement points
+- Analyzers MUST error when a GLOBAL invariant has only application-level enforcement without database-level constraints
+
+### 5.2 Default Scope Handling
+
+- In `VERSION 1.1` files: existing `INVARIANT: "..."` syntax (no scope) SHALL be treated as `INVARIANT LOCAL: "..."`
+- In `VERSION 1.2` files: `INVARIANT: "..."` without scope SHALL produce an error — scope MUST be explicit
+
+---
+
+## EPIC 6 — Obligation Identification
+
+### 6.1 Named Constraint Identifiers
+
+Annotations and constraints MUST include an `AS` identifier in GASD 1.2 files for stable cross-referencing.
+
+**Syntax:**
+
+```gasd
+TYPE RequestData:
+    email: String
+        @format("email") AS EMAIL_FORMAT
+        @max_length(254) AS EMAIL_LENGTH
+    password: String
+        @min_length(8) AS PASSWORD_MIN
+        @constraint("must contain uppercase and digit") AS PASSWORD_COMPLEXITY
+```
+
+**Grammar addition:**
+```ebnf
+annotations   ::= annotation { annotation }
+annotation    ::= "@" identifier [ "(" value_list ")" ] [ "AS" identifier ]
+```
+
+**Rules:**
+- Identifiers MUST be unique within the file scope
+- Identifiers MUST match the pattern `[A-Z][A-Z0-9_]*` (uppercase with underscores)
+- Identifiers SHOULD be semantically descriptive
+
+**Verification impact:** Named identifiers appear in verification reports, lint output, and traceability matrices — providing stable references that survive AST refactoring.
+
+### 6.2 Automatic Identifier Generation (VERSION 1.1 Fallback)
+
+- In `VERSION 1.1` files where `AS` is not provided, tools MUST generate deterministic identifiers from:
+  - The parent TYPE or FLOW name
+  - The field name
+  - The annotation type
+  - Example: `@format("email")` on `RequestData.email` → `PO-REQUESTDATA-EMAIL-FORMAT`
+- Generated identifiers MUST be stable across runs (same input → same identifier)
+- Generated identifiers MUST NOT collide with author-assigned identifiers
+- In `VERSION 1.2` files: missing `AS` identifier SHALL produce an error
+
+---
+
+## EPIC 7 — External Model Integration
+
+### 7.1 Model Reference Block
+
+A new `MODEL` block SHALL allow GASD files to reference external formal verification models. In GASD 1.2 files, a `MODEL` block is **REQUIRED** when a GASD file contains `INVARIANT GLOBAL` statements that involve distributed or cross-service properties.
+
+**Syntax:**
+
+```gasd
+MODEL "Payment Saga Correctness":
+    TYPE: TLA+
+    FILE: "models/payment_saga.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Payment and user creation are atomic"
+    ASSUMPTIONS:
+        "Network partitions resolve within retry budget"
+        "All saga participants implement compensating transactions"
+```
+
+**Grammar addition:**
+```ebnf
+model_def     ::= "MODEL" string_literal ":" indent
+                  "TYPE" ":" model_type
+                  "FILE" ":" string_literal
+                  [ "VERIFIES" ":" indent { invariant_ref } dedent ]
+                  [ "ASSUMPTIONS" ":" indent { string_literal } dedent ]
+                  dedent
+
+model_type    ::= "TLA+" | "Alloy" | "Spin" | "Promela" | string_literal
+invariant_ref ::= invariant_def | "INVARIANT" scope_qualifier ":" string_literal
+```
+
+**Rules:**
+- MODEL blocks are REQUIRED when `INVARIANT GLOBAL` references distributed properties that cannot be verified by code analysis alone
+- MODEL blocks are OPTIONAL for INVARIANTs that can be verified structurally
+- Missing model files SHALL produce an error in GASD 1.2 files
+- When a MODEL references an INVARIANT, the INVARIANT's verification scope is extended to include the model's verification results
+- Analyzers MUST validate that the FILE path exists
+
+**Verification impact:** Distributed protocol correctness (temporal properties like message ordering, crash recovery, network partition behavior) requires model checking — not code analysis. MODEL blocks provide a pathway to incorporate external verification results into GASD verification reports.
+
+### 7.2 Missing Model Handling
+
+- When a MODEL is referenced but the file is missing, analyzers MUST emit an error: `"MODEL file 'payment_saga.tla' not found — REQUIRED for INVARIANT GLOBAL verification"`
+- In `VERSION 1.1` files: missing model files SHALL produce a warning, not an error
+
+---
+
+## EPIC 8 — Assumption & Warning System
+
+### 8.1 Explicit ASSUMPTION Blocks
+
+A new `ASSUMPTION` construct is **REQUIRED** in GASD 1.2 files. GASD authors MUST explicitly declare all environmental assumptions.
+
+**Syntax:**
+
+```gasd
+ASSUMPTION "PostgreSQL 15+ with READ COMMITTED isolation":
+    AFFECTS: [@transaction_type(ACID)]
+    CONSEQUENCE: "ACID semantics may not hold if violated"
+
+ASSUMPTION "Payment gateway responds within 3000ms":
+    AFFECTS: [PaymentService.createCustomer]
+    CONSEQUENCE: "Timeout behavior undefined if violated"
+
+ASSUMPTION "BCrypt library version >= 2.3 in classpath":
+    AFFECTS: [@hash("bcrypt")]
+```
+
+**Grammar addition:**
+```ebnf
+assumption_def ::= "ASSUMPTION" string_literal ":" indent
+                   [ "AFFECTS" ":" list_literal ]
+                   [ "CONSEQUENCE" ":" string_literal ]
+                   dedent
+                 | "ASSUMPTION" ":" string_literal   (* inline form *)
+```
+
+**Rules:**
+- ASSUMPTIONs MUST be included in all verification output and reports
+- Each ASSUMPTION MUST specify which annotations or components it AFFECTS
+- CONSEQUENCE is REQUIRED — it describes the failure mode if the assumption is violated
+- Annotations with environmental dependencies (see EPIC 1 semantic triples) MUST have a corresponding ASSUMPTION block
+
+### 8.2 Analyzer Warning System
+
+Analyzers SHALL emit warnings for the following underspecified patterns:
+
+| Pattern | Warning | Severity |
+|---|---|---|
+| `ACHIEVE` without `POSTCONDITION` | `"ACHIEVE outcome is unverifiable — add POSTCONDITION"` | Warning |
+| `IMPORT` without `CONTRACT` | `"Boundary behavior is assumed — add CONTRACT"` | Warning |
+| `INVARIANT` without scope | `"INVARIANT scope defaults to LOCAL — specify GLOBAL if system-wide"` | Info |
+| `@transaction_type(ACID)` without `ASSUMPTION` | `"ACID semantics require environmental assumptions"` | Warning |
+| `@retry(n)` without `@idempotent` | `"Retry safety requires idempotent operation"` | Warning |
+| TYPE with annotations but no VALIDATE binding | `"TYPE has constraints but no VALIDATE binding"` | Warning (existing from §5.3) |
+
+---
+
+## EPIC 9 — Linting Engine
+
+### 9.1 Lint Rules
+
+GASD 1.2 analyzers MUST implement the following lint rules:
+
+| Rule ID | Pattern | Recommendation | Severity (v1.2) | Severity (v1.1) |
+|---|---|---|---|---|
+| `LINT-001` | ACHIEVE without POSTCONDITION | Add POSTCONDITION — REQUIRED in 1.2 | **Error** | Warning |
+| `LINT-002` | IMPORT without CONTRACT | Add CONTRACT — REQUIRED in 1.2 | **Error** | Warning |
+| `LINT-003` | INVARIANT without scope qualifier | Specify LOCAL or GLOBAL — REQUIRED in 1.2 | **Error** | Info |
+| `LINT-004` | @retry without @idempotent | Add @idempotent or document compensation logic | **Error** | Warning |
+| `LINT-005` | @transaction_type without ASSUMPTION | Add ASSUMPTION — REQUIRED in 1.2 | **Error** | Warning |
+| `LINT-006` | GLOBAL INVARIANT with only application-level enforcement | Add DB constraint or document why application-only is sufficient | **Error** | Warning |
+| `LINT-007` | CONTRACT CASE without THROWS or POSTCONDITION | Each case must specify an observable outcome | **Error** | Error |
+| `LINT-008` | DEPENDS_ON references non-existent step | Step number must exist in the same FLOW | **Error** | Error |
+| `LINT-009` | DEPENDS_ON creates circular dependency | Dependency graph must be acyclic | **Error** | Error |
+| `LINT-010` | Obligation identifier collision | AS identifiers must be unique within file scope | **Error** | Error |
+| `LINT-011` | Annotation without AS identifier | Add AS identifier — REQUIRED in 1.2 | **Error** | Info |
+| `LINT-012` | Annotation with environmental dependency but no ASSUMPTION | Add ASSUMPTION block | **Error** | Warning |
+
+---
+
+## EPIC 10 — Version Declaration
+
+### 10.1 VERSION Directive
+
+A new `VERSION` directive SHALL declare the GASD specification version a file targets.
+
+**Syntax:**
+
+```gasd
+VERSION 1.2
+CONTEXT: "Spring Boot microservice"
+TARGET: "Java 17"
+```
+
+**Grammar addition:**
+```ebnf
+version_stmt  ::= "VERSION" version_number
+version_number ::= number_literal "." number_literal [ "." number_literal ]
+```
+
+**Rules:**
+- VERSION MUST appear as the first directive, before CONTEXT and TARGET
+- VERSION is **REQUIRED** in GASD 1.2 files; missing VERSION SHALL be treated as GASD 1.1 for backward compatibility
+- Analyzers MUST support all GASD versions ≥ 1.0
+
+### 10.2 Version Compatibility
+
+- Files declaring `VERSION 1.1` MUST be processed using GASD 1.1 semantics only
+- Files declaring `VERSION 1.2` MUST use all new constructs defined in this GEP where applicable
+- New constructs in a `VERSION 1.1` file SHALL produce a lint warning, not a parse error, to support gradual migration
+- Files without VERSION declaration SHALL be treated as `VERSION 1.1` — enforcing new constructs requires explicit opt-in via `VERSION 1.2`
+
+---
+
+# Rationale
+
+## Why Semantic Triples?
+
+The alternative — single-statement definitions like "generates retry logic" — is ambiguous. When `@retry(3)` is defined only as "wraps call in retry logic," it is unclear whether:
+- The structure (retry wrapper present) is verified
+- The behavior (actually retries on failure) is tested
+- The environment (operation is idempotent) is assumed
+
+The semantic triple makes each dimension explicit and independently actionable.
+
+## Why CONTRACT Instead of Extending INTERFACE?
+
+INTERFACE defines the method signature. CONTRACT defines the method's **behavioral expectations** across all cases — success, failure, timeout, null, and edge cases. These are separate concerns: a method can have a correct signature but incorrect timeout behavior. Merging them into INTERFACE would overload GASD's existing structural mechanism with behavioral semantics.
+
+## Why Not Extend ENSURE/OTHERWISE for Postconditions?
+
+ENSURE is a guard clause: it checks a precondition and throws on violation. POSTCONDITION is an outcome declaration: it asserts what must be true after execution. These are logically dual — precondition vs postcondition — and using the same syntax would be confusing. POSTCONDITION specifically addresses the undecidability of ACHIEVE by providing testable outcome assertions.
+
+## Why Explicit ASSUMPTION Blocks?
+
+Annotations like `@transaction_type(ACID)` have implicit environmental dependencies (DB isolation level, connection pool configuration). Without explicit ASSUMPTION blocks, these dependencies are invisible. Making them explicit ensures verification reports honestly state what the system guarantees and what it assumes.
+
+---
+
+# Backwards Compatibility
+
+**Fully backward compatible for GASD 1.1 files.** Existing files without `VERSION 1.2` parse and behave identically. **New constructs are REQUIRED when a file declares `VERSION 1.2`.**
+
+| Construct | VERSION 1.1 (absent) | VERSION 1.2 (absent) |
+|---|---|---|
+| POSTCONDITION | Warning — ACHIEVE treated as underspecified | **Error** — MUST be present on all ACHIEVE |
+| CONTRACT | Warning — signature-only agreement | **Error** — MUST be present for all IMPORTs |
+| DEPENDS_ON | Inferred from variable usage + sequence | **Error** if dependencies are ambiguous |
+| INVARIANT scope | Defaults to LOCAL | **Error** — scope MUST be explicit |
+| AS identifier | Auto-generated from AST position | **Error** — MUST be author-specified |
+| MODEL | Distributed invariants in default scope | **Error** if GLOBAL INVARIANT involves distributed properties |
+| ASSUMPTION | Environmental dependencies implicit | **Error** — MUST be explicit for all environmental annotations |
+| VERSION | Treated as VERSION 1.1 | N/A — VERSION is required |
+
+No existing GASD 1.1 file requires modification. Upgrading to GASD 1.2 requires adding all REQUIRED constructs.
+
+---
+
+# Reference Implementation
+
+## Complete Formal EBNF Grammar (GASD 1.2)
+
+This grammar includes every GASD 1.1 production rule **verbatim and unmodified**, plus GASD 1.2 additions marked with `(* GASD 1.2 addition *)`. No GASD 1.1 rule has been altered or removed.
+
+```ebnf
+(* ══════════════════════════════════════════════════════════════ *)
+(* GASD 1.2 Grammar                                             *)
+(* Includes complete GASD 1.1 grammar + GASD 1.2 additions      *)
+(* GASD 1.1 rules are UNCHANGED — 1.2 additions clearly marked  *)
+(* ══════════════════════════════════════════════════════════════ *)
+
+(* --- Top-level file structure --- *)
+
+gasd_file     ::= { section }
+section       ::= context_dir | namespace_stmt | import_stmt | decision_blk
+                | type_def | component_def | flow_def | strategy_def
+                | constraint | resources_stmt
+                | version_stmt                            (* GASD 1.2 addition *)
+                | contract_def                             (* GASD 1.2 addition *)
+                | model_def                                (* GASD 1.2 addition *)
+                | assumption_def                           (* GASD 1.2 addition *)
+
+resources_stmt::= "RESOURCES" ":" indent { resource_item } dedent
+resource_item ::= "-" string_literal [ annotations ]
+
+(* --- Context & Directives --- *)
+
+context_dir   ::= ( "CONTEXT" | "TARGET" | "TRACE" ) ":" value { "," value }
+namespace_stmt::= "NAMESPACE" ":" string_literal
+import_stmt   ::= "IMPORT" string_literal [ "AS" identifier ]
+value         ::= string_literal | number_literal | boolean_literal
+
+(* GASD 1.2 addition *)
+version_stmt  ::= "VERSION" version_number
+version_number::= number_literal "." number_literal [ "." number_literal ]
+
+(* --- Decisions --- *)
+
+decision_blk  ::= "DECISION" string_literal [ annotations ] ":" indent
+                  "CHOSEN" ":" string_literal
+                  [ "RATIONALE" ":" string_literal ]
+                  [ "AFFECTS" ":" list_literal ]
+                  dedent
+
+(* --- Types --- *)
+
+type_def      ::= "TYPE" identifier [ annotations ] ":" indent
+                  { field_def }
+                  dedent
+
+field_def     ::= identifier ":" type_expr [ annotations ]
+
+type_expr     ::= identifier
+                | string_literal    (* Allows "Todo", "Review", etc. *)
+                | number_literal    (* Allows 200, 404, etc. *)
+                | "List" "<" type_expr ">"
+                | "Map" "<" type_expr "," type_expr ">"
+                | "Enum" "(" (identifier | string_literal) { "," (identifier | string_literal) } ")"
+                | "Optional" "<" type_expr ">"
+
+(* --- Components --- *)
+
+component_def ::= "COMPONENT" identifier [ annotations ] ":" indent
+                  [ "PATTERN" ":" string_literal ]
+                  [ "DEPENDENCIES" ":" list_literal ]
+                  "INTERFACE" ":" indent
+                  { method_sig }
+                  dedent dedent
+
+method_sig    ::= identifier "(" [ param_list ] ")" "->" type_expr
+
+(* --- Flows --- *)
+
+flow_def      ::= "FLOW" identifier "(" [ param_list ] ")" [ "->" type_expr ] ":" indent
+                  { flow_step }
+                  dedent
+
+flow_step     ::= step_number "." ( action | control_flow )
+                  [ depends_clause ]                       (* GASD 1.2 addition *)
+                  [ annotations ]
+
+action        ::= "VALIDATE" expr asBinding
+                | "ACHIEVE" string_literal [ ":" achieve_body ] [ block ]   (* GASD 1.2: achieve_body added *)
+                | "CREATE" identifier ":" block
+                | "PERSIST" identifier "via" identifier
+                | "UPDATE" identifier "SET" identifier "=" expr
+                | "APPLY" identifier "TO" expr
+                | "THROW" identifier [ "(" arg_list ")" ]
+                | "RETURN" expr
+                | "LOG" string_literal
+
+asBinding     ::= "AS" typePath
+typePath      ::= "TYPE" "." typeIdentifier { "." fieldIdentifier }
+typeIdentifier::= IDENTIFIER
+fieldIdentifier::= IDENTIFIER
+
+assignments   ::= property { "," property }
+
+control_flow  ::= "ENSURE" condition [ "OTHERWISE" action ]
+                | "MATCH" expr ":" indent { match_case } dedent
+                | "IF" condition ":" indent { flow_step } dedent [ "ELSE" ":" indent { flow_step } dedent ]
+
+match_case    ::= pattern_list "->" ( flow_step | action )
+pattern_list  ::= pattern { "|" pattern }
+pattern       ::= [ "CONTAINS" ] ( string_literal | number_literal | identifier | "DEFAULT" )
+
+block         ::= indent { property | annotation | flow_step | on_error_clause } dedent
+on_error_clause ::= "ON_ERROR" ":" action
+property      ::= identifier ":" value
+
+value         ::= string_literal | number_literal | boolean_literal | identifier | expr
+
+expr          ::= term { bin_op term }
+term          ::= "TRANSFORM" "(" value "," annotations ")"
+                | value
+                | identifier { "." identifier } [ "(" [ arg_list ] ")" ]
+bin_op        ::= "+" | "-" | "*" | "/" | "^" | "==" | "!=" | ">" | "<" | ">=" | "<="
+arg_list      ::= value { "," value }
+
+(* --- Strategies --- *)
+
+strategy_def  ::= "STRATEGY" identifier [ annotations ] ":" indent
+                  "ALGORITHM" ":" string_literal
+                  [ "PRECONDITION" ":" condition ]
+                  [ "COMPLEXITY" ":" string_literal ]
+                  [ "INPUT" ":" param_list ]
+                  [ "OUTPUT" ":" type_expr ]
+                  dedent
+
+(* --- Constraints & Invariants --- *)
+
+constraint    ::= ( "CONSTRAINT" | "ENSURE" ) ":" string_literal
+                | invariant_def
+
+invariant_def ::= "INVARIANT" [ scope_qualifier ] ":" string_literal   (* GASD 1.2: scope_qualifier added *)
+
+(* GASD 1.2 addition *)
+scope_qualifier ::= "LOCAL" | "GLOBAL"
+
+(* --- Lexical Tokens --- *)
+
+identifier    ::= [a-zA-Z_#] { [a-zA-Z0-9_.-] }
+string_literal::= '"' { character } '"'
+step_number   ::= digit { digit }
+indent        ::= (* implied indentation increase *)
+dedent        ::= (* implied indentation decrease *)
+param_list    ::= param { "," param }
+param         ::= identifier ":" type_expr
+list_literal  ::= "[" value { "," value } "]"
+condition     ::= expr
+
+(* --- Annotations (GASD 1.2: extended with AS identifier) --- *)
+
+annotations   ::= annotation { annotation }
+annotation    ::= "@" identifier [ "(" value_list ")" ] [ "AS" identifier ]    (* GASD 1.2: AS clause added *)
+value_list    ::= value { "," value }
+
+(* ══════════════════════════════════════════════════════════════ *)
+(* GASD 1.2 NEW CONSTRUCTS — additions only, no 1.1 changes     *)
+(* ══════════════════════════════════════════════════════════════ *)
+
+(* --- ACHIEVE POSTCONDITION (GASD 1.2 addition) --- *)
+
+achieve_body  ::= indent
+                  [ "POSTCONDITION" ":" indent { postcondition_expr } dedent ]
+                  [ on_error_clause ]
+                  [ "TIMEOUT" ":" duration_literal ]
+                  dedent
+
+postcondition_expr ::= expr comparison_op expr
+comparison_op ::= "IS" | "==" | "!=" | ">" | "<" | ">=" | "<="
+duration_literal ::= number_literal ( "ms" | "s" | "m" )
+
+(* --- DEPENDS_ON (GASD 1.2 addition) --- *)
+
+depends_clause ::= "DEPENDS_ON" step_ref { "," step_ref }
+step_ref       ::= "STEP" step_number
+
+(* --- CONTRACT (GASD 1.2 addition) --- *)
+
+contract_def  ::= "CONTRACT" qualified_name ":" indent
+                  "INPUT" ":" param_list
+                  "OUTPUT" ":" type_expr
+                  "BEHAVIORS" ":" indent { case_def } dedent
+                  [ "IDEMPOTENT" ":" boolean_literal ]
+                  [ "VERSION" ":" string_literal ]
+                  dedent
+
+case_def      ::= "CASE" identifier ":" indent
+                  { case_clause }
+                  dedent
+
+case_clause   ::= "POSTCONDITION" ":" postcondition_expr
+                | "THROWS" ":" identifier
+                | "AFTER" ":" ( duration_literal | identifier "(" value_list ")" )
+
+qualified_name ::= identifier { "." identifier }
+
+(* --- MODEL (GASD 1.2 addition) --- *)
+
+model_def     ::= "MODEL" string_literal ":" indent
+                  "TYPE" ":" model_type
+                  "FILE" ":" string_literal
+                  [ "VERIFIES" ":" indent { invariant_ref } dedent ]
+                  [ "ASSUMPTIONS" ":" indent { string_literal } dedent ]
+                  dedent
+
+model_type    ::= "TLA+" | "Alloy" | "Spin" | "Promela" | string_literal
+invariant_ref ::= invariant_def | "INVARIANT" scope_qualifier ":" string_literal
+
+(* --- ASSUMPTION (GASD 1.2 addition) --- *)
+
+assumption_def ::= "ASSUMPTION" string_literal ":" indent
+                   [ "AFFECTS" ":" list_literal ]
+                   [ "CONSEQUENCE" ":" string_literal ]
+                   dedent
+                 | "ASSUMPTION" ":" string_literal           (* inline form *)
+
+(* ══════════════════════════════════════════════════════════════ *)
+(* END OF GASD 1.2 GRAMMAR                                      *)
+(* ══════════════════════════════════════════════════════════════ *)
+```
+
+## AST Node Additions
+
+| New Node Type | Parent | Fields |
+|---|---|---|
+| `PostconditionNode` | `AchieveNode` | `expressions: List<PostconditionExpr>` |
+| `ContractNode` | Root | `target, input, output, cases: List<CaseNode>, version, idempotent` |
+| `CaseNode` | `ContractNode` | `name, postconditions, throws, after` |
+| `DependsOnNode` | `FlowStepNode` | `step_refs: List<Integer>` |
+| `ModelNode` | Root | `name, type, file, verifies, assumptions` |
+| `AssumptionNode` | Root | `description, affects, consequence` |
+| `VersionNode` | Root | `major, minor, patch` |
+| `ObligationIdNode` | `AnnotationNode` | `identifier: String` |
+
+---
+
+# Test Plan
+
+## Acceptance Tests
+
+```
+AT-GEP6-001  ACHIEVE with POSTCONDITION parses correctly
+AT-GEP6-002  CONTRACT block with multiple CASE entries parses correctly
+AT-GEP6-003  DEPENDS_ON with valid step references parses correctly
+AT-GEP6-004  INVARIANT GLOBAL parses and reflects scope in AST
+AT-GEP6-005  Annotation with AS identifier stores identifier in AST
+AT-GEP6-006  MODEL block with TYPE and FILE parses correctly
+AT-GEP6-007  ASSUMPTION block with AFFECTS parses correctly
+AT-GEP6-008  VERSION 1.2 directive accepted as first line
+AT-GEP6-009  TIMEOUT with ms/s/m suffix parses correctly
+AT-GEP6-010  CONTRACT with IDEMPOTENT: true stores flag correctly
+```
+
+## Regression Tests
+
+```
+RT-GEP6-001  All existing GASD 1.1 example files parse identically
+RT-GEP6-002  ACHIEVE without POSTCONDITION continues to parse
+RT-GEP6-003  INVARIANT without scope defaults to LOCAL
+RT-GEP6-004  Annotation without AS has no identifier in AST
+RT-GEP6-005  Missing VERSION treated as latest
+RT-GEP6-006  IMPORT without CONTRACT parses without error
+```
+
+## Negative Tests
+
+```
+NT-GEP6-001  DEPENDS_ON referencing non-existent step → error
+NT-GEP6-002  DEPENDS_ON creating cycle → error
+NT-GEP6-003  Duplicate AS identifier in same file → error
+NT-GEP6-004  CONTRACT CASE without POSTCONDITION or THROWS → error
+NT-GEP6-005  AS identifier with lowercase → error (must be UPPER_CASE)
+NT-GEP6-006  POSTCONDITION outside ACHIEVE → error
+```
+
+## Warning Tests
+
+```
+WT-GEP6-001  ACHIEVE without POSTCONDITION → warning emitted
+WT-GEP6-002  IMPORT without CONTRACT → warning emitted
+WT-GEP6-003  @retry without @idempotent → warning emitted
+WT-GEP6-004  @transaction_type without ASSUMPTION → warning emitted
+WT-GEP6-005  INVARIANT without scope → info emitted
+WT-GEP6-006  MODEL file not found → warning emitted
+```
+
+---
+
+# Traceability
+
+```
+GEP-6 EPIC 1 → Spec §14 (Standard Annotation Library) — extends with semantic triples
+GEP-6 EPIC 2 → Spec §7 (FLOW) — extends ACHIEVE with POSTCONDITION
+GEP-6 EPIC 3 → Spec §3 (Context & Directives) — new CONTRACT construct
+GEP-6 EPIC 4 → Spec §7 (FLOW) — extends flow_step with DEPENDS_ON
+GEP-6 EPIC 5 → Spec §9 (Constraints & Invariants) — extends INVARIANT with scope
+GEP-6 EPIC 6 → Spec §14 (Annotations) — extends annotation with AS identifier
+GEP-6 EPIC 7 → Spec §12 (Resources) — new MODEL construct
+GEP-6 EPIC 8 → Spec §9 (Constraints & Invariants) — new ASSUMPTION construct
+GEP-6 EPIC 9 → New section — Linting Engine
+GEP-6 EPIC 10 → Spec §3 (Context & Directives) — new VERSION directive
+
+Parser: PostconditionNode, ContractNode, CaseNode, DependsOnNode,
+        ModelNode, AssumptionNode, VersionNode, ObligationIdNode
+Grammar: Updated EBNF in this document extends Appendix A of GASD 1.1
+Tests: AT-GEP6-001 through NT-GEP6-006
+```
+
+---
+
+# Non-Functional Requirements
+
+| Requirement | Target |
+| --- | --- |
+| Backward compatibility | 100% — all GASD 1.1 files parse identically |
+| Specification integrity | Strictly additive — zero deletions or modifications to GASD 1.1 text |
+| Grammar completeness | Full EBNF grammar included — every production rule present and verified |
+| Determinism | Strict — same input produces same AST and same analysis output |
+| Parse performance | < 50ms for files up to 10,000 lines |
+| Traceability | Full — every new construct maps to GASD 1.1 spec section |
+| Error clarity | All errors and warnings include file location, construct, and actionable guidance |
+
+---
+
+# EPIC 11 — GASD 1.2 Specification Artifact Generation
+
+## Story 11.1 — Create GASD-1.2 Directory and Artifacts
+
+**As a** GASD maintainer
+**I want** to generate the GASD 1.2 specification artifacts under `GASD-1.2/`
+**So that** the new version has a complete, self-contained specification set matching GASD 1.1's structure
+
+### Template: GASD-1.1 Artifacts
+
+The `GASD-1.1/` directory contains the following artifacts. Each MUST be replicated in `GASD-1.2/` with GEP-6 additions applied:
+
+| GASD-1.1 Artifact | Purpose | GASD-1.2 Target |
+| --- | --- | --- |
+| `GASD_Specification.md` | Normative specification with grammar, constructs, and annotation library | `GASD-1.2/GASD_Specification.md` |
+| `GASD_Tutorial.md` | Comprehensive guide for engineers to learn GASD | `GASD-1.2/GASD_Tutorial.md` |
+| `README.md` | Overview, getting started, and changelog | `GASD-1.2/README.md` |
+| `gasd-1.1.0.gasd` | Self-definition metamodel (AI-readable ground truth) | `GASD-1.2/gasd-1.2.0.gasd` |
+
+### Generation Rules
+
+> [!CAUTION]
+> The GASD 1.1 specification text is the **template**, not raw material. Every line of GASD 1.1 text MUST be preserved verbatim. GEP-6 changes are **additive only** — new sections, new grammar rules, new constructs appended at the correct locations. No existing text may be altered, deleted, or reordered.
+
+**For `GASD_Specification.md`:**
+
+1. Copy `GASD-1.1/GASD_Specification.md` verbatim
+2. Add new sections for each GEP-6 EPIC at the appropriate location:
+   - §3: Add VERSION directive after TRACE
+   - §7: Add POSTCONDITION under ACHIEVE, add DEPENDS_ON to flow_step
+   - §9: Add scope qualifier to INVARIANT, add ASSUMPTION construct
+   - §14: Add AS identifier to annotation syntax, add semantic triples
+   - New §: CONTRACT block (after §6 Components)
+   - New §: MODEL block (after §12 Resources)
+   - New §: Linting Engine
+3. Replace Appendix A EBNF with the complete GASD 1.2 grammar from this GEP
+4. Update Appendix D Changelog with version 1.2.0 entry
+5. **Verify**: diff against GASD 1.1 source MUST show zero deletions, only additions
+
+**For `GASD_Tutorial.md`:**
+
+1. Copy `GASD-1.1/GASD_Tutorial.md` verbatim
+2. Add new tutorial sections for each new construct:
+   - How to use POSTCONDITION with ACHIEVE
+   - How to define CONTRACTs at IMPORT boundaries
+   - How to use DEPENDS_ON for explicit step dependencies
+   - How to scope INVARIANTs with LOCAL/GLOBAL
+   - How to name obligations with AS identifiers
+   - How to reference external MODELs
+   - How to declare ASSUMPTIONs
+   - How to declare VERSION
+3. Add worked examples showing GASD 1.2 files with all new constructs
+4. **Verify**: diff against GASD 1.1 source MUST show zero deletions, only additions
+
+**For `README.md`:**
+
+1. Copy `GASD-1.1/README.md` verbatim
+2. Update title to "GASD 1.2.0"
+3. Add changelog entry for version 1.2.0 listing all GEP-6 EPICs
+4. Update documentation links to reference GASD 1.2 artifacts
+
+**For `gasd-1.2.0.gasd`:**
+
+1. Copy `GASD-1.1/gasd-1.1.0.gasd` verbatim
+2. Add TYPE, COMPONENT, and FLOW definitions for each new construct:
+   - `TYPE PostconditionExpr`, `TYPE ContractDef`, `TYPE CaseDef`
+   - `TYPE ModelDef`, `TYPE AssumptionDef`, `TYPE VersionDecl`
+   - `TYPE DependsOnClause`, `TYPE ScopeQualifier`, `TYPE ObligationId`
+3. Update VERSION and metadata to 1.2.0
+4. **Verify**: the self-definition MUST be a valid GASD 1.2 file that parses without errors
+
+### Acceptance Criteria
+
+```
+AT-GEP6-IMPL-001  GASD-1.2/ directory exists with all 4 artifacts
+AT-GEP6-IMPL-002  GASD-1.2/GASD_Specification.md diff vs GASD-1.1 shows zero deletions
+AT-GEP6-IMPL-003  GASD-1.2/GASD_Tutorial.md diff vs GASD-1.1 shows zero deletions
+AT-GEP6-IMPL-004  GASD-1.2/gasd-1.2.0.gasd parses without errors
+AT-GEP6-IMPL-005  All new constructs from GEP-6 EPICs 1-10 are present in the specification
+AT-GEP6-IMPL-006  Complete EBNF grammar in Appendix A matches GEP-6 grammar exactly
+AT-GEP6-IMPL-007  README changelog references GEP-6 and all 10 EPICs
+```
+
+---
+
+# Change History
+
+```
+2026-03-21 — Initial draft with user story framework

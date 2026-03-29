@@ -1,0 +1,67 @@
+VERSION 1.1
+/*
+   Validation: Semantic AST — Semantic Hashing Tests
+   =================================================
+   Verifies deterministic CI/CD hashing and state comparisons.
+   Based on Design/semantic_hashing_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Hashing Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-SEMAST-010", "US-SEMAST-011", "US-X-SEMAST-011"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+FLOW test_semast_hash_generation():
+    @trace #AT-SEMAST-010-01, #AC-SEMAST-010-01
+    1. ACHIEVE "Apply SemanticHasher to a valid AST node"
+    2. ENSURE "Returns a valid structured SHA-256 hex string"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_hash_whitespace_independence():
+    @trace #AT-SEMAST-010-02, #AC-SEMAST-010-05
+    1. ACHIEVE "Parse two files with identical semantics but different spacing/comments"
+    2. ENSURE "SemanticHasher returns identical fingerprints for both"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_hash_recursion():
+    @trace #AT-SEMAST-010-03, #AC-SEMAST-010-06
+    1. ACHIEVE "Modify a deep property in a nested node"
+    2. ENSURE "Root hash changes to reflect the deep modification"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_drift_detection():
+    @trace #AT-SEMAST-011-01, #AC-SEMAST-011-01
+    1. ACHIEVE "Compare SemanticSystem state A and slightly modified state B"
+    2. ENSURE "DriftReport specifically highlights the changed nodes"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_determinism_guard():
+    @trace #AT-SEMAST-011-02, #AC-SEMAST-011-02, #AC-X-SEMAST-011-03
+    1. ACHIEVE "Run full semantic analysis pipeline iteratively 10 times"
+    2. ENSURE "Resulting root hash is identical every single time"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_cross_file_symbol_sorting():
+    @trace #AT-X-SEMAST-011-01, #AC-X-SEMAST-011-01
+    1. ACHIEVE "Change the lexical order of definitions in File A"
+    2. ENSURE "The global semantic hash remains identical due to deterministic sorting"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_semast_global_graph_hashing():
+    @trace #AT-X-SEMAST-011-02, #AC-X-SEMAST-011-03
+    1. ACHIEVE "Compute hash of the entire CompilationUnit"
+    2. ENSURE "Includes all interconnected files and dependency links in a stable order"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+// ===================================================================
+
+FLOW test_semast_hash_regression_order_independence():
+    @trace #RT-SEMAST-010-01
+    1. ACHIEVE "Parse file where component definitions are merely reordered"
+    2. ENSURE "Hash remains identical since structural semantics are unchanged"
+        OTHERWISE THROW "Validation Failed"

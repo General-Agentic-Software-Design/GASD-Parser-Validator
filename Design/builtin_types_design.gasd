@@ -1,3 +1,4 @@
+VERSION 1.1
 /*
    Design: Built-in Standard Types Support
    =======================================
@@ -19,7 +20,7 @@ DECISION "Built-in Registration Strategy":
     CHOSEN: "Global Symbol Table Initialization"
     RATIONALE: "Pre-registering types in the global scope of the SymbolTable ensures they are always resolvable without requiring local definitions in .gasd files."
     ALTERNATIVES: ["Global Symbol Table Initialization", "Local On-Demand Resolution"]
-    AFFECTS: [SymbolTable]
+    AFFECTS: []
 
 DECISION "Generic Type Handling":
     CHOSEN: "Template-based Validation"

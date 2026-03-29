@@ -1,0 +1,145 @@
+Metadata-Version: 2.4
+Name: gasd-parser
+Version: 1.4.0
+Summary: GASD 1.2 Parser & Validator — Canonical source of truth for GASD specification files.
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: antlr4-python3-runtime
+Dynamic: license-file
+
+# GASD Parser & Validator
+
+The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.1**).
+
+This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
+
+## Project Structure
+
+- **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
+- **[Design/](Design/)**: GASD-level specifications for each parser component.
+- **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
+  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 512 acceptance and regression tests.
+- **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria.
+- **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo.
+
+## The Hallucination Problem & Agent Self-Verification
+
+A core challenge in Agentic Software Engineering is **hallucination**: LLMs forgetting constraints, inventing non-existent APIs, or drifting from the original human design over long contexts.
+
+The `gasd-parser` solves this by acting as the **inflexible source of truth**.
+
+GASD Agents can use this parser for **self-verification loops**:
+
+1. **Human Intent**: A human writes a high-level Design `.gasd` file.
+2. **Machine Validation**: The Agent runs `gasd-parser design.gasd` to ensure the human's design is structurally sound.
+3. **Agent Implementation**: The Agent breaks the design down into code or lower-level `.gasd` files.
+4. **Self-Check**: Before presenting work to the human, the Agent runs `gasd-parser generated.gasd --json`.
+5. **Auto-Correction**: If the parser finds semantic errors (e.g., *Duplicate Type*, *Unknown Dependency*), the Agent programmatically reads the JSON error report and corrects its own output before continuing.
+
+By enforcing strict, language-level compliance through standard compiler design, the parser mathematically eliminates design drift and hallucinations within the architecture specifications.
+
+## Getting Started
+
+### Prerequisites
+
+- Python >= 3.9
+- [ANTLR4 Runtime](https://www.antlr.org/download.html) (Python 3)
+
+### Installation (Standalone CLI)
+
+The easiest way to use the parser is to install it as a standalone tool:
+
+```bash
+pip3 install -r requirements.txt
+pip3 install Build/Installation
+```
+
+To uninstall the standalone CLI:
+
+```bash
+pip3 uninstall gasd-parser
+```
+
+See the [Installation README](Build/Installation/README.md) for more details.
+
+## Usage
+
+### Running without Installation (Developer Mode)
+
+If you are developing the parser and want to run it directly from the source, **set up a virtual environment first**:
+
+```bash
+# 1. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate       # macOS/Linux
+# .venv\Scripts\activate        # Windows
+
+# 2. Install the required dependencies
+pip3 install -r requirements.txt
+
+# 3. Run the parser from the project root
+PYTHONPATH=Build/Installation python3 -m gasd_parser path/to/spec.gasd
+
+# 4. Run the full feature demo
+python3 demo.py
+```
+
+### Validate a specification (Installed)
+
+Once installed, use the `gasd-parser` command:
+
+```bash
+# Validate a specification
+gasd-parser my_spec.gasd
+
+# Output results in JSON (for tooling integration)
+gasd-parser my_spec.gasd --json
+
+# Extract and output the Syntactic AST in JSON format (to console)
+# Note: Raw JSON to stdout requires the --json flag for single files
+gasd-parser my_spec.gasd --ast --json
+
+# Extract and output the Semantic AST in JSON format
+gasd-parser my_spec.gasd --ast-sem --json
+
+# Save the extracted Semantic AST to a specific file
+gasd-parser my_spec.gasd --ast-sem --ast-output sem.json
+
+# Process multiple files and combine their Semantic ASTs into a single JSON
+gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-combine --json
+
+# Process multiple files into individual Semantic AST JSON files (out.spec1.json, out.spec2.json)
+gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-output out.json
+```
+
+## Development
+
+### Setup Environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -r requirements.txt
+```
+
+### Running Tests
+
+The project maintains 100% traceability to user stories. Run the test suite:
+
+```bash
+python3 -m pytest Impl/tests -v
+```
+
+### Build Plan Traceability
+
+The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Build_plan.gasd):
+
+1. **Design**: User stories mapped to formal designs.
+2. **Implementation**: Code generated from designs.
+3. **Testing**: Acceptance and regression verification (512 tests).
+4. **Packaging**: Standalone distributable creation (v1.2.2).
+
+## License
+
+MIT

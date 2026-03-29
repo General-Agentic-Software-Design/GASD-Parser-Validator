@@ -10,9 +10,13 @@ class FlowControlBlockKind(str, Enum):
     ENSURE_OTHERWISE = "ENSURE_OTHERWISE"
 
 class FlowAnalyzer:
-    def __init__(self, symbol_table: SymbolTable, reporter=None):
+    def __init__(self, symbol_table: SymbolTable, reporter=None, version: str = "1.2"):
         self.symbol_table = symbol_table
         self.reporter = reporter
+        self.version = version
+
+    def set_version(self, version: str):
+        self.version = version
 
     def analyze(self, flow_node: ResolvedFlowNode) -> ResolvedFlowNode:
         # Build CFG from raw AST steps (AC-SEMAST-006-01)
@@ -95,6 +99,7 @@ class FlowAnalyzer:
                     if not step.otherwisePath:
                         if self.reporter:
                             from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
+                            # AC-V2-009-10: Report as WARNING, but CLI will treat as fatal in 1.2
                             self.reporter.report(StructuredSemanticError(
                                 code="MissingOtherwise",
                                 message="ENSURE block must have an OTHERWISE recovery path.",

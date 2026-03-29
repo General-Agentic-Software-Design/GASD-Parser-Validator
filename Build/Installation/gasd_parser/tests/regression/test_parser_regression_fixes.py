@@ -1,5 +1,5 @@
 import pytest
-from gasd_parser.parser.ParseTreeAPI import ParseTreeAPI
+from Impl.parser.ParseTreeAPI import ParseTreeAPI
 
 def parse_snippet(source: str):
     api = ParseTreeAPI()
@@ -98,6 +98,39 @@ TARGET: "Test"
 
 FLOW simple_flow():
     1. RETURN "Done"
+'''
+        tree, reporter = parse_snippet(source)
+        assert not reporter.has_errors(), f"Errors: {reporter.syntax_errors}"
+
+    def test_enum_and_optional_in_annotation_args(self):
+        # Bug: ENUM_KW and OPTIONAL_KW were missing from soft_id, breaking annotation args
+        # Bug: generic types (Optional<T>, List<T>) were not allowed as values in annotations
+        # Bug: @transaction_type was missing its 't' argument in the registry
+        # Bug: @async was not allowed in TYPE scope (needed for GASD metamodel)
+        source = '''CONTEXT: "Test"
+TARGET: "Test"
+
+TYPE T:
+    @transaction_type(t: Enum("SAGA", "ACID", "BASE"))
+    @status(s: Enum("DRAFT", "APPROVED"))
+    @rest(verb: Enum("GET", "POST"), path: String)
+    @config(opt: Optional<String>)
+    @meta(type: List<String>)
+    @async
+    field: String
+'''
+        tree, reporter = parse_snippet(source)
+        assert not reporter.has_errors(), f"Errors: {reporter.syntax_errors}"
+
+    def test_async_in_type_scope_metamodel(self):
+        # Bug: Annotation @async is not allowed in scope TYPE
+        # This is needed for the authoritative gasd-1.2.0.gasd file
+        source = '''CONTEXT: "Test"
+TARGET: "Test"
+
+TYPE StandardAnnotation:
+    @async
+    @transaction_type(t: Enum("SAGA", "ACID"))
 '''
         tree, reporter = parse_snippet(source)
         assert not reporter.has_errors(), f"Errors: {reporter.syntax_errors}"

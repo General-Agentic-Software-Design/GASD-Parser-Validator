@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-002: Labeled type visitor null safety"
+TARGET: "Python"
+
+TYPE UserContext:
+    user_id: UUID
+    tags: List<String>
+    roles: List<Integer>
+    metadata: Map<String, String>
+    nickname: Optional<String>

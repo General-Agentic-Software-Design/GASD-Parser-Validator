@@ -1,5 +1,5 @@
 import pytest
-from Impl.ast.ASTNodes import GASDFile, Decision, TypeDefinition, FlowDefinition, Parameter, TypeExpression, FieldNode
+from Impl.ast.ASTNodes import GASDFile, Decision, TypeDefinition, FlowDefinition, Parameter, TypeExpression, FieldDefinition
 from Impl.validation.passes.ReferenceResolutionPass import ReferenceResolutionPass
 
 def test_regression_v010_wildcard_affects():
@@ -28,7 +28,7 @@ def test_regression_v008_local_shadowing_result():
     # Define local TYPE Result
     local_result_type = TypeDefinition(
         line=1, column=1, name="Result", 
-        fields=[FieldNode(line=2, column=1, name="success", typeExpr=TypeExpression(baseType="Boolean"))]
+        fields=[FieldDefinition(line=2, column=1, name="success", type=TypeExpression(baseType="Boolean"))]
     )
     
     # Define FLOW using Result (expecting it to resolve to local, thus skipping generic count check)

@@ -5,6 +5,12 @@ from ..parser.generated.grammar.GASDParserVisitor import GASDParserVisitor
 class ASTGenerator(GASDParserVisitor):
     def __init__(self, source_file="unknown"):
         self.source_file = source_file
+        self.pending_annotations = []
+
+    def visit(self, tree):
+        # type_name = type(tree).__name__
+        # print(f"!!!! DEBUG: visit() for {type_name} !!!!")
+        return super().visit(tree)
 
     def _get_loc(self, ctx):
         return {
@@ -14,6 +20,7 @@ class ASTGenerator(GASDParserVisitor):
         }
 
     def visitGasd_file(self, ctx: GASDParser.Gasd_fileContext):
+        
         directives = []
         decisions = []
         types = []
@@ -21,16 +28,29 @@ class ASTGenerator(GASDParserVisitor):
         flows = []
         strategies = []
         constraints = []
+        contracts = []
+        models = []
+        assumptions = []
         questions = []
         approvals = []
         todos = []
         reviews = []
         ensures = []
         matches = []
+        version = None # Default to None to allow pipeline to determine default
 
         for section in ctx.section():
             node = self.visit(section)
-            if isinstance(node, Directive): directives.append(node)
+            if not node: continue
+            
+            if isinstance(node, str) and getattr(section, 'version_dir', None) and section.version_dir():
+                # print(f"!!!! DEBUG: visitGasd_file found version '{node}' !!!!")
+                version = node
+            elif isinstance(node, str):
+                # Check for other string-yielding sections that might be VERSION
+                # In standard ANTLR4, if section : version_dir, then section.version_dir() should work.
+                pass
+            elif isinstance(node, Directive): directives.append(node)
             elif isinstance(node, Decision): decisions.append(node)
             elif isinstance(node, TypeDefinition): types.append(node)
             elif isinstance(node, ComponentDefinition): components.append(node)
@@ -43,9 +63,21 @@ class ASTGenerator(GASDParserVisitor):
             elif isinstance(node, ReviewNode): reviews.append(node)
             elif isinstance(node, EnsureNode): ensures.append(node)
             elif isinstance(node, MatchNode): matches.append(node)
+            elif isinstance(node, ContractDefinition): contracts.append(node)
+            elif isinstance(node, ModelDefinition): models.append(node)
+            elif isinstance(node, AssumptionDefinition): assumptions.append(node)
+            elif isinstance(node, list) and len(node) > 0:
+                if isinstance(node[0], str) and node[0] == "POSTCONDITION":
+                    for pc in node[1:]:
+                        ensures.append(EnsureNode(expression=pc, **self._get_loc(section)))
+                elif isinstance(node[0], Annotation):
+                    self.pending_annotations.extend(node)
 
-        loc = self._get_loc(ctx)
-        return GASDFile(
+        # Set GASDFile line to 1 (file root always starts at line 1)
+        res_file = GASDFile(
+            version=version,
+            line=1,
+            column=0,
             directives=directives,
             decisions=decisions,
             types=types,
@@ -59,8 +91,25 @@ class ASTGenerator(GASDParserVisitor):
             reviews=reviews,
             ensures=ensures,
             matches=matches,
-            **loc
+            contracts=contracts,
+            models=models,
+            assumptions=assumptions,
+            sourceFile=self.source_file
         )
+        res_file.annotations = self.pending_annotations
+        self.pending_annotations = []
+        return res_file
+
+    def visitSection(self, ctx: GASDParser.SectionContext):
+        # We need an explicit visitSection because 'section : annotations NEWLINE'
+        # would otherwise return the result of NEWLINE (None) instead of the annotations.
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            # Skip terminal nodes like NEWLINE
+            from antlr4.tree.Tree import TerminalNodeImpl
+            if not isinstance(child, TerminalNodeImpl):
+                return self.visit(child)
+        return None
 
     def visitEnsure_stmt(self, ctx: GASDParser.Ensure_stmtContext):
         return EnsureNode(expression=ctx.STRING_LITERAL().getText().strip('"'), **self._get_loc(ctx))
@@ -71,8 +120,18 @@ class ASTGenerator(GASDParserVisitor):
     def visitContext_dir(self, ctx: GASDParser.Context_dirContext):
         return Directive(directiveType="CONTEXT", values=[v.getText() for v in ctx.value_list().value()], **self._get_loc(ctx))
 
+    def visitVersion_dir(self, ctx: GASDParser.Version_dirContext):
+        return ctx.getChild(1).getText().strip('"')
+
     def visitValue(self, ctx: GASDParser.ValueContext):
         return ctx.getText()
+    def visitVersion_dir(self, ctx: GASDParser.Version_dirContext):
+        v = ctx.version_number().getText() if ctx.version_number() else ctx.STRING_LITERAL().getText().strip('"')
+        return v # visitGasd_file handles this return as a version string
+
+    def visitContext_dir(self, ctx: GASDParser.Context_dirContext):
+        return Directive(directiveType="CONTEXT", values=[v.getText() for v in ctx.value_list().value()], **self._get_loc(ctx))
+
     def visitTarget_dir(self, ctx: GASDParser.Target_dirContext):
         return Directive(directiveType="TARGET", values=[v.getText() for v in ctx.value_list().value()], **self._get_loc(ctx))
 
@@ -80,11 +139,11 @@ class ASTGenerator(GASDParserVisitor):
         return Directive(directiveType="TRACE", values=[v.getText() for v in ctx.value_list().value()], **self._get_loc(ctx))
 
     def visitNamespace_stmt(self, ctx: GASDParser.Namespace_stmtContext):
-        val = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else "unknown"
+        val = ctx.STRING_LITERAL().getText().strip('"\'') if ctx.STRING_LITERAL() else "unknown"
         return Directive(directiveType="NAMESPACE", values=[val], **self._get_loc(ctx))
 
     def visitImport_stmt(self, ctx: GASDParser.Import_stmtContext):
-        val = ctx.STRING_LITERAL().getText().strip('"') if ctx.STRING_LITERAL() else "unknown"
+        val = ctx.STRING_LITERAL().getText().strip('"\'') if ctx.STRING_LITERAL() else "unknown"
         alias = ctx.soft_id().getText() if ctx.soft_id() else None
         return Directive(directiveType="IMPORT", values=[val], alias=alias, **self._get_loc(ctx))
 
@@ -143,94 +202,110 @@ class ASTGenerator(GASDParserVisitor):
     def visitType_def(self, ctx: GASDParser.Type_defContext):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
         fields = []
-        if ctx.field_def():
-            for f in ctx.field_def():
-                fields.append(self.visit(f))
-        return TypeDefinition(name=name, fields=fields, **loc)
+        # Process indented block (type_body_item)
+        if hasattr(ctx, 'type_body_item') and ctx.type_body_item():
+            for tbi in ctx.type_body_item():
+                if tbi.field_def():
+                    fields.append(self.visit(tbi.field_def()))
+                elif tbi.annotations():
+                    self.pending_annotations += self._visit_anns(tbi.annotations())
+        
+        # Process inline field (field_def)
+        fd_ctx = ctx.field_def()
+        if fd_ctx:
+            if isinstance(fd_ctx, list):
+                fields.extend([self.visit(f) for f in fd_ctx])
+            else:
+                fields.append(self.visit(fd_ctx))
+        
+        # Detect enum: ENUM_KW lives in the inline type_expr child, not in type_def itself
+        is_enum = False
+        if ctx.type_expr():
+            te_ctx = ctx.type_expr()
+            if hasattr(te_ctx, 'ENUM_KW') and te_ctx.ENUM_KW():
+                is_enum = True
+        return TypeDefinition(name=name, fields=fields, isEnum=is_enum, annotations=anns, **loc)
 
     def visitField_def(self, ctx: GASDParser.Field_defContext):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
         type_expr = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Unknown", **loc)
-        return FieldNode(name=name, typeExpr=type_expr, **loc)
+        return FieldDefinition(name=name, type=type_expr, annotations=anns, **loc)
 
-    # Labeled expression visitors are defined later in the class
+    # === Labeled Type Expression Visitors ===
 
-    def visitType_expr(self, ctx: GASDParser.Type_exprContext):
+    def visitGenericType(self, ctx: GASDParser.GenericTypeContext):
         loc = self._get_loc(ctx)
+        segments = [id.getText() for id in ctx.soft_id() if id]
+        base = ".".join(segments)
+        args = [self.visit(a) for a in ctx.type_expr() if a]
         
-        # 1. Special case: ENUM_KW LPAREN (soft_id | STRING_LITERAL) (COMMA (soft_id | STRING_LITERAL))* RPAREN
-        if ctx.ENUM_KW():
-            # Collect all identifiers and string literals from the enum list
-            values = []
-            for i in range(ctx.getChildCount()):
-                child = ctx.getChild(i)
-                # Check for either soft_id (identifier) or STRING_LITERAL
-                if isinstance(child, GASDParser.Soft_idContext):
-                    values.append(child.getText())
-                elif hasattr(child, 'getSymbol') and child.getSymbol().type == GASDParser.STRING_LITERAL:
-                    values.append(child.getText())
-                elif hasattr(child, 'getText') and child.getText().startswith('"'):
-                    # Fallback for string literals if getSymbol() is not available or mismatch
-                    values.append(child.getText())
-            
-            return TypeExpression(baseType="Enum", enumValues=values, **loc)
-            
-        # 2. Special case: OPTIONAL_KW LANGLE type_expr RANGLE
-        if ctx.OPTIONAL_KW():
-            args = [self.visit(a) for a in ctx.type_expr() if a]
-            if args:
-                # Wrap the inner type as optional, preserving all its attributes
-                inner = args[0]
-                return TypeExpression(
-                    baseType=inner.baseType, 
-                    genericArgs=inner.genericArgs, 
-                    isOptional=True, 
-                    literalValue=inner.literalValue,
-                    enumValues=inner.enumValues,
-                    **loc
-                )
-            return TypeExpression(baseType="Any", isOptional=True, **loc)
+        is_optional = base == "Optional"
+        return TypeExpression(baseType=base, genericArgs=args, isOptional=is_optional, **loc)
 
-        # 3. Unified Generics branch: (soft_id | STRING_LITERAL) (DOT soft_id)* (LANGLE type_expr (COMMA type_expr)* RANGLE)?
-        if ctx.soft_id() or (ctx.STRING_LITERAL() and ctx.LANGLE()):
-            segments = [id.getText() for id in ctx.soft_id() if id]
-            base = ".".join(segments)
-            args = [self.visit(a) for a in ctx.type_expr() if a]
-            
-            is_optional = base == "Optional"
-            if is_optional and args:
-                inner = args[0]
-                return TypeExpression(
-                    baseType=inner.baseType, 
-                    genericArgs=inner.genericArgs, 
-                    isOptional=True, 
-                    literalValue=inner.literalValue,
-                    enumValues=inner.enumValues,
-                    **loc
-                )
-            
-            # For List and Map, we should also propagate something if relevant, 
-            # but usually they are containers for other types.
-            return TypeExpression(baseType=base, genericArgs=args, isOptional=is_optional, **loc)
+    def visitRecordType(self, ctx: GASDParser.RecordTypeContext):
+        loc = self._get_loc(ctx)
+        args = []
+        if hasattr(ctx, 'param_list') and ctx.param_list():
+             # self.visit() on param just returns a Parameter object
+             args = [self.visit(p).type for p in ctx.param_list().param()]
+        return TypeExpression(baseType="Record", genericArgs=args, **loc)
 
-        # 4. Literal types
-        if ctx.STRING_LITERAL():
-            literal_value = ctx.STRING_LITERAL(0).getText()
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        elif ctx.INTEGER():
-            literal_value = str(ctx.INTEGER().getText())
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        elif ctx.FLOAT_LITERAL():
-            literal_value = str(ctx.FLOAT_LITERAL().getText())
-            return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
+    def visitEnumType(self, ctx: GASDParser.EnumTypeContext):
+        loc = self._get_loc(ctx)
+        values = []
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            if isinstance(child, GASDParser.Soft_idContext):
+                values.append(child.getText())
+            elif hasattr(child, 'getSymbol') and child.getSymbol().type == GASDParser.STRING_LITERAL:
+                values.append(child.getText())
+        return TypeExpression(baseType="Enum", enumValues=values, **loc)
 
-        return TypeExpression(baseType="unknown", **loc)
+    def visitOptionalType(self, ctx: GASDParser.OptionalTypeContext):
+        loc = self._get_loc(ctx)
+        inner = self.visit(ctx.type_expr())
+        if inner:
+            return TypeExpression(
+                baseType=inner.baseType, 
+                genericArgs=inner.genericArgs, 
+                isOptional=True, 
+                **loc
+            )
+        return TypeExpression(baseType="Any", isOptional=True, **loc)
+
+    def visitSimpleType(self, ctx: GASDParser.SimpleTypeContext):
+        loc = self._get_loc(ctx)
+        segments = [id.getText() for id in ctx.soft_id() if id]
+        base = ".".join(segments)
+        if hasattr(ctx, 'STRING_LITERAL') and ctx.STRING_LITERAL():
+            return TypeExpression(baseType="literal", literalValue=ctx.STRING_LITERAL().getText(), **loc)
+        return TypeExpression(baseType=base, **loc)
+
+    def visitIntType(self, ctx: GASDParser.IntTypeContext):
+        loc = self._get_loc(ctx)
+        return TypeExpression(baseType="literal", literalValue=ctx.INTEGER().getText(), **loc)
+
+    def visitFloatType(self, ctx: GASDParser.FloatTypeContext):
+        loc = self._get_loc(ctx)
+        return TypeExpression(baseType="literal", literalValue=ctx.FLOAT_LITERAL().getText(), **loc)
+
+    # Fallback for the rule itself if needed
+    def visitType_expr(self, ctx: GASDParser.Type_exprContext):
+        return self.visitChildren(ctx)
 
     def visitComponent_def(self, ctx: GASDParser.Component_defContext):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText()
+        
+        v_anns = self._visit_anns(ctx.annotations()) if ctx.annotations() else []
+        anns = self.pending_annotations + v_anns
+        self.pending_annotations = []
         
         # Use a temporary holder for the component data
         self._current_component = {
@@ -243,13 +318,16 @@ class ASTGenerator(GASDParserVisitor):
         for item in ctx.component_body_item():
             self.visit(item)
             
+            
         res = ComponentDefinition(
             name=name, 
             pattern=self._current_component["pattern"],
             methods=self._current_component["methods"],
             dependencies=self._current_component["dependencies"],
+            annotations=anns,
             **loc
         )
+        self.pending_annotations = []
         del self._current_component
         return res
 
@@ -272,94 +350,158 @@ class ASTGenerator(GASDParserVisitor):
     def visitMethod_sig(self, ctx: GASDParser.Method_sigContext):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText()
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
         params = self.visit(ctx.param_list()) if ctx.param_list() else []
         ret = self.visit(ctx.type_expr()) if ctx.type_expr() else None
-        return MethodSignature(name=name, parameters=params, returnType=ret, **loc)
+        return MethodSignature(name=name, parameters=params, returnType=ret, annotations=anns, **loc)
 
     def visitParam_list(self, ctx: GASDParser.Param_listContext):
         return [self.visit(p) for p in ctx.param()]
 
     def visitParam(self, ctx: GASDParser.ParamContext):
+        loc = self._get_loc(ctx)
         name = ctx.soft_id().getText()
         t = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Any")
-        return Parameter(name=name, type=t)
+        anns = self._visit_anns(ctx.annotations())
+        return Parameter(name=name, type=t, annotations=anns, **loc)
 
     def visitFlow_def(self, ctx: GASDParser.Flow_defContext):
         loc = self._get_loc(ctx)
-        name = ctx.soft_id().getText()
+        name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
+        
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
+        
         params = self.visit(ctx.param_list()) if ctx.param_list() else []
         ret = self.visit(ctx.type_expr()) if ctx.type_expr() else None
         
         steps = []
+        # Visit children to find flow_steps, match_exprs, etc.
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
             if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.Field_defContext, GASDParser.Match_exprContext)):
                 res = self.visit(child)
-                if isinstance(res, list):
-                    steps.extend(res)
-                elif res:
+                if res:
                     steps.append(res)
                     
-        return FlowDefinition(name=name, parameters=params, steps=steps, returnType=ret, **loc)
-
+        return FlowDefinition(name=name, parameters=params, steps=steps, returnType=ret, annotations=anns, **loc)
     def visitFlow_step(self, ctx: GASDParser.Flow_stepContext):
         loc = self._get_loc(ctx)
         
-        # Case 1: annotations NEWLINE (standalone annotation)
-        if ctx.annotations() and not ctx.STEP_NUM():
-            substeps = []
-            if ctx.internal_block():
-                substeps.extend(self.visit(ctx.internal_block()))
-            return FlowStepNode(
-                action="ANNOTATION", 
-                target="", 
-                annotations=self.visit(ctx.annotations()), 
-                subSteps=substeps,
+        if hasattr(ctx, 'annotations') and ctx.annotations():
+            anns = self.visit(ctx.annotations())
+            if anns:
+                self.pending_annotations.extend(anns)
+        
+        step_num = None
+        step_id_ctx = None
+        
+        if hasattr(ctx, 'step_id'):
+            step_id_val = ctx.step_id()
+            if isinstance(step_id_val, list):
+                if len(step_id_val) > 0:
+                    step_id_ctx = step_id_val[0]
+            else:
+                step_id_ctx = step_id_val
+                
+        if step_id_ctx:
+            step_num_str = step_id_ctx.getText()
+            if "." in step_num_str:
+                 # Extract first component for backward compatibility with int stepNumber
+                 try:
+                     step_num = int(step_num_str.split('.')[0])
+                 except:
+                     step_num = None
+            else:
+                 try:
+                     step_num = int(step_num_str)
+                 except:
+                     step_num = None
+        
+        main_op = None
+        if ctx.control_flow():
+            main_op = self.visit(ctx.control_flow())
+        elif ctx.action():
+            main_op = self.visit(ctx.action())
+        elif ctx.match_expr():
+            main_op = self.visit(ctx.match_expr())
+            
+        deps = []
+        if ctx.depends_clause():
+            deps = [r.getText().replace("STEP", "").strip() for r in ctx.depends_clause().step_ref()]
+
+        res = None
+        if isinstance(main_op, (MatchNode, EnsureNode)):
+            res = main_op
+        elif main_op:
+            # Op is a dict from visitAction or visitControl_flow
+            res = FlowStepNode(
+                stepNumber=step_num,
+                action=main_op.get("action", ""),
+                target=main_op.get("target", ""),
+                dependsOn=deps,
+                postconditions=main_op.get("postconditions", []),
+                timeout=main_op.get("timeout"),
+                asBinding=main_op.get("asBinding"),
+                typePath=main_op.get("typePath"),
+                subSteps=main_op.get("subSteps", []),
+                **loc
+            )
+        else:
+            # Actionless step (only step_id or internal_block)
+            res = FlowStepNode(
+                stepNumber=step_num,
+                action="",
+                target="",
+                dependsOn=deps,
                 **loc
             )
 
-        num = int(ctx.STEP_NUM().getText().rstrip(".")) if ctx.STEP_NUM() else None
-        
-        step_annotations = self.visit(ctx.annotations()) if ctx.annotations() else []
-        
-        action_name = "ACTION"
-        target = ""
-        substeps = []
-
-        as_binding = None
-        type_path = None
-
-        if ctx.action():
-            action_data = self.visit(ctx.action())
-            action_name = action_data["action"]
-            target = action_data["target"]
-            as_binding = action_data.get("as_binding")
-            type_path = action_data.get("type_path")
-        elif ctx.control_flow():
-            cf_data = self.visit(ctx.control_flow())
-            action_name = cf_data["action"]
-            target = cf_data["target"]
-            if "subSteps" in cf_data:
-                substeps.extend(cf_data["subSteps"])
-        elif ctx.match_expr():
-            match_node = self.visit(ctx.match_expr())
-            action_name = "MATCH"
-            target = match_node.expression
-            substeps.append(match_node)
-
-        # Visit internal block if present
+        # Handle internal_block content for properties/dependencies
         if ctx.internal_block():
-            substeps.extend(self.visit(ctx.internal_block()))
+            block_items = self.visit(ctx.internal_block())
+            for item in block_items:
+                if isinstance(item, list) and len(item) > 0 and isinstance(item[0], str) and item[0] == "DEPENDS":
+                    res.dependsOn.extend(item[1:])
+                elif isinstance(item, list) and len(item) > 0 and isinstance(item[0], str) and item[0] == "POSTCONDITION":
+                    res.postconditions.extend(item[1:])
+                elif isinstance(item, list) and len(item) > 0 and isinstance(item[0], str) and item[0] == "TIMEOUT":
+                    res.timeout = item[1]
+                elif isinstance(item, FlowStepNode):
+                    if getattr(res, 'subSteps', None) is None: res.subSteps = []
+                    res.subSteps.append(item)
 
-        return FlowStepNode(stepNumber=num, action=action_name, target=target, asBinding=as_binding, typePath=type_path, subSteps=substeps, annotations=step_annotations, **loc)
+        if self.pending_annotations and res:
+            res.annotations = self.pending_annotations
+            self.pending_annotations = []
+            
+        if res and getattr(res, 'action', None) == "" and len(getattr(res, 'annotations', [])) > 0 and getattr(res, 'stepNumber', None) is None:
+            res.action = "ANNOTATION"
+            
+        return res
 
     def visitInternal_block(self, ctx: GASDParser.Internal_blockContext):
-        substeps = []
+        items = []
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
-            if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.Step_propertyContext, GASDParser.Otherwise_stmtContext)):
-                substeps.append(self.visit(child))
-        return substeps
+            if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.Step_propertyContext, 
+                                 GASDParser.Otherwise_stmtContext, GASDParser.Depends_stmtContext,
+                                 GASDParser.Postcondition_stmtContext, GASDParser.Timeout_stmtContext)):
+                res = self.visit(child)
+                if res: items.append(res)
+        return items
+
+    def visitDepends_stmt(self, ctx: GASDParser.Depends_stmtContext):
+        deps = [r.getText().replace("STEP", "").strip().strip("'") for r in ctx.depends_clause().step_ref()]
+        return ["DEPENDS"] + deps
+
+    def visitPostcondition_stmt(self, ctx: GASDParser.Postcondition_stmtContext):
+        pcs = [pe.getText() for pe in ctx.postcondition_expr()]
+        return ["POSTCONDITION"] + pcs
+
+    def visitTimeout_stmt(self, ctx: GASDParser.Timeout_stmtContext):
+        return ["TIMEOUT", ctx.duration_literal().getText()]
 
     def visitMatch_expr(self, ctx: GASDParser.Match_exprContext):
         loc = self._get_loc(ctx)
@@ -420,45 +562,95 @@ class ASTGenerator(GASDParserVisitor):
         return self.visit(ctx.value())
 
     def visitAction(self, ctx: GASDParser.ActionContext):
-        # Universal action visitor
-        # action : VALIDATE_KW ... | ACHIEVE_KW ... | CREATE_KW ... | PERSIST_KW ... | ...
-        action_name = ctx.getChild(0).getText()
+        action_name = ""
+        # Get action name - handle all possible keywords
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            # Find the first keyword child (usually at index 0 or after annotations)
+            from antlr4.tree.Tree import TerminalNodeImpl
+            if isinstance(child, TerminalNodeImpl):
+                text = child.getText()
+                if text.isupper(): # Basic heuristic for keywords
+                    action_name = text
+                    break
+
         target = ""
-        
+        postconditions = []
+        timeout = None
+
+        as_binding = None
+        type_path = None
+
         if ctx.VALIDATE_KW():
-            target = ctx.expr(0).getText() if ctx.expr(0) else ""
-            as_binding = "AS TYPE"
-            type_path = ctx.type_expr().getText() if ctx.type_expr() else ""
-            return {"action": "VALIDATE", "target": target, "as_binding": as_binding, "type_path": type_path}
+            target = self._get_text(ctx.expr(), 0)
+            # Populate AS TYPE binding for VALIDATE actions
+            if ctx.AS_KW() and ctx.TYPE_KW():
+                as_binding = "AS TYPE"
+                # Extract the type path from dot-separated soft_ids after TYPE
+                found_type = False
+                for i in range(ctx.getChildCount()):
+                    child = ctx.getChild(i)
+                    text = child.getText()
+                    if text == "TYPE":
+                        found_type = True
+                        continue
+                    if found_type:
+                        if isinstance(child, GASDParser.Type_exprContext):
+                            type_path = text
+                            break
+                        elif text == ".":
+                            continue
+                        elif isinstance(child, GASDParser.Soft_idContext):
+                            type_path = text
+                            break
+                        else:
+                            break
         elif ctx.ACHIEVE_KW():
             sl = ctx.STRING_LITERAL()
+            if not sl:
+                sl = ctx.soft_id()
+            
             if isinstance(sl, list):
-                titles = " AND ".join([s.getText() for s in sl])
+                # Join multi-part ACHIEVE 'A' AND 'B' targets
+                parts = []
+                for s in sl:
+                    parts.append(s.getText().strip('"\''))
+                target = " AND ".join(parts)
             else:
-                titles = sl.getText() if sl else ""
-            expr_val = ""
-            if ctx.expr():
-                expr_val = f": {self._get_text(ctx.expr(), 0)}"
-            target = f"{titles}{expr_val}"
-        elif ctx.CREATE_KW() or ctx.RETURN_KW() or ctx.LOG_KW() or ctx.THROW_KW() or ctx.EXECUTE_KW() or ctx.UPDATE_KW():
+                target = sl.getText().strip('"\'') if sl else ""
+            
+            # Inline version: ACHIEVE 'Task': expr
+            if hasattr(ctx, 'postcondition_expr') and ctx.postcondition_expr():
+                pc_text = ctx.postcondition_expr().getText()
+                postconditions.append(pc_text)
+            # Indented blocks are now handled by visitFlow_step's internal_block check
+        elif ctx.CREATE_KW() or ctx.RETURN_KW() or ctx.LOG_KW() or ctx.THROW_KW() or ctx.UPDATE_KW():
             # For these, the target is the rest of the line content
-            target = ctx.getText()[len(action_name):].strip()
+            # Reconstruct target from children excluding keywords and punctuation
+            parts = []
+            for i in range(1, ctx.getChildCount()):
+                child = ctx.getChild(i)
+                if not isinstance(child, (GASDParser.AnnotationsContext, GASDParser.Internal_blockContext)):
+                     parts.append(child.getText())
+            target = " ".join(parts).strip()
         elif ctx.PERSIST_KW():
-            target = self._get_text(ctx.expr(), 0)
-            if ctx.VIA_KW(): target += f" via {self._get_text(ctx.expr(), 1)}"
-        elif ctx.TRANSFORM_KW():
-            if ctx.expr():
-                target = self._get_text(ctx.expr(), 0)
-                if len(ctx.expr()) > 1: target += f" via {self._get_text(ctx.expr(), 1)}"
-            elif ctx.annotation():
-                target = f"({ctx.annotation().getText()})"
-        elif hasattr(ctx, 'soft_id') and ctx.soft_id():
-            # generic action or function call
-            target = ctx.getText()
-            if target.startswith(action_name):
-                target = target[len(action_name):].strip()
+            target = ctx.expr(0).getText() if ctx.expr(0) else ""
+            if ctx.VIA_KW() and len(ctx.expr()) > 1: target += f" via {ctx.expr(1).getText()}"
+        else:
+            # generic action
+            parts = []
+            for i in range(1, ctx.getChildCount()):
+                parts.append(ctx.getChild(i).getText())
+            target = " ".join(parts).strip()
         
-        return {"action": action_name, "target": target}
+        return {
+            "action": action_name, 
+            "target": target, 
+            "postconditions": postconditions,
+            "timeout": timeout,
+            "asBinding": as_binding,
+            "typePath": type_path
+        }
 
     def visitControl_flow(self, ctx: GASDParser.Control_flowContext):
         loc = self._get_loc(ctx)
@@ -496,6 +688,44 @@ class ASTGenerator(GASDParserVisitor):
         target = ctx.expr().getText()
         return FlowStepNode(stepNumber=None, action="OTHERWISE", target=f"{action_type} {target}", **loc)
 
+    def visitAnnotations(self, ctx: GASDParser.AnnotationsContext):
+        return [self.visit(a) for a in ctx.annotation()]
+
+    def visitValue_list(self, ctx: GASDParser.Value_listContext):
+        from antlr4.tree.Tree import TerminalNodeImpl
+        args = []
+        # value_list : (value | named_arg) ( (COMMA)? (value | named_arg))*
+        for i in range(ctx.getChildCount()):
+            child = ctx.getChild(i)
+            if isinstance(child, TerminalNodeImpl):
+                continue # Skip commas
+            
+            res = self.visit(child)
+            if isinstance(res, AnnotationArg):
+                args.append(res)
+            elif res is not None:
+                # Simple value from visitValue
+                args.append(AnnotationArg(value=str(res)))
+        return args
+
+    def visitNamed_arg(self, ctx: GASDParser.Named_argContext):
+        key = ctx.soft_id().getText()
+        val = self.visit(ctx.value())
+        return AnnotationArg(value=str(val), key=key)
+
+    def visitAnnotation(self, ctx: GASDParser.AnnotationContext):
+        # name=soft_id
+        name = ctx.name.getText() if ctx.name else ""
+        args = []
+        if hasattr(ctx, 'args') and ctx.args:
+            args = self.visit(ctx.args)
+        elif hasattr(ctx, 'param_id') and ctx.param_id:
+            args = [AnnotationArg(value=ctx.param_id.getText().strip('"\''))]
+            
+        alias = ctx.alias.getText().strip('"\'') if ctx.AS_KW() and ctx.alias else None
+        
+        return Annotation(name=name, arguments=args, alias=alias)
+
     def visitStep_property(self, ctx: GASDParser.Step_propertyContext):
         name = ctx.soft_id().getText()
         val = ""
@@ -508,33 +738,158 @@ class ASTGenerator(GASDParserVisitor):
         # Map step property to a FlowStepNode with action="PROPERTY" to fit in subSteps
         return FlowStepNode(stepNumber=None, action="PROPERTY", target=f"{name}: {val}", **loc)
 
-    def visitAnnotations(self, ctx: GASDParser.AnnotationsContext):
-        return [self.visit(a) for a in ctx.annotation()]
+    def visitContract_def(self, ctx: GASDParser.Contract_defContext):
+        loc = self._get_loc(ctx)
+        
+        # Handle either qualified_name or STRING_LITERAL
+        name = ""
+        if ctx.qualified_name():
+            name = ctx.qualified_name().getText()
+        elif ctx.STRING_LITERAL():
+            name = ctx.STRING_LITERAL().getText().strip('"\'')
+            
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
+        
+        inputs = self.visit(ctx.input_blk()) if ctx.input_blk() else []
+        output = self.visit(ctx.output_blk()) if ctx.output_blk() else None
+        
+        cases = {}
+        for cblk in ctx.case_blk():
+            case_node = self.visit(cblk)
+            cases[case_node.name] = case_node
+            
+        idem = False
+        if ctx.idempotent_blk():
+            idem = ctx.idempotent_blk().BOOLEAN_LITERAL().getText().lower() == "true"
+            
+        ver = None
+        if ctx.version_dir():
+             ver = ctx.version_dir().getChild(1).getText().strip('"\'')
+
+        return ContractDefinition(name=name, inputs=inputs, output=output, behaviors=cases, idempotent=idem, version=ver, annotations=anns, **loc)
+
+    def visitInput_blk(self, ctx: GASDParser.Input_blkContext):
+        if ctx.param_list():
+            return self.visit(ctx.param_list())
+        return [self.visit(p) for p in ctx.param()]
+
+    def visitOutput_blk(self, ctx: GASDParser.Output_blkContext):
+        return self.visit(ctx.type_expr())
+
+    def visitCase_blk(self, ctx: GASDParser.Case_blkContext):
+        loc = self._get_loc(ctx)
+        name = ""
+        if ctx.soft_id():
+            name = ctx.soft_id().getText()
+        elif ctx.STRING_LITERAL():
+            name = ctx.STRING_LITERAL().getText().strip('"\'')
+            
+        clauses = []
+        for c in ctx.case_clause():
+            clauses.append(self.visit(c))
+        return ContractCase(name=name, clauses=clauses, **loc)
+
+    def visitCase_clause(self, ctx: GASDParser.Case_clauseContext):
+        res = {}
+        if ctx.POSTCONDITION_KW():
+            res["type"] = "POSTCONDITION"
+            res["value"] = ctx.postcondition_expr().getText()
+        elif ctx.THROWS_KW():
+            res["type"] = "THROWS"
+            res["value"] = ctx.soft_id().getText()
+        elif ctx.AFTER_KW():
+            res["type"] = "AFTER"
+            res["value"] = ctx.getChild(2).getText()
+        return res
+
+    def visitModel_def(self, ctx: GASDParser.Model_defContext):
+        loc = self._get_loc(ctx)
+        name = ctx.STRING_LITERAL(0).getText().strip('"\'')
+        model_type = ctx.tech_id().getText() if ctx.tech_id() else "Unknown"
+        file_path = ctx.STRING_LITERAL(1).getText().strip('"\'')
+        verifies = []
+        if ctx.VERIFIES_KW():
+            for ir in ctx.invariant_ref():
+                scope = "GLOBAL"
+                if "LOCAL" in ir.getText(): scope = "LOCAL"
+                elif "GLOBAL" in ir.getText(): scope = "GLOBAL"
+                verifies.append(f"{scope} {ir.STRING_LITERAL().getText()}")
+        assumptions = []
+        if ctx.ASSUMPTIONS_KW():
+            assumptions = [a.getText().strip('"\'') for a in ctx.STRING_LITERAL()[2:]] # Skip first name and path
+        
+        return ModelDefinition(name=name, type=model_type, file=file_path, verifies=verifies, assumptions=assumptions, **loc)
+
+    def visitAssumption_def(self, ctx: GASDParser.Assumption_defContext):
+        loc = self._get_loc(ctx)
+        sl = ctx.STRING_LITERAL()
+        if ctx.soft_id():
+            name = ctx.soft_id().getText()
+        else:
+            name = sl[0].getText().strip('"\'') if sl else "Unknown"
+        
+        affects = []
+        if ctx.AFFECTS_KW() and ctx.list_literal():
+            for v in ctx.list_literal().value():
+                affects.append(v.getText().strip('"\''))
+        
+        consequence = None
+        if ctx.CONSEQUENCE_KW() and sl:
+            consequence = sl[-1].getText().strip('"\'')
+        
+        return AssumptionDefinition(name=name, affects=affects, consequence=consequence, **loc)
 
     def visitConstraint_stmt(self, ctx: GASDParser.Constraint_stmtContext):
-        name = ctx.soft_id().getText() if ctx.soft_id() else None
-        if ctx.STRING_LITERAL():
-            text = ctx.STRING_LITERAL().getText().strip('"')
-        elif ctx.value():
-            text = ctx.value().getText().strip('"')
+        name = None
+        text = ""
+        str_literals = ctx.STRING_LITERAL()
+        
+        if ctx.expr():
+            text = ctx.expr().getText().strip('"\'')
+            if ctx.soft_id(): name = ctx.soft_id().getText()
+            elif str_literals: name = str_literals[0].getText().strip('"\'')
         else:
-            # Fallback to children or full text if specifically formatted
-            text = ctx.getText().strip()
-            if ":" in text and name:
-                text = text.split(":", 1)[1].strip()
+            if len(str_literals) == 2:
+                name = str_literals[0].getText().strip('"\'')
+                text = str_literals[1].getText().strip('"\'')
+            elif len(str_literals) == 1:
+                if ctx.soft_id():
+                    name = ctx.soft_id().getText()
+                text = str_literals[0].getText().strip('"\'')
+        
         return ConstraintNode(kind="Constraint", text=text, name=name, **self._get_loc(ctx))
 
     def visitInvariant_stmt(self, ctx: GASDParser.Invariant_stmtContext):
-        name = ctx.soft_id().getText() if ctx.soft_id() else None
-        if ctx.STRING_LITERAL():
-            text = ctx.STRING_LITERAL().getText().strip('"')
-        elif ctx.value():
-            text = ctx.value().getText().strip('"')
+        scope = None
+        full_text = ctx.getText()
+        if ctx.GLOBAL_KW() or "GLOBAL" in full_text: scope = "GLOBAL"
+        elif ctx.LOCAL_KW() or "LOCAL" in full_text: scope = "LOCAL"
+        
+        name = None
+        text = ""
+        str_literals = ctx.STRING_LITERAL()
+        
+        if ctx.expr():
+            text = ctx.expr().getText().strip('"\'')
+            if ctx.soft_id(): name = ctx.soft_id().getText()
+            elif str_literals: name = str_literals[0].getText().strip('"\'')
         else:
-            text = ctx.getText().strip()
-            if ":" in text and name:
-                text = text.split(":", 1)[1].strip()
-        return ConstraintNode(kind="Invariant", text=text, name=name, **self._get_loc(ctx))
+            if len(str_literals) == 2:
+                name = str_literals[0].getText().strip('"\'')
+                text = str_literals[1].getText().strip('"\'')
+            elif len(str_literals) == 1:
+                if ctx.soft_id():
+                    name = ctx.soft_id().getText()
+                text = str_literals[0].getText().strip('"\'')
+        
+        return ConstraintNode(
+            text=text,
+            kind="Invariant",
+            name=name,
+            scope=scope,
+            **self._get_loc(ctx)
+        )
 
     def visitTodo_stmt(self, ctx: GASDParser.Todo_stmtContext):
         return TodoNode(text=ctx.STRING_LITERAL().getText().strip('"'), **self._get_loc(ctx))
@@ -556,6 +911,9 @@ class ASTGenerator(GASDParserVisitor):
     def visitStrategy_def(self, ctx: GASDParser.Strategy_defContext):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText()
+        anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        self.pending_annotations = []
+        
         algo = ""
         comp = ""
         prec = None
@@ -578,5 +936,14 @@ class ASTGenerator(GASDParserVisitor):
             elif child_text == "OUTPUT":
                 output = self.visit(item.type_expr())
 
-        return StrategyDefinition(name=name, algorithm=algo, precondition=prec, complexity=comp, inputs=inputs, output=output, **loc)
+        return StrategyDefinition(name=name, algorithm=algo, precondition=prec, complexity=comp, inputs=inputs, output=output, annotations=anns, **loc)
 
+
+    def _visit_anns(self, ctx_list):
+        if not ctx_list: return []
+        if isinstance(ctx_list, list):
+            res = []
+            for c in ctx_list:
+                res.extend(self.visit(c))
+            return res
+        return self.visit(ctx_list)

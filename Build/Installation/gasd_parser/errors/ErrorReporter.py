@@ -52,6 +52,9 @@ class ErrorReporter:
     def get_warning_count(self) -> int:
         return sum(1 for e in self.semantic_errors if e.severity == "WARNING")
 
+    def get_info_count(self) -> int:
+        return sum(1 for e in self.semantic_errors if e.severity == "INFO")
+
     def to_json(self) -> str:
         """Machine-readable output format @trace #AC-PARSER-005-03"""
         report = {
@@ -114,7 +117,12 @@ class ErrorReporter:
             output.append("")
 
         for err in self.semantic_errors:
-            tag = "error" if err.severity == "ERROR" else "warning"
+            if err.severity == "ERROR":
+                tag = "error"
+            elif err.severity == "WARNING":
+                tag = "warning"
+            else:
+                tag = "info"
             output.append(f"{tag}[SEMANTIC {err.code}]: {err.message}")
             output.append(f"  --> {self.source_file}:{err.line}:{err.column}")
             if err.context:

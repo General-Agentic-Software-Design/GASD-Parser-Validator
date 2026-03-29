@@ -17,7 +17,7 @@ def get_semantic_system(contents: Dict[str, str]) -> SemanticSystem:
         asts.append(ast)
     
     pipeline = SemanticPipeline()
-    return pipeline.build(asts)
+    return pipeline.run(asts)
 
 def get_semantic_ast(content: str) -> SemanticSystem:
     return get_semantic_system({"file.gasd": content})
@@ -133,7 +133,7 @@ def test_semast_model_builder_incremental():
     ast2 = gen.visit(tree2)
     
     pipeline = SemanticPipeline()
-    sem = pipeline.build([ast1, ast2])
+    sem = pipeline.run([ast1, ast2])
     
     ns = sem.namespaces["global"]
     assert "T1" in ns.types
@@ -155,8 +155,8 @@ def test_semast_model_regression_empty():
     # ENSURE "Returns a valid SemanticSystem with empty maps (plus built-in types)"
     assert sem_ast.kind == "SemanticSystem"
     ns = sem_ast.namespaces["global"]
-    # 16 built-in types are always registered
-    assert len(ns.types) == 16
+    # 18 built-in types (v1.2 adds Date, Int32)
+    assert len(ns.types) == 18
     assert len(ns.components) == 0
 
 # ===================================================================

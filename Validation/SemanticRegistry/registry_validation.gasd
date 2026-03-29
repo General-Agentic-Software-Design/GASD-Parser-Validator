@@ -1,0 +1,105 @@
+VERSION 1.1
+/*
+   Validation: Annotation Semantic Registry
+   =========================================
+   Exhaustive validation of the Semantic Registry for all 21 standard annotations.
+   Traces: US-V2-002, AC-V2-002-02
+   Syntax: GASD 1.1 (Compliance with Build Plan Constraint)
+*/
+
+NAMESPACE: "GASD-Validator.Validation.SemanticRegistry"
+CONTEXT: "Validation of Semantic Triples for Standard Annotations"
+TARGET: "GASD Agent"
+TRACE: "US-V2-002"
+
+FLOW validate_standard_annotations():
+    // --- Data Validation ---
+    1. ACHIEVE "Verify @range(min, max) triple in registry"
+    2. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH' AND result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+    
+    3. ACHIEVE "Verify @min_length(n) triple in registry"
+    4. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    5. ACHIEVE "Verify @max_length(n) triple in registry"
+    6. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    7. ACHIEVE "Verify @format(fmt) triple in registry"
+    8. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    9. ACHIEVE "Verify @unique(scope) triple in registry"
+    10. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    11. ACHIEVE "Verify @default(val) triple in registry"
+    12. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    13. ACHIEVE "Verify @constraint(desc) triple in registry"
+    14. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+
+    // --- Architectural ---
+    15. ACHIEVE "Verify @injectable triple in registry"
+    16. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    17. ACHIEVE "Verify @mockable triple in registry"
+    18. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    19. ACHIEVE "Verify @transaction_type(ACID) triple in registry"
+    20. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    21. ACHIEVE "Verify @transaction_type(SAGA) triple in registry"
+    22. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+
+    // --- Implementation ---
+    23. ACHIEVE "Verify @async triple in registry"
+    24. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    25. ACHIEVE "Verify @retry(n) triple in registry"
+    26. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+    
+    27. ACHIEVE "Verify @timeout(ms) triple in registry"
+    28. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    29. ACHIEVE "Verify @external triple in registry"
+    30. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+    
+    31. ACHIEVE "Verify @hash(algo) triple in registry"
+    32. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
+        OTHERWISE THROW "Validation Failed"
+    
+    33. ACHIEVE "Verify @circuit_breaker triple in registry"
+    34. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+    
+    35. ACHIEVE "Verify @cacheable(ttl) triple in registry"
+    36. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    37. ACHIEVE "Verify @idempotent triple in registry"
+    38. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
+        OTHERWISE THROW "Validation Failed"
+
+    // --- Extended ---
+    39. ACHIEVE "Verify @sensitive triple in registry"
+    40. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+    
+    41. ACHIEVE "Verify @authorized(role) triple in registry"
+    42. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
+        OTHERWISE THROW "Validation Failed"
+
+    43. ENSURE "All 21 standard annotations are present in the registry"
+        OTHERWISE THROW "Incomplete Annotation Registry"

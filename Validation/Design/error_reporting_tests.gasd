@@ -1,0 +1,60 @@
+VERSION 1.1
+/*
+   Validation: Error Reporting System Tests
+   ========================================
+   Verifies human-readable and machine-readable error formats.
+   Based on Design/error_reporting_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Error Reporting Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-PARSER-005"
+
+// ===================================================================
+// Syntax Error Formatting
+
+FLOW test_syntax_error_format():
+    @trace #AC-PARSER-005-01, #AT-PARSER-005-01
+    1. ACHIEVE "Trigger a syntax error via GASDErrorListener"
+    2. ACHIEVE "Invoke ErrorReporter.toConsole()"
+    3. ENSURE "Output contains file path, line, and column"
+        OTHERWISE THROW "Validation Failed"
+    4. ENSURE "Output contains source snippet with caret indicator"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Semantic Error Formatting
+
+FLOW test_semantic_error_format():
+    @trace #AC-PARSER-005-02
+    1. ACHIEVE "Trigger a semantic error via ValidationPipeline"
+    2. ACHIEVE "Invoke ErrorReporter.toConsole()"
+    3. ENSURE "Output contains error code and context (e.g. within FLOW name)"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Machine-Readable Output
+
+FLOW test_error_json_output():
+    @trace #AC-PARSER-005-03
+    1. ACHIEVE "Collect multiple errors in ErrorReporter"
+    2. ACHIEVE "Invoke ErrorReporter.toJSON()"
+    3. ENSURE "Result is valid ErrorReport JSON"
+        OTHERWISE THROW "Validation Failed"
+    4. ENSURE "JSON contains 'success': false and 'errorCount' > 0"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression Tests
+
+FLOW test_error_format_stability():
+    @trace #RT-PARSER-005-01
+    1. ACHIEVE "Compare current JSON output against historical baseline"
+    2. ENSURE "JSON schema remains consistent"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Constraints
+
+CONSTRAINT: "Every error MUST include source file and line" @trace #AC-PARSER-005-01
+CONSTRAINT: "Error reporter MUST be a singleton" @trace #AC-PARSER-005-03

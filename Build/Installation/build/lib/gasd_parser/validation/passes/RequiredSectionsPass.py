@@ -16,13 +16,15 @@ class RequiredSectionsPass(ValidationPass):
         has_context = False
         has_target = False
         
+        is_v12 = getattr(ast, 'version', '1.1') == "1.2"
+        
         for d in ast.directives:
             if d.directiveType == "CONTEXT":
                 has_context = True
             if d.directiveType == "TARGET":
                 has_target = True
 
-        if not has_context:
+        if not has_context and not is_v12:
             errors.append(SemanticError(
                 code='V002',
                 severity='ERROR',
@@ -30,7 +32,7 @@ class RequiredSectionsPass(ValidationPass):
                 line=1, column=1
             ))
             
-        if not has_target:
+        if not has_target and not is_v12:
             errors.append(SemanticError(
                 code='V003',
                 severity='ERROR',
@@ -38,11 +40,15 @@ class RequiredSectionsPass(ValidationPass):
                 line=1, column=1
             ))
             
-        if not (ast.types or ast.components or ast.flows):
+        # GEP-6: GASD 1.2 permits header-only files and IMPORT-only files
+        has_imports = any(d.directiveType == "IMPORT" for d in ast.directives)
+        has_assumptions = getattr(ast, 'assumptions', None) and len(ast.assumptions) > 0
+        has_invariants = getattr(ast, 'ensures', None) and len(ast.ensures) > 0
+        if not is_v12 and not (ast.types or ast.components or ast.flows or ast.contracts or ast.models or ast.constraints or ast.decisions or has_imports or has_assumptions):
             errors.append(SemanticError(
                 code='V004',
                 severity='ERROR',
-                message="File must contain at least one TYPE, COMPONENT, or FLOW.",
+                message="File must contain at least one TYPE, COMPONENT, FLOW, CONTRACT, MODEL, DECISION, INVARIANT or IMPORT.",
                 line=1, column=1
             ))
             

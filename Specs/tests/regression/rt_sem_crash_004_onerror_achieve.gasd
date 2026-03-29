@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-004: LINT-001 ON_ERROR ACHIEVE"
+TARGET: "Python"
+
+FLOW secure_action() -> Result<Void>:
+    1. ACHIEVE "Attempt Operation"
+        POSTCONDITION: result == true
+        ON_ERROR:
+            ACHIEVE "Log Failure"
+                POSTCONDITION: "Failure logged"
+            THROW SecurityError("failed")
+    2. RETURN Void

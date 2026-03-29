@@ -1,0 +1,15 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-001: Signatures match null safety"
+TARGET: "Python"
+
+TYPE Blob:
+    data: String
+
+COMPONENT SVC:
+    INTERFACE:
+        action(data: Blob) -> Result<Void>
+
+FLOW do_action() -> Result<Void>:
+    1. ACHIEVE "SVC.action"
+        POSTCONDITION: result == true
+    2. RETURN Void

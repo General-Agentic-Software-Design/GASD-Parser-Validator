@@ -1,0 +1,110 @@
+VERSION 1.1
+/*
+   Design: Annotation Semantic Registry
+   ======================================
+   Defines the Annotation Semantic Registry that stores semantic triples
+   (structural_predicate, runtime_contract, environmental_dependency)
+   for all 21 standard annotations.
+
+   Output: Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — Annotation Semantic Registry Design"
+TARGET: "Python3"
+TRACE: "US-V2-002"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Registry Storage Format":
+    CHOSEN: "In-memory dictionary keyed by annotation type"
+    RATIONALE: "Registry must support deterministic lookup by annotation type and be accessible to all processing modules."
+    ALTERNATIVES: ["In-memory dictionary", "External JSON config", "Database table"]
+    AFFECTS: [AnnotationSemanticRegistry]
+
+DECISION "Triple Verification Types":
+    CHOSEN: "Three enum values: AST_PATTERN_MATCH, PROPERTY_BASED_TEST, ASSUMPTION_STATEMENT"
+    RATIONALE: "Per GEP-6 §1.1, each component of the triple maps to a specific verification method."
+    ALTERNATIVES: ["Three enum values", "String-based types", "Numeric codes"]
+    AFFECTS: [SemanticTriple]
+
+// ===================================================================
+// Semantic Triple Model
+// ===================================================================
+
+/// A semantic triple decomposes an annotation into three verifiable dimensions.
+TYPE SemanticTriple @trace #AC-V2-002-03:
+    structural_predicate: String
+    structural_verification: String
+    runtime_contract: String
+    runtime_verification: String
+    environmental_dependency: String @optional
+    environmental_verification: String @optional
+
+/// Registry entry for a single annotation.
+TYPE AnnotationRegistryEntry @trace #AC-V2-002-01:
+    annotation_name: String
+    annotation_category: String
+    triple: SemanticTriple
+    version: String @default("1.2")
+
+// ===================================================================
+// Registry Component
+// ===================================================================
+
+/// Centralized registry storing semantic triples for all standard annotations.
+COMPONENT AnnotationSemanticRegistry @trace #AC-V2-002-01:
+    PATTERN: "Registry"
+    DEPENDENCIES: []
+    INTERFACE:
+        lookup(annotationName: String) -> SemanticTriple
+        getAllEntries() -> List<AnnotationRegistryEntry>
+        getByCategory(category: String) -> List<AnnotationRegistryEntry>
+
+// ===================================================================
+// Registry Population
+// ===================================================================
+
+/// Populates the registry with all 21 standard annotation triples.
+FLOW populate_registry(registry: AnnotationSemanticRegistry) -> AnnotationSemanticRegistry:
+    @trace #AC-V2-002-02
+
+    // --- Data Validation Annotations (7) ---
+    1. ACHIEVE "Register @range(min, max) triple: (Guard clause present, Boundary inputs tested, None)"
+    2. ACHIEVE "Register @min_length(n) triple: (Length guard present, Input n-1 rejected, None)"
+    3. ACHIEVE "Register @max_length(n) triple: (Length guard present, Input n+1 rejected, None)"
+    4. ACHIEVE "Register @format(fmt) triple: (Regex present, Adversarial inputs handled, None)"
+    5. ACHIEVE "Register @unique(scope) triple: (Uniqueness check present, Duplicate rejected, DB unique constraint)"
+    6. ACHIEVE "Register @default(val) triple: (Default assignment present, Missing input gets val, None)"
+    7. ACHIEVE "Register @constraint(desc) triple: (Validation logic present, Violating inputs rejected, None)"
+
+    // --- Architectural Annotations (4) ---
+    8. ACHIEVE "Register @injectable triple: (DI constructor generated, Component resolved from DI, DI container configured)"
+    9. ACHIEVE "Register @mockable triple: (Interface abstraction generated, Mock substitutable, None)"
+    10. ACHIEVE "Register @transaction_type(ACID) triple: (Transactional annotation present, Rollback tested, DB isolation >= READ COMMITTED)"
+    11. ACHIEVE "Register @transaction_type(SAGA) triple: (Saga pattern present, Compensation executes, All participants compensate)"
+
+    // --- Implementation Modifier Annotations (8) ---
+    12. ACHIEVE "Register @async triple: (Future/Promise return type, Non-blocking dispatch, Thread pool size)"
+    13. ACHIEVE "Register @retry(n) triple: (Retry wrapper present count=n, Retries occur and propagate, Idempotent OR compensation)"
+    14. ACHIEVE "Register @timeout(ms) triple: (Timeout parameter present, TimeoutException thrown, External service latency)"
+    15. ACHIEVE "Register @external triple: (Network error handling present, All failure modes handled, Endpoint reachable)"
+    16. ACHIEVE "Register @hash(algo) triple: (Named algorithm present, Hash matches format, Algorithm library available)"
+    17. ACHIEVE "Register @circuit_breaker triple: (Breaker wrapper with open/half-open/closed, FSM states tested, None)"
+    18. ACHIEVE "Register @cacheable(ttl) triple: (Cache annotation with TTL, Cache hit consistent within TTL, Cache infrastructure available)"
+    19. ACHIEVE "Register @idempotent triple: (No side-effect duplication, Repeated calls identical state, None)"
+
+    // --- Extended Annotations (2) ---
+    20. ACHIEVE "Register @sensitive triple: (Field masked in logs and encryption, Never plaintext in logs, Encryption key management)"
+    21. ACHIEVE "Register @authorized(role) triple: (Role check present, Unauthorized rejected, Auth service available)"
+
+    22. RETURN registry
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Registry MUST support lookup by annotation type" @trace #AC-V2-002-01
+CONSTRAINT: "Resolution MUST be deterministic — same annotation always resolves to same triple" @trace #AC-V2-002-03
+CONSTRAINT: "Registry MUST be accessible to all processing modules (parsers, analyzers, linters)" @trace #AC-V2-002-01

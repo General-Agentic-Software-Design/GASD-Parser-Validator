@@ -1,0 +1,68 @@
+VERSION 1.1
+/*
+   Validation: AST — Abstract Syntax Tree Model Tests
+   ===============================================
+   Verifies AST hierarchy, metadata, and serialization.
+   Based on Design/ast_design.gasd.
+*/
+
+CONTEXT: "Compiler / Language Tooling — AST Validation"
+TARGET: "TypeScript", "Python3"
+TRACE: "US-PARSER-003", "US-PARSER-007"
+
+// ===================================================================
+// Acceptance Tests
+
+FLOW test_ast_root():
+    @trace #AT-PARSER-003-01
+    1. ACHIEVE "Generate AST from a valid file"
+    2. ENSURE "Root node is GASDFile"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_ast_hierarchy():
+    @trace #AT-PARSER-003-02
+    1. ACHIEVE "Generate AST for FLOW with multiple steps"
+    2. ENSURE "FlowStepNode children appear under FlowDefinition"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_ast_metadata():
+    @trace #AT-PARSER-003-03, #AC-PARSER-007-10
+    1. ACHIEVE "Generate AST for any construct"
+    2. ENSURE "Node contains 'line' and 'column' properties"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// GEP-5 Specific AST Tests
+
+FLOW test_ast_validate_binding():
+    @trace #AC-PARSER-008-04
+    1. ACHIEVE "Generate AST for 'VALIDATE user AS TYPE.User'"
+    2. ENSURE "FlowStepNode contains action='VALIDATE'"
+        OTHERWISE THROW "Validation Failed"
+    3. ENSURE "FlowStepNode contains asBinding='AS TYPE'"
+        OTHERWISE THROW "Validation Failed"
+    4. ENSURE "FlowStepNode contains typePath='User'"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Regression & JSON Tests
+
+FLOW test_ast_json_export():
+    @trace #AC-PARSER-007-03, #AC-PARSER-007-08
+    1. ACHIEVE "Export AST to JSON string"
+    2. ENSURE "String is valid JSON"
+        OTHERWISE THROW "Validation Failed"
+    3. ENSURE "JSON structure matches Design/ast_design.gasd"
+        OTHERWISE THROW "Validation Failed"
+
+FLOW test_ast_deterministic():
+    @trace #AC-PARSER-003-04
+    1. ACHIEVE "Generate AST twice from the same source"
+    2. ENSURE "Both ASTs are deeply equal"
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Constraints
+
+CONSTRAINT: "Every AST node MUST include source location metadata" @trace #AC-PARSER-003-03
+CONSTRAINT: "AST MUST enforce parent-child hierarchy successfully" @trace #AC-PARSER-003-02

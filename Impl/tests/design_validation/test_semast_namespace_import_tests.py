@@ -13,7 +13,7 @@ def test_semast_import_resolution_requirement():
     from Impl.semantic.SemanticPipeline import SemanticPipeline
     pipeline = SemanticPipeline()
     # Basic check for namespaces property in system metadata
-    assert hasattr(pipeline, "build")
+    assert hasattr(pipeline, "run")
 
 # ===================================================================
 # Cross-File Design Validation

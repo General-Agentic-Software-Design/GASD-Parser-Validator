@@ -1,0 +1,69 @@
+VERSION 1.2
+/*
+   Design: ACHIEVE POSTCONDITION & TIMEOUT
+   =========================================
+   Defines the grammar and semantic rules for POSTCONDITION and TIMEOUT
+   blocks under ACHIEVE constructs in GASD 1.2.
+
+   Output: Impl/grammar/ and Impl/semantic/
+*/
+
+CONTEXT: "Compiler / Language Tooling — ACHIEVE Formalization Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-003"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "POSTCONDITION Enforcement Model":
+    CHOSEN: "Version-sensitive: Error in 1.2, Warning in 1.1"
+    RATIONALE: "Per GEP-6 §2.2, ACHIEVE without POSTCONDITION is an error in 1.2 but must remain valid in 1.1."
+    ALTERNATIVES: ["Version-sensitive enforcement", "Always error", "Always warning"]
+    AFFECTS: [AchieveBodyRule, PostconditionExprRule, DurationLiteralRule]
+
+// ===================================================================
+// Grammar Additions
+// ===================================================================
+
+/// ACHIEVE body grammar rule (GASD 1.2 addition).
+TYPE AchieveBodyRule @trace("#AC-V2-003-01") AS TRACE_01:
+    syntax: "ACHIEVE STRING_LITERAL (':' achieve_body)?"
+    achieve_body: "INDENT (POSTCONDITION ':' INDENT postcondition_expr+ DEDENT)? on_error_clause? (TIMEOUT ':' duration_literal)? DEDENT"
+
+/// Postcondition expression grammar.
+TYPE PostconditionExprRule @trace("#AC-V2-003-02") AS TRACE_02:
+    syntax: "expr comparison_op expr"
+    comparison_ops: "IS | == | != | > | < | >= | <="
+
+/// Duration literal grammar.
+TYPE DurationLiteralRule @trace("#AC-V2-003-03") AS TRACE_03:
+    syntax: "number_literal ('ms' | 's' | 'm')"
+    examples: "3000ms, 5s, 2m"
+
+// ===================================================================
+// Semantic Validation
+// ===================================================================
+
+/// Validates ACHIEVE constructs for POSTCONDITION presence based on version.
+FLOW validate_achieve_postconditions(ast: GASDFile, version: String) -> List<SemanticError>:
+    @trace("#AC-V2-003-04") AS TRACE_04
+    1. ACHIEVE "Collect all ACHIEVE nodes from AST"
+        POSTCONDITION: "AST parsed"
+    2. ACHIEVE "For each ACHIEVE, check if POSTCONDITION block exists"
+        POSTCONDITION: "Block presence checked"
+    3. ACHIEVE "For VERSION 1.2: emit LINT-001 ERROR for each ACHIEVE missing POSTCONDITION"
+        POSTCONDITION: "Error emitted"
+    4. ACHIEVE "For VERSION 1.1: emit WARNING for each ACHIEVE missing POSTCONDITION"
+        POSTCONDITION: "Warning emitted"
+    5. ACHIEVE "List of errors or warnings"
+        POSTCONDITION: "Report generated"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "POSTCONDITION expressions support IS, ==, !=, >, <, >=, <= operators" @trace #AC-V2-003-02
+CONSTRAINT: "TIMEOUT supports duration literals: ms, s, m" @trace #AC-V2-003-03
+CONSTRAINT: "LINT-001: ACHIEVE without POSTCONDITION in VERSION 1.2 is an ERROR" @trace #AC-V2-003-04
+CONSTRAINT: "ACHIEVE without POSTCONDITION in VERSION 1.1 MUST remain valid (warning only)" @trace #AC-V2-003-04

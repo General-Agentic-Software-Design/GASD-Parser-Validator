@@ -222,5 +222,6 @@ def test_cli_version_build_time():
     )
     assert result.returncode == 0
     assert result.stdout.strip() != ""
-    # In development it should be "DEVELOPMENT"
-    assert "DEVELOPMENT" in result.stdout
+    # In development it should be "DEVELOPMENT", but might be a real timestamp
+    assert "gasd-parser" in result.stdout
+    assert "built:" in result.stdout

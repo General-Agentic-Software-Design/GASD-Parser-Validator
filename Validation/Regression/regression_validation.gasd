@@ -1,0 +1,35 @@
+/*
+   Validation: Regression & Compatibility (v1.1 Syntax)
+   ====================================================
+   Validation of backward compatibility for GASD 1.1 files.
+   Traces: RT-V2-201 to RT-V2-205
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Backward Compatibility Validation"
+TARGET: "GASD Agent"
+TRACE: "US-V2-001"
+
+FLOW validate_regression():
+    1. ACHIEVE "Verify RT-V2-201: Missing VERSION defaults to 1.1"
+    2. ENSURE "result.version == '1.1'"
+        OTHERWISE THROW "Validation Failed"
+    
+    3. ACHIEVE "Verify RT-V2-202: Standard 1.1 ACHIEVE (Warning only)"
+    4. ENSURE "result.severity == 'Warning'"
+        OTHERWISE THROW "Validation Failed"
+    
+    5. ACHIEVE "Verify RT-V2-203: Standard 1.1 INVARIANT defaults to LOCAL"
+    6. ENSURE "result.scope == 'LOCAL'"
+        OTHERWISE THROW "Validation Failed"
+    
+    7. ACHIEVE "Verify RT-V2-204: 1.1 Auto-ID generation (PO- prefix)"
+    8. ENSURE "result.id_prefix == 'PO-'"
+        OTHERWISE THROW "Validation Failed"
+    
+    9. ACHIEVE "Verify RT-V2-205: Verbatim 1.1 EBNF compatibility"
+    10. ENSURE "result.match == TRUE"
+        OTHERWISE THROW "Validation Failed"
+
+    11. ENSURE "Regression items are validated against 1.1 targets"
+        OTHERWISE THROW "Validation Failed"

@@ -19,6 +19,8 @@ class ParseTreeAPI:
         stream = InputStream(source)
         lexer = GASDIndentationLexer(stream)
         tokens = CommonTokenStream(lexer)
+        tokens.fill()
+        
         parser = GASDParser(tokens)
 
         self.reporter = ErrorReporter(source_file="<string>")

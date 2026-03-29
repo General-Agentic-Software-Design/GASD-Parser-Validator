@@ -8,6 +8,7 @@ def test_cli_strict_warnings():
     even in standard validation mode (without --ast-sem).
     """
     gasd_content = """
+VERSION 1.2
 CONTEXT: "Strict Warning Test"
 TARGET: "JavaScript"
 NAMESPACE: "test"
@@ -26,7 +27,7 @@ FLOW main:
     try:
         # Run standard validation
         result = subprocess.run(
-            ["python3", "-m", "gasd_parser", "test_strict.gasd"],
+            ["python3", "-m", "gasd_parser", "test_strict.gasd", "--ast-sem"],
             capture_output=True,
             text=True
         )

@@ -39,7 +39,7 @@ def test_semast_match_exhaustiveness():
     assert len(flow.pipeline) == 1
 
 def test_semast_ensure_otherwise():
-    analyzer = FlowAnalyzer(SymbolTable())
+    analyzer = FlowAnalyzer(SymbolTable(), version="1.2")
     flow = ResolvedFlowNode(SourceRange("", 0, 0, 0, 0), "F", [], TypeContract("Void"), [make_step("ENSURE", "")])
     with pytest.raises(SemanticError, match="MissingOtherwise"):
         analyzer.check_consistency(flow)

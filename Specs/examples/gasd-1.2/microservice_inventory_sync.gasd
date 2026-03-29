@@ -1,0 +1,85 @@
+VERSION 1.2
+CONTEXT: "Order-to-Inventory Synchronization"
+TARGET: "Spring Boot / RabbitMQ"
+NAMESPACE: "org.gasd.realistic.sync"
+
+/* 
+   Scenario: Microservice Event-Driven Sync
+   ========================================
+   When an order is created, it must notify the Inventory service
+   to reserve stock. This design uses GASD 1.2 CONTRACTs to
+   formally model the cross-service boundary and ASSUMPTIONs
+   to declare environmental constraints (MQ performance).
+*/
+
+IMPORT "payment_service_interface.gasd" AS Pay
+
+/// Formal contract for the external payment gateway
+CONTRACT Pay.execute_payment:
+    INPUT: amount: Decimal, currency: String
+    OUTPUT: Result<String>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "SUCCESS"
+        CASE failure:
+            THROWS: PaymentError
+    IDEMPOTENT: true
+
+/// Environmental dependency for the payment gateway
+ASSUMPTION "Payment gateway is available 99.9% of the time" @monitor("External: payment_gateway_uptime") AS PAYMENT_GATEWAY_AVAILABILITY:
+    AFFECTS: [Pay.execute_payment]
+    CONSEQUENCE: "Orders cannot be placed if payment gateway is down"
+
+/// Contract for payment processing within this synchronization flow
+CONTRACT Pay.process_payment:
+    INPUT: data: Any
+    OUTPUT: Result<String>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "OK"
+    IDEMPOTENT: true
+
+TYPE OrderEvent:
+    order_id: UUID
+    items: List<{sku: String, qty: Integer}>
+    timestamp: DateTime
+
+COMPONENT InventoryService:
+    INTERFACE:
+        reserve_stock(event: OrderEvent) -> Result<Boolean>
+
+/// Formal contract for the Inventory Service consumer
+CONTRACT InventoryService.reserve_stock:
+    INPUT: event: OrderEvent
+    OUTPUT: Result<Boolean>
+    BEHAVIORS:
+        CASE stock_available:
+            POSTCONDITION: result == true
+            POSTCONDITION: "Stock is decremented in DB"
+        CASE out_of_stock:
+            POSTCONDITION: result == false
+            POSTCONDITION: "Event is logged as 'UNFULFILLED'"
+    IDEMPOTENT: true
+
+/// Environmental assumptions about the message broker
+ASSUMPTION "RabbitMQ latency < 200ms" @monitor("Prometheus: rabbitmq_delivery_latency_ms") AS MQ_LATENCY_GUARD:
+    AFFECTS: [OrderPlacement.emit_event]
+    CONSEQUENCE: "Degraded user experience or timeout in order flow"
+
+ASSUMPTION "Inventory sync requires persistent messaging" @monitor("RabbitMQ: queue_durability") AS MQ_DURABILITY_GUARD:
+    AFFECTS: [InventoryService.reserve_stock]
+    CONSEQUENCE: "Events may be lost on broker crash, breaking sync"
+
+COMPONENT OrderPlacement:
+    INTERFACE:
+        place_order(items: List<Any>) -> Result<UUID>
+
+FLOW place_order(items: List<Any>) -> Result<UUID>:
+    1. ACHIEVE "Create Order Record"
+        POSTCONDITION: result.status == "PENDING"
+    2. ACHIEVE "Pay.execute_payment"
+        POSTCONDITION: result.is_success == true
+    3. ACHIEVE "Emit OrderEvent to RabbitMQ"
+        DEPENDS_ON: [step 1, step 2]
+        POSTCONDITION: "Event is published to 'order.created' exchange"
+    4. RETURN result_of(step 1).id

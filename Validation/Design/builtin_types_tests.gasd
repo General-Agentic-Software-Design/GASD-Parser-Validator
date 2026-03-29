@@ -1,0 +1,67 @@
+VERSION 1.1
+/*
+   Validation Specs: Built-in Standard Types Support
+   ================================================
+   Tests traceability for §US-SEMAST-019.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Validation Spec"
+TARGET: "Pytest"
+TRACE: "US-SEMAST-019"
+
+// ===================================================================
+// Acceptance Tests
+// ===================================================================
+
+/// AT-SEMAST-019-01: Implicit primitive support
+FLOW test_primitive_implicit_support():
+    1. ACHIEVE "Prepare GASD file using String, Integer, Boolean without definition"
+    2. ACHIEVE "Run gasd-parser validation"
+    3. ENSURE "No V008 warnings are produced" @trace #AT-SEMAST-019-01
+        OTHERWISE THROW "Validation Failed"
+
+/// AT-SEMAST-019-02: Generics resolution (Result)
+FLOW test_result_generics_resolution():
+    1. ACHIEVE "Prepare GASD file with Result<UserProfile>"
+    2. ACHIEVE "Run semantic analysis"
+    3. ENSURE "Result is resolved as a built-in generic and UserProfile is resolved from local TYPE" @trace #AT-SEMAST-019-02
+        OTHERWISE THROW "Validation Failed"
+
+/// AT-SEMAST-019-03: DateTime and annotations
+FLOW test_datetime_annotations():
+    1. ACHIEVE "Prepare TYPE with field 'created_at: DateTime' @format('iso8601')"
+    2. ACHIEVE "Run validation"
+    3. ENSURE "DateTime is recognized and annotations are successfully bound" @trace #AT-SEMAST-019-03
+        OTHERWISE THROW "Validation Failed"
+
+/// AT-SEMAST-019-04: VALIDATE AS TYPE binding to built-ins
+FLOW test_validate_as_builtin_binding():
+    1. ACHIEVE "Prepare FLOW with 'VALIDATE payload AS TYPE.String'"
+    2. ACHIEVE "Run validation"
+    3. ENSURE "Binding resolves to built-in String type" @trace #AT-SEMAST-019-04
+        OTHERWISE THROW "Validation Failed"
+
+/// AT-SEMAST-019-05: Collision avoidance
+FLOW test_builtin_collision_error():
+    1. ACHIEVE "Prepare GASD file with 'TYPE String: value: String'"
+    2. ACHIEVE "Run validation"
+    3. ENSURE "SymbolCollisionError is produced" @trace #AT-SEMAST-019-05
+        OTHERWISE THROW "Validation Failed"
+
+// ===================================================================
+// Negative Tests
+// ===================================================================
+
+/// NT-SEMAST-019-01: Unknown type rejections
+FLOW test_unknown_type_rejection():
+    1. ACHIEVE "Prepare GASD file with 'TYPE X: field: MyCustomType'"
+    2. ACHIEVE "Run validation"
+    3. ENSURE "V008 warning: Unknown type reference: 'MyCustomType' is produced" @trace #NT-SEMAST-019-01
+        OTHERWISE THROW "Validation Failed"
+
+/// NT-SEMAST-019-02: Invalid generic arguments
+FLOW test_invalid_generic_args():
+    1. ACHIEVE "Prepare GASD file with 'Map<String>'"
+    2. ACHIEVE "Run validation"
+    3. ENSURE "Error: Map requires 2 generic type arguments" @trace #NT-SEMAST-019-02
+        OTHERWISE THROW "Validation Failed"

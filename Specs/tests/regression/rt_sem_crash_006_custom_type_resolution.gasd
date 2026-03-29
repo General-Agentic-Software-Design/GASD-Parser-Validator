@@ -1,0 +1,14 @@
+VERSION 1.2
+CONTEXT: "RT-SEM-CRASH-006: Declared custom type resolution"
+TARGET: "Python"
+
+TYPE Binary:
+    binary_size: Integer
+
+TYPE TestReport:
+    pass_rate: Float
+
+COMPONENT Builder:
+    INTERFACE:
+        compile(src: String) -> Result<Binary>
+        run_tests(bin: Binary) -> Result<TestReport>

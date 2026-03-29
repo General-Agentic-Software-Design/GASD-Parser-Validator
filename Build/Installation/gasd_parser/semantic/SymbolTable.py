@@ -70,7 +70,8 @@ class BuiltinTypeRegistry:
         """@trace #AC-SEMAST-019-01"""
         builtins = [
             "String", "Integer", "Int", "Boolean", "Float", "Decimal", "Bytes", "UUID", 
-            "DateTime", "Optional", "List", "Map", "Enum", "Result", "Any", "Void"
+            "Date", "DateTime", "Optional", "List", "Map", "Enum", "Result", "Any", "Void",
+            "Int32"
         ]
         
         # SourceRange for built-ins is internal

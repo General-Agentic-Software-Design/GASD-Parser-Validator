@@ -1,0 +1,49 @@
+VERSION 1.2
+CONTEXT: "Memory-Augmented Research Agent"
+TARGET: "Python / ChromaDB / Redis"
+NAMESPACE: "org.gasd.agentic.memory"
+
+/* 
+   Scenario: Continuous Knowledge Acquisition
+   ==========================================
+   An agent that researches a topic and updates its persistent memory.
+   Features:
+   - INVARIANT GLOBAL on memory consistency (index vs store).
+   - POSTCONDITION on semantic embedding quality.
+   - AS IDs for data provenance tracking.
+*/
+
+TYPE KnowledgeItem:
+    topic: String
+    summary: String
+    sources: List<String>
+    embedding: List<Float> @range(-1.0, 1.0) AS EMBEDDING_VALID
+
+COMPONENT MemoryStore:
+    INTERFACE:
+        retrieve_similar(query_vector: List<Float>) -> Result<List<KnowledgeItem>>
+        upsert_item(item: KnowledgeItem) -> Result<Void>
+
+/// Global invariant: vector index must always be in sync with document store
+INVARIANT GLOBAL: "Count(VectorIndex) == Count(DocumentStore)"
+
+MODEL "Memory Consistency Model":
+    TYPE: TLA+
+    FILE: "models/memory_consistency.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Count(VectorIndex) == Count(DocumentStore)"
+    ASSUMPTIONS:
+        "Write-ahead log ensures eventual consistency"
+
+FLOW expand_knowledge(topic: String, new_facts: List<String>) -> Result<Void>:
+    1. ACHIEVE "Retrieve Existing Context"
+        POSTCONDITION: "Recent findings loaded into context window"
+    2. ACHIEVE "Synthesize New KnowledgeItem"
+        DEPENDS_ON: [step 1]
+        POSTCONDITION: result.topic == topic
+        POSTCONDITION: result.sources.length >= 1
+    3. ACHIEVE "MemoryStore.upsert_item"
+        DEPENDS_ON: [step 2]
+        POSTCONDITION: "Item persistent in vector database"
+        @provenance("Research session: {{session_id}}") AS MEMORY_UPDATE_AUDIT
+    4. RETURN Void
