@@ -91,8 +91,8 @@ class TestASTRegression(unittest.TestCase):
         """RT-PARSER-007-01: Exit codes and validation output remains stable."""
         result = self.run_parser([self.sample_file, "--ast-sem"])
         self.assertEqual(result.returncode, 0)
-        # Check standard validation output is NOT printed when --ast is used (to avoid pollution)
-        # but if we didn't use --ast, it should be there.
+        # Check standard validation output is NOT printed when --ast-sem is used (to avoid pollution)
+        # but if we didn't use --ast-sem, it should be there.
         result_no_ast = self.run_parser([self.sample_file])
         self.assertIn("OK", result_no_ast.stderr)
 

@@ -50,7 +50,7 @@ def test_cli_human_readable_failure():
         os.unlink(fp)
 
 def test_cli_json_ast():
-    """Verify --json --ast combines AST into the response"""
+    """Verify --json --ast-sem combines AST into the response"""
     result, fp = run_cli("--ast-sem", "--json")
     try:
         assert result.returncode == 0
@@ -76,12 +76,12 @@ def test_cli_json_sem_ast():
         os.unlink(fp)
 
 def test_cli_no_ast_printed_without_json():
-    """Verify --ast alone does not print raw JSON to stdout"""
+    """Verify --ast-sem alone does not print raw JSON to stdout"""
     result, fp = run_cli("--ast-sem")
     try:
         assert result.returncode == 0
         assert f"OK Passed: {fp}" in result.stderr
-        # With --ast, JSON is NOT printed to stdout unless --json is specified
+        # With --ast-sem, JSON is NOT printed to stdout unless --json is specified
         assert not result.stdout.strip().startswith("{")
         assert '"kind": "GASDFile"' not in result.stdout
     finally:
