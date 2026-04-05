@@ -1,3 +1,2 @@
 [console_scripts]
 gasd_parser = gasd_parser.cli:main
-

@@ -4,17 +4,6 @@ The official, canonical parser and validator for the **General Agentic Software 
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
-## `--ast` vs `--ast-sem` — Validation Mode Comparison
-
-| | `--ast-sem` | `--ast` |
-| --- | --- | --- |
-| `do_full_sem` | **`True`** | **`False`** |
-| `ReferenceResolutionPass` | **Skipped** (deferred to cross-file Phase 4) | **Runs** per-file in Phase 1-3 |
-| Phase 4 (`SemanticPipeline`) | **Runs** — resolves types/deps cross-file | **Does NOT run** |
-
-> [!IMPORTANT]
-> When validating multi-file projects, use `--ast-sem` to get correct cross-file type resolution. `--ast` performs per-file reference resolution only, which will report false errors for types defined in other files.
-
 ## Project Structure
 
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
@@ -96,10 +85,6 @@ gasd-parser my_spec.gasd
 
 # Output results in JSON (for tooling integration)
 gasd-parser my_spec.gasd --json
-
-# Extract and output the Syntactic AST in JSON format (to console)
-# Note: Raw JSON to stdout requires the --json flag for single files
-gasd-parser my_spec.gasd --ast --json
 
 # Extract and output the Semantic AST in JSON format
 gasd-parser my_spec.gasd --ast-sem --json

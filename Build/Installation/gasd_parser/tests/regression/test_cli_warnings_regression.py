@@ -15,7 +15,7 @@ def run_cli(file_path, *args):
     return result
 
 def test_cli_ast_warnings():
-    """Verify --ast shows Phase 3 warnings and summary includes them."""
+    """Verify --ast flag is rejected as a tombstone feature."""
     gasd_content = """CONTEXT: "Test"\nTARGET: "Any"\nNAMESPACE: "n"\nTYPE T:\n  f: UnknownType\n"""
     with tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w") as tmp:
         tmp.write(gasd_content)
