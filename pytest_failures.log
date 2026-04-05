@@ -1,0 +1,86 @@
+Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_output_console FAILED [  0%]
+Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_output_file FAILED [  0%]
+Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_combine FAILED [  1%]
+Impl/tests/acceptance/test_metamodel_validation.py::test_authoritative_metamodel_validation FAILED [  6%]
+Impl/tests/acceptance/test_semast_annotations.py::test_semast_annotation_validation FAILED [  7%]
+Impl/tests/acceptance/test_v20_cli_versioning_acceptance.py::test_cli_version_mismatch_11_vs_12 FAILED [ 35%]
+Impl/tests/acceptance/test_v20_cli_versioning_acceptance.py::test_cli_ast_flag_removal FAILED [ 36%]
+Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AT-V2-108-VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nFLOW f():\n  1. ACHIEVE 'T1'\n    DEPENDS_ON STEP 'T2'\n    POSTCONDITION: true\n  2. ACHIEVE 'T2'\n    DEPENDS_ON STEP 'T1'\n    POSTCONDITION: true\n-1-LINT-009-cli_args7] FAILED [ 38%]
+Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AT-V2-109-VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n-1-LINT-003-cli_args8] FAILED [ 38%]
+Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AC-PARSER-007-01-VERSION 1.2\nNAMESPACE: 'T'\n-1-Unknown argument-cli_args16] FAILED [ 40%]
+Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_core_interfaces FAILED [ 56%]
+Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_cli_defaults FAILED [ 56%]
+Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_ast_version_aware FAILED [ 56%]
+Impl/tests/regression/test_phase11_regressions.py::test_cli_strict_warnings FAILED [ 71%]
+Impl/tests/regression/test_phase11_regressions.py::test_multi_doc_alias_resolution FAILED [ 71%]
+Impl/tests/regression/test_semast_annotation_regression.py::test_semast_annotation_validation FAILED [ 73%]
+Impl/tests/regression/test_semast_cli_regression.py::test_cli_human_readable_failure FAILED [ 76%]
+Impl/tests/regression/test_semast_cli_regression.py::test_cli_json_ast FAILED [ 76%]
+Impl/tests/regression/test_semast_cli_regression.py::test_semast_cli_combine FAILED [ 77%]
+Impl/tests/regression/test_semast_cli_regression.py::test_semast_cli_errors FAILED [ 77%]
+Impl/tests/regression/test_semast_path_resolution_regression.py::TestSemASTPathResolutionRegression::test_multi_file_dir_resolution FAILED [ 88%]
+Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-201-NAMESPACE: 'Test'\nTARGET: 'Python'\nTYPE T: s: String\n-0-1.1-] FAILED [ 94%]
+Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-202-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'Task'\n-0-1.1-Warning] FAILED [ 94%]
+Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-203-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n-0-1.1-Warning] FAILED [ 94%]
+Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-204-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'T'\n  2. ENSURE 'ID generated'\n-0-1.1-] FAILED [ 95%]
+Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-206-VERSION 1.1\nNAMESPACE: 'T'\nTARGET: 'P'\n@retry(3)\nTYPE T: s: String\n-0-1.1-] FAILED [ 95%]
+Impl/tests/semantic/test_v2_lint_engine.py::test_lint_engine_trace_format_v12 FAILED [ 95%]
+Impl/tests/semantic/test_v2_lint_engine.py::test_lint_engine_trace_format_v11 FAILED [ 95%]
+Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-001-VERSION 1.1\nNAMESPACE: 'T'\nFLOW f():\n  1. ACHIEVE 'T'\n-VERSION 1.2\nNAMESPACE: 'T'\nFLOW f():\n  1. ACHIEVE 'T'\n-0-1] FAILED [ 95%]
+Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-002-VERSION 1.1\nNAMESPACE: 'T'\nIMPORT 'Ext'\n-VERSION 1.2\nNAMESPACE: 'T'\nIMPORT 'Ext'\n-0-1] FAILED [ 96%]
+Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-003-VERSION 1.1\nNAMESPACE: 'T'\nINVARIANT 'I': true\n-VERSION 1.2\nNAMESPACE: 'T'\nINVARIANT 'I': true\n-0-1] FAILED [ 96%]
+Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-011-VERSION 1.1\nNAMESPACE: 'T'\n@retry(3)\nTYPE T: s: String\n-VERSION 1.2\nNAMESPACE: 'T'\n@retry(3)\nTYPE T: s: String\n-0-1] FAILED [ 96%]
+Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-013-VERSION 1.1\nNAMESPACE: 'T'\n-VERSION 1.2\nNAMESPACE: 'T'\n-1-1] FAILED [ 96%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@unique('GLOBAL')-environmental] FAILED [ 97%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@injectable-environmental] FAILED [ 97%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@transaction_type('ACID')-environmental] FAILED [ 98%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@transaction_type('SAGA')-runtime] FAILED [ 98%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@retry(3)-runtime] FAILED [ 98%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@timeout(100)-environmental] FAILED [ 98%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@external-runtime] FAILED [ 99%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@circuit_breaker-runtime] FAILED [ 99%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@cacheable(60)-environmental] FAILED [ 99%]
+Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@authorized('admin')-environmental] FAILED [100%]
+FAILED Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_output_console
+FAILED Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_output_file
+FAILED Impl/tests/acceptance/test_ast_extraction.py::test_cli_ast_combine - A...
+FAILED Impl/tests/acceptance/test_metamodel_validation.py::test_authoritative_metamodel_validation
+FAILED Impl/tests/acceptance/test_semast_annotations.py::test_semast_annotation_validation
+FAILED Impl/tests/acceptance/test_v20_cli_versioning_acceptance.py::test_cli_version_mismatch_11_vs_12
+FAILED Impl/tests/acceptance/test_v20_cli_versioning_acceptance.py::test_cli_ast_flag_removal
+FAILED Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AT-V2-108-VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nFLOW f():\n  1. ACHIEVE 'T1'\n    DEPENDS_ON STEP 'T2'\n    POSTCONDITION: true\n  2. ACHIEVE 'T2'\n    DEPENDS_ON STEP 'T1'\n    POSTCONDITION: true\n-1-LINT-009-cli_args7]
+FAILED Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AT-V2-109-VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n-1-LINT-003-cli_args8]
+FAILED Impl/tests/acceptance/test_v2_acceptance.py::test_v2_acceptance_comprehensive[AC-PARSER-007-01-VERSION 1.2\nNAMESPACE: 'T'\n-1-Unknown argument-cli_args16]
+FAILED Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_core_interfaces
+FAILED Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_cli_defaults
+FAILED Impl/tests/design_validation/test_v2_design_validation.py::test_v2_design_ast_version_aware
+FAILED Impl/tests/regression/test_phase11_regressions.py::test_cli_strict_warnings
+FAILED Impl/tests/regression/test_phase11_regressions.py::test_multi_doc_alias_resolution
+FAILED Impl/tests/regression/test_semast_annotation_regression.py::test_semast_annotation_validation
+FAILED Impl/tests/regression/test_semast_cli_regression.py::test_cli_human_readable_failure
+FAILED Impl/tests/regression/test_semast_cli_regression.py::test_cli_json_ast
+FAILED Impl/tests/regression/test_semast_cli_regression.py::test_semast_cli_combine
+FAILED Impl/tests/regression/test_semast_cli_regression.py::test_semast_cli_errors
+FAILED Impl/tests/regression/test_semast_path_resolution_regression.py::TestSemASTPathResolutionRegression::test_multi_file_dir_resolution
+FAILED Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-201-NAMESPACE: 'Test'\nTARGET: 'Python'\nTYPE T: s: String\n-0-1.1-]
+FAILED Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-202-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'Task'\n-0-1.1-Warning]
+FAILED Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-203-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nINVARIANT 'Inv': true\n-0-1.1-Warning]
+FAILED Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-204-VERSION 1.1\nNAMESPACE: 'Test'\nTARGET: 'Python'\nFLOW f():\n  1. ACHIEVE 'T'\n  2. ENSURE 'ID generated'\n-0-1.1-]
+FAILED Impl/tests/regression/test_v2_regression.py::test_v2_regression_comprehensive[RT-V2-206-VERSION 1.1\nNAMESPACE: 'T'\nTARGET: 'P'\n@retry(3)\nTYPE T: s: String\n-0-1.1-]
+FAILED Impl/tests/semantic/test_v2_lint_engine.py::test_lint_engine_trace_format_v12
+FAILED Impl/tests/semantic/test_v2_lint_engine.py::test_lint_engine_trace_format_v11
+FAILED Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-001-VERSION 1.1\nNAMESPACE: 'T'\nFLOW f():\n  1. ACHIEVE 'T'\n-VERSION 1.2\nNAMESPACE: 'T'\nFLOW f():\n  1. ACHIEVE 'T'\n-0-1]
+FAILED Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-002-VERSION 1.1\nNAMESPACE: 'T'\nIMPORT 'Ext'\n-VERSION 1.2\nNAMESPACE: 'T'\nIMPORT 'Ext'\n-0-1]
+FAILED Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-003-VERSION 1.1\nNAMESPACE: 'T'\nINVARIANT 'I': true\n-VERSION 1.2\nNAMESPACE: 'T'\nINVARIANT 'I': true\n-0-1]
+FAILED Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-011-VERSION 1.1\nNAMESPACE: 'T'\n@retry(3)\nTYPE T: s: String\n-VERSION 1.2\nNAMESPACE: 'T'\n@retry(3)\nTYPE T: s: String\n-0-1]
+FAILED Impl/tests/semantic/test_v2_linting_engine.py::test_lint_rules_severity_v11_vs_v12[LINT-013-VERSION 1.1\nNAMESPACE: 'T'\n-VERSION 1.2\nNAMESPACE: 'T'\n-1-1]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@unique('GLOBAL')-environmental]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@injectable-environmental]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@transaction_type('ACID')-environmental]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@transaction_type('SAGA')-runtime]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@retry(3)-runtime]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@timeout(100)-environmental]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@external-runtime]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@circuit_breaker-runtime]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@cacheable(60)-environmental]
+FAILED Impl/tests/semantic/test_v2_semantic_registry.py::test_v2_semantic_registry_standard_annotations[@authorized('admin')-environmental]

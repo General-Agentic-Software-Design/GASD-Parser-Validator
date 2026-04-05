@@ -1,4 +1,4 @@
-VERSION 1.1
+VERSION 1.2
 /*
    Design: VERSION Directive & Version-Aware Processing
    =====================================================
@@ -16,35 +16,30 @@ TRACE: "US-V2-001", "US-V2-009"
 // Decisions
 // ===================================================================
 
-DECISION "Version Default Behavior" @trace #AC-V2-009-03, #AC-V2-009-04:
+DECISION "Version Default Behavior" @trace(#AC-V2-009-03, #AC-V2-009-04) AS DEC_VER_DEFAULT:
     CHOSEN: "Missing VERSION implies 1.2 (unless overridden by CLI)"
     RATIONALE: "Per US-V2-009, the default version for GASD Parser-Validator v2.0 is 1.2 for all new and undecorated files."
-    ALTERNATIVES: ["Missing VERSION implies 1.1", "Missing VERSION implies 1.2", "Missing VERSION triggers error"]
+    ALTERNATIVES: ["Default to 1.1", "Default to 1.2"]
     AFFECTS: [VersionResolver]
 
-DECISION "VERSION Directive Placement":
+DECISION "VERSION Directive Placement" @trace(#AC-V2-001-01) AS DEC_VER_PLACE:
     CHOSEN: "VERSION MUST be the first directive"
     RATIONALE: "Per GEP-6 §10.1, VERSION MUST appear before CONTEXT and TARGET to enable early version-aware parsing."
-    ALTERNATIVES: ["VERSION first directive", "VERSION anywhere in header"]
+    ALTERNATIVES: ["Directive can appear anywhere", "Directive must be first"]
     AFFECTS: [VersionDirectiveRule]
 
 // ===================================================================
-
-// ===================================================================
-
-// Grammar Additions
+// Types
 // ===================================================================
 
 /// VERSION directive grammar rule.
-/// version_stmt ::= "VERSION" version_number
-/// version_number ::= number_literal "." number_literal [ "." number_literal ]
-TYPE VersionDirectiveRule @trace #AC-V2-001-01:
+TYPE VersionDirectiveRule @trace(#AC-V2-001-01) AS TYPE_VER_DIR:
     syntax: "VERSION version_number"
     version_number: "number_literal '.' number_literal ('.' number_literal)?"
     placement: "MUST be the first directive in the file"
 
 /// New lexer keywords for GASD 1.2.
-TYPE Gasd12LexerKeywords @trace #AC-V2-001-03:
+TYPE Gasd12LexerKeywords @trace(#AC-V2-001-03) AS TYPE_GASD12_KW:
     VERSION_KW: "VERSION"
     CONTRACT_KW: "CONTRACT"
     MODEL_KW: "MODEL"
@@ -70,44 +65,53 @@ TYPE Gasd12LexerKeywords @trace #AC-V2-001-03:
 // ===================================================================
 
 /// Resolves the GASD version from the AST and configures version-specific rules.
-COMPONENT VersionResolver @trace #AC-V2-001-02, #AC-V2-009-02, #AC-V2-009-03, #AC-V2-009-04:
+COMPONENT VersionResolver @trace(#AC-V2-001-02, #AC-V2-009-02, #AC-V2-009-03, #AC-V2-009-04) AS COMP_VER_RES:
     PATTERN: "Strategy"
     DEPENDENCIES: []
     INTERFACE:
-        resolveVersion(ast: GASDFile, cliVersion: String @optional) -> String
-        isVersion12(ast: GASDFile, cliVersion: String @optional) -> Boolean
-        validateVersionConsistency(ast: GASDFile, cliVersion: String @optional) -> List<SemanticError>
+        resolveVersion(ast: Any, cliVersion: String @optional) -> String
+        isVersion12(ast: Any, cliVersion: String @optional) -> Boolean
+        validateVersionConsistency(ast: Any, cliVersion: String @optional) -> List<String>
 
-FLOW resolve_version(ast: GASDFile, cliVersion: String @optional) -> String:
-    @trace #AC-V2-001-02, #AC-V2-009-03, #AC-V2-009-04
-    1. ACHIEVE "If cliVersion is provided, return it immediately"
-    2. ACHIEVE "Check if V-directive exists in AST"
-    3. ACHIEVE "If V-directive exists, validate and return value"
+FLOW resolve_version(ast: Any, cliVersion: String @optional) -> String:
+    1. ACHIEVE "If cliVersion is provided, return it immediately":
+        POSTCONDITION: result == cliVersion
+        @trace(#AC-V2-009-03) AS ACHIEVE_CLI_OVR
+    2. ACHIEVE "Check if V-directive exists in AST":
+        POSTCONDITION: result IS Boolean
+        @trace(#AC-V2-001-02) AS ACHIEVE_V_DIR_CHECK
+    3. ACHIEVE "If V-directive exists, validate and return value":
+        POSTCONDITION: result IS String
+        @trace(#AC-V2-001-02) AS ACHIEVE_V_DIR_VAL
     4. RETURN "1.2"
 
 /// When 1.2 constructs appear in a 1.1 file, emit migration warning.
-FLOW check_version_compatibility(ast: GASDFile, version: String) -> List<SemanticError>:
-    @trace #AC-V2-001-04, #AC-V2-009-11
-    1. ACHIEVE "Detect 1.2 constructs: CONTRACT, MODEL, ASSUMPTION, POSTCONDITION, DEPENDS_ON, scoped INVARIANT, AS identifiers"
-    2. ACHIEVE "For each 1.2 construct in a 1.1 file, record a warning-level SemanticError"
-    3. ACHIEVE "For each missing REQUIRED construct in a 1.2 file, record an error-level SemanticError"
+FLOW check_version_compatibility(ast: Any, version: String) -> List<String>:
+    1. ACHIEVE "Detect 1.2 constructs":
+        POSTCONDITION: result IS List<String>
+        @trace(#AC-V2-001-04) AS ACHIEVE_DET_12
+    2. ACHIEVE "Record warning-level SemanticError for 1.2 constructs in 1.1 file":
+        POSTCONDITION: errors.count >= 0
+        @trace(#AC-V2-001-04) AS ACHIEVE_REC_WARN
+    3. ACHIEVE "Record error-level SemanticError for missing required 1.2 constructs":
+        POSTCONDITION: errors.count >= 0
+        @trace(#AC-V2-001-02) AS ACHIEVE_REC_ERR
     4. RETURN "List of SemanticErrors"
 
 /// LINT-013: VERSION_MISMATCH check.
-FLOW validate_version_consistency(ast: GASDFile, cliVersion: String @optional) -> List<SemanticError>:
-    @trace #AC-V2-009-02
+FLOW validate_version_consistency(ast: Any, cliVersion: String @optional) -> List<String>:
     1. IF "cliVersion is provided AND VERSION directive exists in AST":
         IF "cliVersion != VERSION directive value":
-            RECORD "LINT-013: VERSION_MISMATCH Error"
+            RECORD "LINT-013: VERSION_MISMATCH Error" @trace(#AC-V2-009-02) AS REC_MISMATCH
     2. RETURN "List of SemanticErrors"
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "VERSION MUST appear as the first directive, before CONTEXT and TARGET" @trace #AC-V2-001-01
-CONSTRAINT: "Files without VERSION SHALL be treated as VERSION 1.2 by default" @trace #AC-V2-009-04
-CONSTRAINT: "CLI --gasd-ver MUST override internal VERSION directive or missing VERSION" @trace #AC-V2-009-02, #AC-V2-009-03
-CONSTRAINT: "Mismatch between --gasd-ver and internal VERSION directive MUST trigger LINT-013" @trace #AC-V2-009-02
-CONSTRAINT: "New 1.2 constructs in a 1.1 file SHALL produce a lint warning, not a parse error" @trace #AC-V2-001-04, #AC-V2-009-11
-CONSTRAINT: "Analyzers MUST support all GASD versions >= 1.0" @trace #AC-V2-001-03
+CONSTRAINT: "VERSION MUST appear as the first directive, before CONTEXT and TARGET" @trace(#AC-V2-001-01) AS CONST_VER_FIRST
+CONSTRAINT: "Files without VERSION SHALL be treated as VERSION 1.2 by default" @trace(#AC-V2-009-04) AS CONST_VER_DEF
+CONSTRAINT: "CLI --gasd-ver MUST override internal VERSION directive or missing VERSION" @trace(#AC-V2-009-02, #AC-V2-009-03) AS CONST_CLI_OVR
+CONSTRAINT: "Mismatch between --gasd-ver and internal VERSION directive MUST trigger LINT-013" @trace(#AC-V2-009-02) AS CONST_LINT013
+CONSTRAINT: "New 1.2 constructs in a 1.1 file SHALL produce a lint warning, not a parse error" @trace(#AC-V2-001-04) AS CONST_V11_LIMIT
+CONSTRAINT: "Analyzers MUST support all GASD versions >= 1.0" @trace(#AC-V2-001-03) AS CONST_VER_SUPPORT

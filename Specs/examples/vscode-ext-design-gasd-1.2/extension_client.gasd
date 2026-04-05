@@ -1,0 +1,131 @@
+VERSION 1.2
+/* 
+   --- Extension Client Design (Expert Strict) ---
+   Logic for VS Code host interaction and workspace management.
+   Strictly follows GASD 1.2.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension"
+TARGET: "TypeScript 5.x"
+TRACE: "#US-1", "#US-15", "#US-16", "#US-27", "#US-28", "#US-29", "#US-36", "#US-40"
+
+IMPORT "types.gasd" AS TypesClient
+
+CONTRACT TypesClient:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"
+
+NAMESPACE: "gasd.vscode.design"
+
+COMPONENT ExtensionClient @trace("#US-15") AS TRACE_US_15 @trace("#US-27") AS TRACE_US_27:
+    PATTERN: "VS Code Extension Entry Point"
+    DEPENDENCIES: [ProjectManager, SnippetProvider, PreviewManager]
+    
+    INTERFACE:
+        activate(context: TypesClient.ExtensionContext) -> Void
+        deactivate() -> Void
+        on_save(document: TypesClient.TextDocument) -> Void @trace("#US-4") AS TRACE_US_4
+        show_preview() -> Void @trace("#US-12") AS TRACE_US_12
+        register_file_association() -> Void @trace("#AC-27-1") AS TRACE_AC_27_1
+        initialize_lsp_client() -> Void  // Registers for both 'file' and 'untitled' document schemes
+        register_commands() -> Void
+
+COMPONENT SnippetProvider @trace("#US-2") AS TRACE_US_2:
+    INTERFACE:
+        register_snippets() -> Void @trace("#AC-2-1") AS TRACE_AC_2_1
+
+COMPONENT PreviewManager @trace("#US-12") AS TRACE_US_12:
+    INTERFACE:
+        open_preview(uri: String) -> Void @trace("#AC-12-1") AS TRACE_AC_12_1
+
+COMPONENT ProjectManager @trace("#US-15") AS TRACE_US_15 @trace("#US-16") AS TRACE_US_16:
+    INTERFACE:
+        scaffold_project(root_uri: String) -> Void
+        handle_file_move(old_uri: String, new_uri: String) -> Void @trace("#AC-16-2") AS TRACE_AC_16_2
+
+// --- Flows ---
+
+/// Implements #US-15 (Project Scaffolding)
+FLOW initialize_gasd_project():
+    @trace("#AC-15-1") AS TRACE_AC_15_1 @trace("#US-28") AS TRACE_US_28
+    1. VALIDATE "Workspace is open" AS TYPE.Requirement
+    2. CREATE "build/" directory
+    3. CREATE "design/" directory
+    4. CREATE "user-story/" directory
+    5. CREATE "impl/" as the implementation root folder
+    6. PERSIST "package.json" and "tsconfig.json" inside "impl/"
+    7. CREATE "main.gasd" with expert template
+    8. LOG "GASD Project structure initialized"
+
+/// Implements #US-27 (File Association)
+FLOW handle_gasd_file_open(uri: String):
+    @trace("#AC-27-1") AS TRACE_AC_27_1
+    1. MATCH uri extension:
+        ".gasd" -> 
+            ACHIEVE "Set languageId to 'gasd'"
+                POSTCONDITION: result != null
+            ACHIEVE "Enable syntax highlighting (TextMate)"
+                POSTCONDITION: result != null
+            ACHIEVE "Associate official icons/gasd_icon.png with file explorer"
+                POSTCONDITION: result != null
+            ACHIEVE "Start LSP Client if idle"
+                POSTCONDITION: result != null
+        DEFAULT -> RETURN
+
+/// Implements #US-1 (Syntax Highlighting)
+FLOW apply_theming():
+    @trace("#AC-1-1 to #AC-1-6") AS TRACE_AC_1_1_TO_AC_1_6
+    1. ACHIEVE "Load gasd.tmLanguage.json"
+        POSTCONDITION: result != null
+    2. VALIDATE "Directives, keywords, and types are mapped to standard scopes" AS TYPE.Requirement
+    3. ACHIEVE "Apply semantic token mapping" @trace("#US-21") AS TRACE_US_21
+        POSTCONDITION: result != null
+
+// --- Constraints ---
+INVARIANT LOCAL: "Expert Compliance: Extension MUST NOT block the UI thread during scaffolding or indexing."
+
+// ===================================================================
+// GASD 1.2 Components — GEP-6 Support
+// ===================================================================
+
+/// Migration service for upgrading 1.1 files to 1.2.
+/// @trace("#US-40") AS TRACE_US_40
+COMPONENT MigrationService @trace("#US-40") AS TRACE_MIGRATION:
+    PATTERN: "Code Action Provider"
+    INTERFACE:
+        compute_migration(uri: String, ast: Any) -> TypesClient.CodeAction @trace("#AC-40-3") AS TRACE_AC_40_3
+        add_version_directive(uri: String) -> TypesClient.TextEdit
+        scaffold_postconditions(uri: String, achieveSteps: List<String>) -> List<TypesClient.TextEdit>
+        generate_annotation_ids(uri: String, annotations: List<String>) -> List<TypesClient.TextEdit>
+
+/// Snippet provider for GASD 1.2 constructs.
+/// @trace("#US-29") AS TRACE_US_29
+COMPONENT VersionSnippetProvider @trace("#US-29") AS TRACE_VER_SNIPPET:
+    INTERFACE:
+        register_12_snippets() -> Void @trace("#AC-29-5") AS TRACE_AC_29_5
+
+// ===================================================================
+// GASD 1.2 Flows — GEP-6 Support
+// ===================================================================
+
+/// Quick Fix flow: upgrades a GASD 1.1 file to 1.2 compliance.
+/// @trace("#US-40") AS TRACE_US_40_FLOW
+FLOW upgrade_to_gasd12(uri: String):
+    @trace("#AC-40-1") AS TRACE_AC_40_1 @trace("#AC-40-2") AS TRACE_AC_40_2 @trace("#AC-40-3") AS TRACE_AC_40_3
+    1. ACHIEVE "MigrationService.add_version_directive(uri)"
+        POSTCONDITION:
+            result != null
+    2. ACHIEVE "MigrationService.scaffold_postconditions(uri, achieveSteps)"
+        POSTCONDITION:
+            result != null
+    3. ACHIEVE "MigrationService.generate_annotation_ids(uri, annotations)"
+        POSTCONDITION:
+            result != null
+    4. ACHIEVE "Apply all TextEdits to document"
+        POSTCONDITION:
+            result != null
+    5. LOG "File upgraded to GASD 1.2"

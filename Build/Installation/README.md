@@ -1,19 +1,19 @@
 # GASD Parser & Validator
 
-Official implementation of the GASD 1.2 specification language (Version 2.0.0).
+Official implementation of the GASD 1.2 specification language (Version 2.1.0).
 
 ## Installation
 
 From the wheel (recommended):
 
 ```bash
-pip3 install gasd_parser-2.0.0-py3-none-any.whl
+pip3 install gasd_parser-2.1.0-py3-none-any.whl
 ```
 
 Or from the source distribution:
 
 ```bash
-pip3 install gasd_parser-2.0.0.tar.gz
+pip3 install gasd_parser-2.1.0.tar.gz
 ```
 
 ## Uninstallation
@@ -36,10 +36,10 @@ gasd-parser path/to/file.gasd
 gasd-parser path/to/dir/
 ```
 
-### Export Syntactic AST to JSON
+### Export Semantic AST to JSON (default mode)
 
 ```bash
-gasd-parser --ast path/to/file.gasd
+gasd-parser --ast-sem path/to/file.gasd
 ```
 
 ### Export Semantic AST to JSON
@@ -69,11 +69,11 @@ gasd-parser path/to/file.gasd --json
 ## Options
 
 - `--json`: Output results in machine-readable JSON format.
-- `--ast`: Extract and output the Syntactic AST in JSON format.
-- `--ast-sem`: Extract and output the Semantic AST in JSON format.
+- `--ast-sem`: Extract and output the Semantic AST in JSON format (default mode).
+- `--no-validate`: Skip semantic validation, only check syntax.
 - `--ast-output <path>`: Path to save the extracted AST JSON file.
 - `--ast-combine`: Combine multiple ASTs into a single JSON output.
-- `--no-validate`: Skip semantic validation, only check syntax.
+- `--json`: Output results in machine-readable JSON format.
 - `--gasd-ver <version>`: Specify the authoritative GASD version (1.1 or 1.2).
 - `--version`: Show the version and build time.
 
@@ -85,4 +85,4 @@ To verify the installation and build time:
 gasd-parser --version
 ```
 
-Output should look like: `gasd-parser 2.0.0 (built: 2026-03-27T00:00:00Z)`
+Output should look like: `gasd-parser 2.1.0 (built: 2026-04-05T00:00:00Z)`

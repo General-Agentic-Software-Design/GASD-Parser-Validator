@@ -34,12 +34,13 @@ class TestASTRegression(unittest.TestCase):
         return result
 
     def test_ast_help_listing(self):
-        """RT-PARSER-007-03: --help lists and describes --ast flags."""
+        """RT-PARSER-007-03: --help lists and describes --ast flags but not legacy --ast."""
         result = self.run_parser(["--help"])
         self.assertEqual(result.returncode, 0)
-        self.assertIn("--ast", result.stdout)
+        self.assertIn("--ast-sem", result.stdout)
         self.assertIn("--ast-output", result.stdout)
         self.assertIn("--ast-combine", result.stdout)
+        self.assertNotIn(" --ast ", result.stdout) # Legacy should be gone from help
 
     def test_ast_utf8_preservation(self):
         """RT-PARSER-007-04: Special characters (UTF-8) are preserved in JSON AST."""
@@ -48,23 +49,22 @@ class TestASTRegression(unittest.TestCase):
         with open(special_file, "w", encoding="utf-8") as f:
             f.write('CONTEXT: "Special"\nTARGET: "Python3"\nTYPE Emoji:\n    val: "🎉 🚀"\n')
         
-        result = self.run_parser([special_file, "--ast", "--json"])
+        result = self.run_parser([special_file, "--ast-sem", "--json"])
         self.assertEqual(result.returncode, 0)
         full_data = json.loads(result.stdout)
-        data = full_data["asts"][0]
-        # Find the literal value
-        # In our grammar, TYPE MyType: field: "Value" is a bit different, but let's assume it works.
-        # Actually field: String is common. 
-        # Let's check the AST structure for literal types if possible.
-        # Based on ASTGenerator, visitType_expr: return TypeExpression(baseType="literal", literalValue=literal_value, **loc)
-        field_type = data["types"][0]["fields"][0]["type"]
-        self.assertEqual(field_type["literalValue"], '"🎉 🚀"')
+        # Unified Semantic AST structure differs from old flat list
+        system = full_data["asts"][0]
+        ns_key = "global" if "global" in system["namespaces"] else ""
+        emoji_type = system["namespaces"][ns_key]["types"]["Emoji"]
+        # In Ph4, fields are a dictionary, and we use typeRef
+        field_type_val = emoji_type["fields"]["val"]["typeRef"]
+        self.assertEqual(field_type_val["literalValue"], '"🎉 🚀"')
 
     def test_ast_version_unaffected(self):
         """RT-PARSER-007-05: --version remains unchanged."""
         result = self.run_parser(["--version"])
         self.assertEqual(result.returncode, 0)
-        self.assertRegex(result.stdout, r"gasd-parser [12]\.\d+\.\d+")
+        self.assertRegex(result.stdout, r"gasd_parser [12]\.\d+\.\d+")
 
 
     def test_ast_performance_overhead(self):
@@ -78,7 +78,7 @@ class TestASTRegression(unittest.TestCase):
         # Run with AST
         start = time.time()
         for _ in range(5):
-            self.run_parser([self.sample_file, "--ast"])
+            self.run_parser([self.sample_file, "--ast-sem"])
         duration_ast = time.time() - start
         
         # Heuristic: AST generation shouldn't be massive compared to whole parse+validate
@@ -89,7 +89,7 @@ class TestASTRegression(unittest.TestCase):
 
     def test_ast_standard_output_unaffected(self):
         """RT-PARSER-007-01: Exit codes and validation output remains stable."""
-        result = self.run_parser([self.sample_file, "--ast"])
+        result = self.run_parser([self.sample_file, "--ast-sem"])
         self.assertEqual(result.returncode, 0)
         # Check standard validation output is NOT printed when --ast is used (to avoid pollution)
         # but if we didn't use --ast, it should be there.

@@ -1,0 +1,250 @@
+VERSION 1.2
+/* 
+   --- LSP Core Types (Expert Strict) ---
+   Normative data contracts for the GASD Language Server.
+   Strictly follows GASD 1.2.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension / LSP"
+TARGET: "TypeScript 5.x"
+TRACE: "#US-5", "#US-6", "#US-7", "#US-9", "#US-19", "#US-21", "#US-22", "#US-23", "#US-30", "#US-31", "#US-32", "#US-33", "#US-34", "#US-38", "#US-39", "#US-40"
+
+NAMESPACE: "gasd.vscode.design"
+
+/// Mandatory: All design primitives must adhere to expert patterns.
+TYPE Requirement:
+    name: String
+
+TYPE ExtensionContext:
+    extensionUri: String
+    storageUri: Optional<String>
+
+TYPE TextDocument:
+    uri: String
+    languageId: String
+    version: Integer
+
+
+/// Represents a cursor position in a document.
+TYPE Position:
+    line: Integer @min(0) AS MIN_ZERO_LINE
+    character: Integer @min(0) AS MIN_ZERO_CHAR
+
+/// Represents a range within a document.
+TYPE Range:
+    start: Position
+    end: Position
+
+/// Represents a specific location in a file.
+TYPE Location:
+    uri: String @format("uri") AS FORMAT_URI
+    range: Range
+
+/// A diagnostic message for linting/errors.
+/// @trace("#AC-9-1") AS TRACE_AC_9_1
+/// @trace("#AC-9-2") AS TRACE_AC_9_2
+/// @trace("#AC-13-1") AS TRACE_AC_13_1
+TYPE Diagnostic:
+    range: Range
+    message: String
+    severity: Enum(ERROR, WARNING, INFO, HINT)
+    source: String @default("gasd-lsp") AS DEFAULT_LSP_SOURCE
+    code: Optional<String>
+
+/// A symbol definition for Outline and Breadcrumbs.
+/// @trace("#AC-19-1") AS TRACE_AC_19_1
+TYPE SymbolInformation:
+    name: String
+    kind: Enum(FILE, MODULE, NAMESPACE, PACKAGE, CLASS, METHOD, PROPERTY, FIELD, CONSTRUCTOR, ENUM, INTERFACE, FUNCTION, VARIABLE, CONSTANT, STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, KEY, NULL, ENUM_MEMBER, STRUCT, EVENT, OPERATOR, TYPE_PARAMETER)
+    location: Location
+    containerName: Optional<String>
+
+/// Code completion item for IntelliSense.
+/// @trace("#AC-5-1") AS TRACE_AC_5_1
+/// @trace("#AC-5-2") AS TRACE_AC_5_2
+TYPE CompletionItem:
+    label: String
+    kind: Enum(TEXT, METHOD, FUNCTION, CONSTRUCTOR, FIELD, VARIABLE, CLASS, INTERFACE, MODULE, PROPERTY, UNIT, VALUE, ENUM, KEYWORD, SNIPPET, COLOR, FILE, REFERENCE, FOLDER, ENUM_MEMBER, CONSTANT, STRUCT, EVENT, OPERATOR, TYPE_PARAMETER)
+    detail: Optional<String>
+    documentation: Optional<String>
+    insertText: Optional<String>
+
+/// Hover content (markdown).
+/// @trace("#AC-7-1") AS TRACE_AC_7_1
+TYPE Hover:
+    contents: String @format("markdown") AS FORMAT_MD
+    range: Optional<Range>
+
+/// Signature help for parameter guidance.
+/// @trace("#AC-22-1") AS TRACE_AC_22_1
+TYPE SignatureHelp:
+    signatures: List<SignatureInformation>
+    activeSignature: Integer
+    activeParameter: Integer
+
+TYPE SignatureInformation:
+    label: String
+    documentation: Optional<String>
+    parameters: List<ParameterInformation>
+
+TYPE ParameterInformation:
+    label: String
+    documentation: Optional<String>
+
+/// Inlay hints for inline type/parameter info.
+/// @trace("#AC-23-1") AS TRACE_AC_23_1
+TYPE InlayHint:
+    position: Position
+    label: String
+    kind: Enum(TYPE, PARAMETER)
+    paddingLeft: Optional<Boolean>
+    paddingRight: Optional<Boolean>
+
+/// represents a set of textual changes over many resources.
+TYPE WorkspaceEdit:
+    changes: Map<String, List<TextEdit>>
+
+TYPE TextEdit:
+    range: Range
+    newText: String
+
+/// Document highlights for cursor-based highlighting.
+/// @trace("#AC-26-1") AS TRACE_AC_26_1
+TYPE DocumentHighlight:
+    range: Range
+    kind: Enum(TEXT, READ, WRITE)
+
+/// Selection range for smart select.
+/// @trace("#AC-24-1") AS TRACE_AC_24_1
+TYPE SelectionRange:
+    range: Range
+    parent: Optional<SelectionRange>
+
+/// Call hierarchy item.
+/// @trace("#AC-25-1") AS TRACE_AC_25_1
+TYPE CallHierarchyItem:
+    name: String
+    kind: Enum(FILE, MODULE, NAMESPACE, PACKAGE, CLASS, METHOD, PROPERTY, FIELD, CONSTRUCTOR, ENUM, INTERFACE, FUNCTION, VARIABLE, CONSTANT, STRING, NUMBER, BOOLEAN, ARRAY, OBJECT, KEY, NULL, ENUM_MEMBER, STRUCT, EVENT, OPERATOR, TYPE_PARAMETER)
+    uri: String
+    range: Range
+    selectionRange: Range
+
+/// Formatting options.
+/// @trace("#AC-4-1") AS TRACE_AC_4_1
+TYPE FormattingOptions:
+    tabSize: Integer
+
+
+TYPE AST:
+    kind: String
+
+TYPE SemanticTokens:
+    data: List<Integer>
+
+TYPE CodeActionContext:
+    diagnostics: List<Diagnostic>
+
+TYPE CodeAction:
+    title: String
+    kind: String
+
+// ===================================================================
+// GASD 1.2 Types — GEP-6 Support
+// ===================================================================
+
+/// Postcondition expression within an ACHIEVE body.
+/// @trace("#US-30") AS TRACE_US_30
+TYPE PostconditionExpr:
+    left: String
+    operator: Enum(IS, EQUALS, NOT_EQUALS, GT, LT, GTE, LTE)
+    right: String
+
+/// Duration literal for TIMEOUT clauses.
+/// @trace("#US-30") AS TRACE_US_30_TIMEOUT
+TYPE DurationLiteral:
+    value: Integer
+    unit: Enum(MS, S, M)
+
+/// CONTRACT block definition at IMPORT boundaries.
+/// @trace("#US-31") AS TRACE_US_31
+TYPE ContractDefinition:
+    qualifiedName: String
+    input: List<String>
+    output: String
+    behaviors: List<ContractCase>
+    idempotent: Optional<Boolean>
+    version: Optional<String>
+
+/// A single CASE within a CONTRACT BEHAVIORS block.
+/// @trace("#AC-31.1") AS TRACE_AC_31_1
+TYPE ContractCase:
+    name: String
+    postconditions: List<PostconditionExpr>
+    throws: Optional<String>
+    after: Optional<String>
+
+/// DEPENDS_ON clause referencing other FLOW steps.
+/// @trace("#US-32") AS TRACE_US_32
+TYPE DependsOnClause:
+    stepRefs: List<Integer>
+
+/// Scoped INVARIANT with LOCAL or GLOBAL qualifier.
+/// @trace("#US-33") AS TRACE_US_33
+TYPE InvariantDefinition:
+    scope: Enum(LOCAL, GLOBAL)
+    description: String
+    enforcementPoints: Optional<List<String>>
+
+/// Annotation obligation identifier (AS clause).
+/// @trace("#US-34") AS TRACE_US_34
+TYPE AnnotationId:
+    annotationType: String
+    identifier: String
+    parentContext: String
+
+/// ASSUMPTION block for environmental dependencies.
+/// @trace("#US-35") AS TRACE_US_35
+TYPE AssumptionDefinition:
+    description: String
+    affects: List<String>
+    consequence: Optional<String>
+
+/// MODEL block for external formal verification references.
+/// @trace("#US-35") AS TRACE_US_35_MODEL
+TYPE ModelDefinition:
+    name: String
+    modelType: Enum(TLA_PLUS, ALLOY, SPIN, PROMELA, OTHER)
+    filePath: String
+    verifies: List<String>
+    assumptions: List<String>
+
+/// Semantic triple for annotation intelligence.
+/// @trace("#US-38") AS TRACE_US_38
+TYPE SemanticTriple:
+    structuralPredicate: String
+    runtimeContract: String
+    environmentalDependency: Optional<String>
+
+/// A GASD 1.2 lint rule definition.
+/// @trace("#US-39") AS TRACE_US_39
+TYPE LintRule:
+    ruleId: String
+    pattern: String
+    recommendation: String
+    severity12: Enum(ERROR, WARNING, INFO)
+    severity11: Enum(ERROR, WARNING, INFO)
+
+/// Migration action for "Upgrade to GASD 1.2" Quick Fix.
+/// @trace("#US-40") AS TRACE_US_40
+TYPE MigrationAction:
+    fileUri: String
+    addVersionDirective: Boolean
+    postconditionsToScaffold: List<String>
+    annotationIdsToGenerate: List<AnnotationId>
+
+/// VERSION directive representation.
+/// @trace("#US-29") AS TRACE_US_29
+TYPE VersionDirective:
+    major: Integer
+    minor: Integer
+    patch: Optional<Integer>

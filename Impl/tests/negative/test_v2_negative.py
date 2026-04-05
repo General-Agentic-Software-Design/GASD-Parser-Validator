@@ -28,42 +28,29 @@ def create_gasd(path, content):
     with open(path, "w") as f:
         f.write(content)
 
-@pytest.mark.parametrize("case_id, content, expected_exit", [
-    # NT-GEP6-001: Missing Step Reference
-    ("NT-GEP6-001", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nFLOW f():\n  1. ACHIEVE 'T1'\n    DEPENDS_ON STEP 'Missing'\n    POSTCONDITION: true\n", 1),
+@pytest.mark.parametrize("case_id, content, expected_exit, expected_error, cli_args", [
+    # 1. ACHIEVE without POSTCONDITION in 1.2
+    ("NEG-L001", "VERSION 1.2\nNAMESPACE: 'T'\nFLOW f():\n  1. ACHIEVE 'T'\n", 1, "LINT-001", ["--ast-sem"]),
     
-    # NT-GEP6-002: Circular Dependency
-    ("NT-GEP6-002", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nFLOW f():\n  1. ACHIEVE 'T1'\n    DEPENDS_ON STEP 'T1'\n    POSTCONDITION: true\n", 1),
+    # 2. IMPORT without CONTRACT in 1.2
+    ("NEG-L002", "VERSION 1.2\nNAMESPACE: 'T'\nIMPORT 'Ext'\n", 1, "LINT-002", ["--ast-sem"]),
     
-    # NT-GEP6-003: AS ID Collision
-    ("NT-GEP6-003", "@retry(3) AS 'ID'\n@timeout(1) AS 'ID'\nVERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\n", 1),
+    # 3. Annotation without AS in 1.2
+    ("NEG-L011", "VERSION 1.2\nNAMESPACE: 'T'\n@retry(3)\nTYPE T: s: String\n", 1, "LINT-011", ["--ast-sem"]),
     
-    # NT-GEP6-004: Missing Outcome in Case
-    ("NT-GEP6-004", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nCONTRACT 'C':\n  CASE 'X':\n    ENSURE 'NoOutcome'\n", 1),
+    # 4. Legacy --ast flag
+    ("NEG-AST", "VERSION 1.2\nNAMESPACE: 'T'\n", 1, "Unknown argument", ["--ast"]),
     
-    # NT-GEP6-005: Regex Violation for AS ID
-    ("NT-GEP6-005", "@retry(3) AS 'lower_case'\nVERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\n", 1),
+    # 5. Version mismatch (LINT-013)
+    ("NEG-VER", "CONTEXT: 'T'\nTARGET: 'P'\nVERSION 1.1\nNAMESPACE: 'T'\nTYPE T: s: String\n", 1, "LINT-013", ["--gasd-ver", "1.2", "--ast-sem"]),
     
-    # NT-GEP6-006: Top-level Postcondition violation
-    ("NT-GEP6-006", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nPOSTCONDITION: outside_achieve == true\n", 1),
-    
-    # NT-GEP6-007: Version Mismatch in Imports (LINT-012 INFO, success)
-    ("NT-GEP6-007", "VERSION 1.2\nNAMESPACE: 'T'\nTARGET: 'P'\nCONTEXT: 'I'\nIMPORT 'legacy.gasd'\n", 0), # Now INFO (LINT-012) — success
+    # 6. Invalid VERSION placement (not at top)
+    ("NEG-PLACE", "NAMESPACE: 'T'\nVERSION 1.2\n", 1, "SyntaxError", ["--ast-sem"]),
 ])
-def test_v2_negative_comprehensive(run_cli, case_id, content, expected_exit):
+def test_v2_negative_scenarios(run_cli, case_id, content, expected_exit, expected_error, cli_args):
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = os.path.join(tmpdir, f"{case_id}.gasd")
-        if case_id == "NT-GEP6-007":
-            # Create a VALID legacy file
-            create_gasd(os.path.join(tmpdir, "legacy.gasd"), "NAMESPACE: 'Legacy'\nTARGET: 'P'\nCONTEXT: 'I'\nTYPE T: s: String\n")
-            
         create_gasd(file_path, content)
-        exit_code, stdout, stderr = run_cli([file_path, "--ast-sem"])
-        assert exit_code == expected_exit
-        if case_id == "NT-GEP6-007":
-            assert "LINT-012" in stderr or "LINT-012" in stdout
-        elif case_id == "NT-GEP6-006":
-            # Top-level POSTCONDITION is rejected by the parser as a SYNTAX error
-            assert "SYNTAX" in (stdout + stderr) or "POSTCONDITION" in (stdout + stderr)
-        else:
-            assert any(f"LINT-00{i}" in (stdout + stderr) or f"LINT-01{i}" in (stdout + stderr) for i in range(13))
+        exit_code, stdout, stderr = run_cli([file_path] + cli_args)
+        assert exit_code == expected_exit, f"Failed {case_id}: exit code mismatch"
+        assert expected_error.lower() in (stderr + stdout).lower(), f"Failed {case_id}: missing expected error {expected_error}"

@@ -1,9 +1,9 @@
-VERSION 1.1
+VERSION 1.2
 /*
    Design: CLI Interface Design
    ============================
    Defines the user-facing command-line interface for the GASD parser,
-   including argument parsing and bulk specification validation.
+   including argument parsing, version-aware validation, and flag consolidation.
 
    Output: Build/Installation/gasd_parser/cli.py
 */
@@ -16,45 +16,44 @@ TRACE: "US-PARSER-006", "US-PARSER-007", "US-SEMAST-016", "US-SEMAST-018", "US-V
 // Decisions
 // ===================================================================
 
-DECISION "Input Argument Strategy":
+DECISION "Input Argument Strategy" @id("DEC_INPUT_STRAT") AS ID_INPUT_STRAT:
     CHOSEN: "Variadic file/directory paths (nargs='*')"
     RATIONALE: "Users need to validate entire architecture projects at once, rather than passing a single file at a time. This mirrors standard compiler CLI behavior."
-    ALTERNATIVES: ["Variadic file/directory paths (nargs='*')", "Single file only"]
-    AFFECTS: [GASDCLI]
+    ALTERNATIVES: ["Variadic folders", "Single file entry"]
+    AFFECTS: []
 
-DECISION "Directory Traversal":
+DECISION "Directory Traversal" @id("DEC_DIR_TRAV") AS ID_DIR_TRAV:
     CHOSEN: "Recursive discovery of .gasd files"
     RATIONALE: "When a directory is provided, the tool should automatically locate all valid specification files within its hierarchy."
-    ALTERNATIVES: ["Recursive discovery of .gasd files", "Flat directory only"]
+    ALTERNATIVES: ["Flat traversal", "Recursive traversal"]
     AFFECTS: []
 
-DECISION "Output Formatting":
+DECISION "Output Formatting" @id("DEC_OUT_FMT") AS ID_OUT_FMT:
     CHOSEN: "Per-file status followed by aggregated summary (unless JSON mode)"
     RATIONALE: "Provides immediate feedback per file, but a high-level summary at the end prevents scrolling fatigue on large codebases."
-    ALTERNATIVES: ["Per-file status followed by aggregated summary", "Aggregated summary only"]
+    ALTERNATIVES: ["Detailed per-file log", "Summary-only output"]
     AFFECTS: []
 
-DECISION "AST Output Strategy" @trace #AC-PARSER-007-02, #AC-PARSER-007-04, #AC-PARSER-007-05, #AC-PARSER-007-06:
+DECISION "AST Output Strategy" @id("DEC_AST_OUT_TRACE") @trace(#AC-PARSER-007-02, #AC-PARSER-007-04) AS ID_AST_OUT_TRACE:
     CHOSEN: "Optional enabling with flexible routing (Console/File/Combined)"
-    RATIONALE: "Users need flexibility to either inspect the AST directly or pipe it into other tools."
-    ALTERNATIVES: ["Optional enabling with flexible routing", "Standard output only"]
+    RATIONALE: "In v2.1, --ast is removed and --ast-sem is the default. Users can still route this output to files or the console."
+    ALTERNATIVES: ["Optional AST export", "Implicit AST export"]
     AFFECTS: []
 
-DECISION "CLI Version Flag Selection" @trace #AC-V2-009-01, #AC-V2-009-03, #AC-V2-009-04:
+DECISION "CLI Version Flag Selection" @trace(#AC-V2-009-01, #AC-V2-009-03, #AC-V2-009-04) AS DEC_CLI_VER_TRACE:
     CHOSEN: "--gasd-ver {1.1 | 1.2} flag"
     RATIONALE: "Provides a global override for version enforcement without modifying each file. Defaults to 1.2 if not specified."
-    ALTERNATIVES: ["--gasd-ver {1.1 | 1.2}", "Implicit versioning only"]
+    ALTERNATIVES: ["Global --gasd-ver", "Per-file version only"]
     AFFECTS: []
 
 // ===================================================================
 // CLI Component Definition
 // ===================================================================
 
-COMPONENT GASDCLI @trace #AC-PARSER-006-01:
+COMPONENT GASDCLI @trace(#AC-PARSER-006-01) AS COMP_CLI_MAIN:
     PATTERN: "Command-Line Interface"
-    DEPENDENCIES: [ParseTreeAPI, ASTGenerator, ASTExporter, ValidationPipeline]
+    DEPENDENCIES: [GASDParser, ASTGenerator, SemanticASTExporter, ValidationPipeline]
     INTERFACE:
-        /// Main application entry point handling sys.argv
         main() -> Void
         
 // ===================================================================
@@ -62,14 +61,24 @@ COMPONENT GASDCLI @trace #AC-PARSER-006-01:
 // ===================================================================
 
 FLOW execute_cli_validation(args: List<String>) -> Integer:
-    @trace #AC-PARSER-006-02
-    1. ACHIEVE "Parse flags (--json, --validate, --ast, --ast-sem, --ast-output, --ast-combine, --gasd-ver) and positional path arguments" @trace #AC-PARSER-007-02, #AC-PARSER-007-05, #AC-PARSER-007-06, #AC-SEMAST-016-01, #AC-V2-009-01
-    2. ACHIEVE "Determine global_version from --gasd-ver OR default to 1.2" @trace #AC-V2-009-03, #AC-V2-009-04
+    1. ACHIEVE "Parse flags (--json, --validate, --no-validate, --ast-sem, --ast-output, --ast-combine, --gasd-ver) and positional path arguments":
+        POSTCONDITION:
+            flags.ast == undefined
+            flags.ast_sem == true
+        @trace(#AC-PARSER-007-01, #AC-PARSER-007-02, #AC-PARSER-007-03, #AC-PARSER-007-04, #AC-V2-009-01) AS ACHIEVE_PARSE_TRACE
+    2. ACHIEVE "Determine global_version from --gasd-ver OR default to 1.2":
+        POSTCONDITION: global_version IS String
+        @trace(#AC-V2-009-03, #AC-V2-009-04) AS ACHIEVE_VER_TRACE
     3. CREATE target_files: "Empty list of paths"
     4. ACHIEVE "Evaluate each path in args":
-        ACHIEVE "Recursively find *.gasd files for directories"
-        ACHIEVE "Add direct .gasd files"
-        LOG "Error for missing paths"
+        POSTCONDITION: target_files.count >= 0
+        1. ACHIEVE "Recursively find *.gasd files for directories":
+            POSTCONDITION: result.count >= 0
+            @trace(#AC-PARSER-006-02) AS ACHIEVE_FIND_GASD
+        2. ACHIEVE "Add direct .gasd files":
+            POSTCONDITION: result.count >= 0
+            @trace(#AC-PARSER-006-02) AS ACHIEVE_ADD_DIRECT
+        3. LOG "Error for missing paths"
 
     5. IF "No files found":
         LOG "No .gasd files found"
@@ -77,29 +86,53 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
     
     6. CREATE summary: "Counters for success/failure"
     7. ACHIEVE "Iterate through each file in target_files":
-        ACHIEVE "Read file content"
-        ACHIEVE "Run ParseTreeAPI"
-        IF "Syntax successful":
-            ACHIEVE "Run ASTGenerator"
-            ACHIEVE "Run ValidationPipeline with global_version" @trace #AC-V2-009-02
-            IF "Validation successful AND (--ast OR --ast-sem) enabled":
-                ACHIEVE "Run ASTExporter or SemanticASTExporter" @trace #AC-PARSER-007-01, #AC-SEMAST-016-04
-                IF "NOT --ast-combine":
-                    ACHIEVE "Print JSON to console OR Save to individual file" @trace #AC-PARSER-007-04, #AC-PARSER-007-05, #AC-SEMAST-018-01
-        ACHIEVE "Print file result (OK/FAIL)"
-        ACHIEVE "Update summary counters"
+        POSTCONDITION: summary.processed > 0
+        1. ACHIEVE "Read file content":
+            POSTCONDITION: content IS String
+            @trace(#AC-PARSER-006-02) AS ACHIEVE_READ_FILE
+        2. ACHIEVE "Run GASDParser":
+            POSTCONDITION: result IS Any
+            @trace(#AC-PARSER-006-02) AS ACHIEVE_PARSE
+        3. IF "Syntax successful":
+            4. ACHIEVE "Run ASTGenerator":
+                POSTCONDITION: result IS Any
+                @trace(#AC-PARSER-007-02) AS ACHIEVE_ASTGEN
+            5. IF "flags.validate == true":
+                6. ACHIEVE "Run ValidationPipeline with global_version":
+                    POSTCONDITION: result IS Any
+                    @trace(#AC-V2-009-02) AS ACHIEVE_VAL_TRACE
+            
+            7. IF "(flags.validate successful OR flags.no_validate) AND flags.ast_sem enabled":
+                8. ACHIEVE "Run SemanticASTExporter":
+                    POSTCONDITION: result IS String
+                    @trace(#AC-PARSER-007-02, #AC-SEMAST-016-04) AS ACHIEVE_EXP_TRACE
+                9. IF "NOT --ast-combine":
+                    10. ACHIEVE "Print JSON to console OR Save to individual file":
+                        POSTCONDITION: "Output succeeded"
+                        @trace(#AC-PARSER-007-04, #AC-PARSER-007-05, #AC-SEMAST-018-01) AS ACHIEVE_OUT_TRACE
+        11. ACHIEVE "Print file result (OK/FAIL)":
+            POSTCONDITION: "Output printed"
+            @trace(#AC-PARSER-006-03) AS ACHIEVE_PRNT_RES
+        12. ACHIEVE "Update summary counters":
+            POSTCONDITION: summary.processed > 0
+            @trace(#AC-PARSER-006-03) AS ACHIEVE_UPDT_SUM
         
-    8. IF "--ast-combine AND AST collection (Syntactic or Semantic) NOT empty":
-        ACHIEVE "Merge ASTs and Print to console OR Save to file" @trace #AC-PARSER-007-06, #AC-SEMAST-018-03
-    9. ACHIEVE "Print final validation summary across all files" @trace #AC-PARSER-006-03
-    10. RETURN 1
+    8. IF "--ast-combine AND Semantic AST collection NOT empty":
+        9. ACHIEVE "Merge ASTs and Print to console OR Save to file":
+            POSTCONDITION: "Combined output succeeded"
+            @trace(#AC-PARSER-007-06, #AC-SEMAST-018-03) AS ACHIEVE_COMBINE_TRACE
+    10. ACHIEVE "Print final validation summary across all files":
+        POSTCONDITION: "Summary printed"
+        @trace(#AC-PARSER-006-03) AS ACHIEVE_SUMMARY_TRACE
+    11. RETURN 1
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "CLI MUST exit with code 1 if ANY parsed file contains errors" @trace #AC-PARSER-006-03
-CONSTRAINT: "Directory traversal MUST only process files ending with .gasd extension" @trace #AC-PARSER-006-02
-CONSTRAINT: "CLI MUST process all discovered files sequentially and not halt on the first file error" @trace #AC-PARSER-006-03
-CONSTRAINT: "AST Extraction MUST ONLY occur for files that pass semantic validation" @trace #AC-PARSER-007-01
-CONSTRAINT: "CLI MUST provide clear error messages for I/O failures during AST export" @trace #AC-PARSER-007-09
+CONSTRAINT: "CLI MUST exit with code 1 if ANY parsed file contains errors" @trace(#AC-PARSER-006-03) AS CONST_EXIT_ERR
+CONSTRAINT: "Directory traversal MUST only process files ending with .gasd extension" @trace(#AC-PARSER-006-02) AS CONST_DIR_PROW
+CONSTRAINT: "CLI MUST process all discovered files sequentially and not halt on the first file error" @trace(#AC-PARSER-006-03) AS CONST_SEQ_VAL
+CONSTRAINT: "AST Extraction MUST ONLY occur for files that pass semantic validation unless --no-validate is specified" @trace(#AC-PARSER-007-01, #AC-PARSER-007-04) AS CONST_VAL_REQ
+CONSTRAINT: "CLI MUST provide clear error messages for I/O failures during AST export" @trace(#AC-PARSER-007-09) AS CONST_IO_ERR
+CONSTRAINT: "The --ast flag MUST be treated as an unknown option with no legacy support" @trace(#AC-PARSER-007-01) AS CONST_NO_LEGACY

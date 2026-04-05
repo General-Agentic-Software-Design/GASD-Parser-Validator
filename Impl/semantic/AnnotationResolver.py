@@ -15,21 +15,34 @@ class AnnotationResolver:
         for ann in syntactic_annotations:
             args = {}
             if getattr(ann, 'arguments', None):
+                from .AnnotationRegistry import REGISTRY
+                defn = REGISTRY.get(ann.name)
+                
                 for i, arg in enumerate(ann.arguments):
-                    key = arg.key if hasattr(arg, 'key') and arg.key else "value"
+                    # Determine key: 
+                    # 1. Use explicit key if present
+                    # 2. Use positional map from registry if available
+                    # 3. Default to "value"
+                    key = arg.key if hasattr(arg, 'key') and arg.key else None
+                    if not key and defn and i < len(defn.positional_map):
+                        key = defn.positional_map[i]
+                    if not key:
+                        key = "value"
+                    
                     val = arg.value
                     
-                    # Primitive type inference
-                    if val.isdigit():
-                        val = int(val)
-                    elif val.lstrip('-').isdigit():
-                        val = int(val)
-                    elif val.lower() == "true":
-                        val = True
-                    elif val.lower() == "false":
-                        val = False
-                    elif (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
-                        val = val[1:-1]
+                    # Primitive type inference (only for string values)
+                    if isinstance(val, str):
+                        if val.isdigit():
+                            val = int(val)
+                        elif val.lstrip('-').isdigit():
+                            val = int(val)
+                        elif val.lower() == "true":
+                            val = True
+                        elif val.lower() == "false":
+                            val = False
+                        elif (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                            val = val[1:-1]
 
                     args[key] = val
                     

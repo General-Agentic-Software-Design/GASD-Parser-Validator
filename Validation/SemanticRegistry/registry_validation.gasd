@@ -1,10 +1,9 @@
-VERSION 1.1
+VERSION 1.2
 /*
-   Validation: Annotation Semantic Registry
-   =========================================
+   Validation: Annotation Semantic Registry (Strict 1.2 Syntax)
+   ===========================================================
    Exhaustive validation of the Semantic Registry for all 21 standard annotations.
    Traces: US-V2-002, AC-V2-002-02
-   Syntax: GASD 1.1 (Compliance with Build Plan Constraint)
 */
 
 NAMESPACE: "GASD-Validator.Validation.SemanticRegistry"
@@ -14,92 +13,102 @@ TRACE: "US-V2-002"
 
 FLOW validate_standard_annotations():
     // --- Data Validation ---
-    1. ACHIEVE "Verify @range(min, max) triple in registry"
-    2. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH' AND result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
     
-    3. ACHIEVE "Verify @min_length(n) triple in registry"
-    4. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    1. ACHIEVE "Verify @range(min, max)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH" AND result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_01_TRACE
     
-    5. ACHIEVE "Verify @max_length(n) triple in registry"
-    6. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    2. ACHIEVE "Verify @min_length(n)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_02_TRACE
     
-    7. ACHIEVE "Verify @format(fmt) triple in registry"
-    8. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    3. ACHIEVE "Verify @max_length(n)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_03_TRACE
     
-    9. ACHIEVE "Verify @unique(scope) triple in registry"
-    10. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
+    4. ACHIEVE "Verify @format(fmt)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_04_TRACE
     
-    11. ACHIEVE "Verify @default(val) triple in registry"
-    12. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    5. ACHIEVE "Verify @unique(scope)":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_05_TRACE
     
-    13. ACHIEVE "Verify @constraint(desc) triple in registry"
-    14. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    6. ACHIEVE "Verify @default(val)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_06_TRACE
+    
+    7. ACHIEVE "Verify @constraint(desc)":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-02) AS ACHIEVE_REG_07_TRACE
 
     // --- Architectural ---
-    15. ACHIEVE "Verify @injectable triple in registry"
-    16. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
     
-    17. ACHIEVE "Verify @mockable triple in registry"
-    18. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    8. ACHIEVE "Verify @injectable":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-03) AS ACHIEVE_REG_08_TRACE
     
-    19. ACHIEVE "Verify @transaction_type(ACID) triple in registry"
-    20. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
+    9. ACHIEVE "Verify @mockable":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-03) AS ACHIEVE_REG_09_TRACE
     
-    21. ACHIEVE "Verify @transaction_type(SAGA) triple in registry"
-    22. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    10. ACHIEVE "Verify @transaction_type(ACID)":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-03) AS ACHIEVE_REG_10_TRACE
+    
+    11. ACHIEVE "Verify @transaction_type(SAGA)":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-03) AS ACHIEVE_REG_11_TRACE
 
     // --- Implementation ---
-    23. ACHIEVE "Verify @async triple in registry"
-    24. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
     
-    25. ACHIEVE "Verify @retry(n) triple in registry"
-    26. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    12. ACHIEVE "Verify @async":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_12_TRACE
     
-    27. ACHIEVE "Verify @timeout(ms) triple in registry"
-    28. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
+    13. ACHIEVE "Verify @retry(n)":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_13_TRACE
     
-    29. ACHIEVE "Verify @external triple in registry"
-    30. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    14. ACHIEVE "Verify @timeout(ms)":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_14_TRACE
     
-    31. ACHIEVE "Verify @hash(algo) triple in registry"
-    32. ENSURE "result.structural_verification == 'AST_PATTERN_MATCH'"
-        OTHERWISE THROW "Validation Failed"
+    15. ACHIEVE "Verify @external":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_15_TRACE
     
-    33. ACHIEVE "Verify @circuit_breaker triple in registry"
-    34. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    16. ACHIEVE "Verify @hash(algo)":
+        POSTCONDITION: result.structural == "AST_PATTERN_MATCH"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_16_TRACE
     
-    35. ACHIEVE "Verify @cacheable(ttl) triple in registry"
-    36. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
+    17. ACHIEVE "Verify @circuit_breaker":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_17_TRACE
     
-    37. ACHIEVE "Verify @idempotent triple in registry"
-    38. ENSURE "result.runtime_verification == 'PROPERTY_BASED_TEST'"
-        OTHERWISE THROW "Validation Failed"
+    18. ACHIEVE "Verify @cacheable(ttl)":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_18_TRACE
+    
+    19. ACHIEVE "Verify @idempotent":
+        POSTCONDITION: result.runtime == "PROPERTY_BASED_TEST"
+        @trace(#AC-V2-002-04) AS ACHIEVE_REG_19_TRACE
 
     // --- Extended ---
-    39. ACHIEVE "Verify @sensitive triple in registry"
-    40. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
     
-    41. ACHIEVE "Verify @authorized(role) triple in registry"
-    42. ENSURE "result.environmental_verification == 'ASSUMPTION_STATEMENT'"
-        OTHERWISE THROW "Validation Failed"
+    20. ACHIEVE "Verify @sensitive":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-05) AS ACHIEVE_REG_20_TRACE
+    
+    21. ACHIEVE "Verify @authorized(role)":
+        POSTCONDITION: result.environmental == "ASSUMPTION_STATEMENT"
+        @trace(#AC-V2-002-05) AS ACHIEVE_REG_21_TRACE
 
-    43. ENSURE "All 21 standard annotations are present in the registry"
+    22. ENSURE "All 21 standard annotations are present in the registry"
         OTHERWISE THROW "Incomplete Annotation Registry"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Registry MUST define at least two verification dimensions for each triple" @trace(#AC-V2-002-01) AS CONST_REG_TRI_DIM

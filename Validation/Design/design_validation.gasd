@@ -1,40 +1,68 @@
-VERSION 1.1
+VERSION 1.2
 /*
-   Validation: Design Components (1.1 Syntax)
-   ==========================================
-   Validates the design of all 33 components defined in Design/*.gasd.
-   Traces: US-V2-001 to US-V2-008
+   Validation: High-Level Design Verification (Strict 1.2 Syntax)
+   ============================================================
+   Validates the high-level architectural components and flows defined in 
+   Design/component_design.gasd for GASD v2.0.
 */
 
 NAMESPACE: "GASD-Validator.Validation.Design"
-CONTEXT: "Component Design Validation"
+CONTEXT: "Verification of High-Level Design Integrity"
 TARGET: "GASD Agent"
-TRACE: "US-V1-001"
+TRACE: "US-V2-001", "US-PARSER-007"
 
-FLOW validate_design_components():
-    // --- Core Engine ---
-    1. ACHIEVE "Validate Parser Design (grammar_design.gasd, parse_tree_design.gasd)"
-    2. ACHIEVE "Validate AST Model Design (ast_design.gasd, semantic_ast_model_design.gasd)"
-    3. ACHIEVE "Validate Semantic Analysis (semantic_validation_design.gasd, flow_semantic_analysis_design.gasd)"
-    4. ACHIEVE "Validate Symbol Resolution (symbol_resolution_design.gasd, namespace_import_design.gasd)"
+IMPORT "Design/component_design.gasd" AS CORE
+IMPORT "Design/cli_design.gasd" AS CLI
 
-    // --- GEP-6 EPICs ---
-    5. ACHIEVE "Validate EPIC 1: Annotation Semantic Registry Design"
-    6. ACHIEVE "Validate EPIC 2: ACHIEVE Postcondition Design"
-    7. ACHIEVE "Validate EPIC 3: Contract Modeling Design"
-    8. ACHIEVE "Validate EPIC 4: Dependency Semantics Design"
-    9. ACHIEVE "Validate EPIC 5: Invariant Scoping Design"
-    10. ACHIEVE "Validate EPIC 6: Obligation Identification Design"
-    11. ACHIEVE "Validate EPIC 7: External Model Integration Design"
-    12. ACHIEVE "Validate EPIC 8: Assumption System Design"
-    13. ACHIEVE "Validate EPIC 9: Linting Engine Design"
-    14. ACHIEVE "Validate EPIC 10: Versioning Directive Design"
+CONTRACT CORE.GASDParser:
+    /// Behavioral requirement: Parser MUST support source code to parse tree translation.
+    ENSURE "parse() method exists"
 
-    // --- Infrastructure & Support ---
-    15. ACHIEVE "Validate CLI & Error Reporting Design"
-    16. ACHIEVE "Validate Built-in Types Design"
-    17. ACHIEVE "Validate Compatibility & Decision Designs"
-    18. ACHIEVE "Validate Human-in-the-loop & Resource Designs"
+CONTRACT CORE.ASTGenerator:
+    /// Behavioral requirement: AST generator MUST support tree to AST translation.
+    ENSURE "generate_ast() method exists"
 
-    19. ENSURE "All 33 design files are successfully validated against Requirements"
-        OTHERWISE THROW "Validation Failed"
+CONTRACT CORE.ValidationPipeline:
+    /// Behavioral requirement: Validation pipeline MUST perform semantic analysis.
+    ENSURE "validate() method exists"
+
+CONTRACT CLI.GASDCLI:
+    /// Behavioral requirement: CLI MUST provide the main entry point.
+    ENSURE "main() method exists"
+
+FLOW validate_core_architecture():
+    // --- Phase 1: Parsing ---
+    1. ACHIEVE "Verify GASDParser Interface":
+        POSTCONDITION: CORE.GASDParser.parse IS Function
+        @trace(#AC-V2-001-01) AS ACHIEVE_DSGN_P_TRACE
+    
+    // --- Phase 2: AST Generation ---
+    2. ACHIEVE "Verify ASTGenerator Interface with version aware logic":
+        POSTCONDITION: CORE.ASTGenerator.generate_ast IS Function
+        @trace(#AC-V2-001-03) AS ACHIEVE_DSGN_A_TRACE
+
+    // --- Phase 3: Validation ---
+    3. ACHIEVE "Verify ValidationPipeline strict compliance":
+        POSTCONDITION: CORE.ValidationPipeline.validate IS Function
+        @trace(#AC-V2-001-02) AS ACHIEVE_DSGN_V_TRACE
+
+    // --- Phase 4: CLI Flag Logic ---
+    4. ACHIEVE "Verify GASDCLI flag consolidation compliance":
+        POSTCONDITION: CLI.GASDCLI.main IS Function
+        @trace(#AC-PARSER-007-01) AS ACHIEVE_DSGN_C_TRACE
+    
+    5. ENSURE "All designed core components are formally validated"
+        OTHERWISE THROW "Design Validation Failure"
+
+FLOW validate_system_flow():
+    1. ACHIEVE "Verify Execution Flow: CLI -> Parser -> ASTGen -> Validator":
+        POSTCONDITION: "Flow sequence matches component_design.gasd"
+        @trace(#AC-V2-001-01, #AC-PARSER-007-01) AS ACHIEVE_DSGN_F_TRACE
+    2. ENSURE "Output mode defaults to --ast-sem"
+        OTHERWISE THROW "Flow Verification Failure: Incorrect Default Mode"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every core interface MUST support version-aware processing" @trace(#AC-V2-001-01) AS CONST_VER_AWARE

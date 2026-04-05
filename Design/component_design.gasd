@@ -1,0 +1,89 @@
+VERSION 1.2
+/*
+   Design: High-Level Component Design
+   ===================================
+   Provides a unified architectural overview of the GASD Parser-Validator v2.0,
+   specifying how components interact to support version-aware parsing and 
+   consolidated CLI flag logic.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Component Design"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-V2-001", "US-PARSER-007"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Versioned Translation Pipeline" @trace(#AC-V2-001-01, #AC-V2-001-02, #AC-V2-001-03) AS DEC_VER_TRACE:
+    CHOSEN: "Version-aware parsing with strict semantic validation for 1.2"
+    RATIONALE: "Ensures backward compatibility for 1.1 while enforcing formal semantics for 1.2. The pipeline MUST determine the version before full semantic analysis."
+    ALTERNATIVES: ["Version-aware parsing", "Monolithic parser", "Separate versioned parsers"]
+    AFFECTS: [GASDParser, ValidationPipeline]
+
+DECISION "Flag Consolidation" @trace(#AC-PARSER-007-01, #AC-PARSER-007-02, #AC-PARSER-007-04) AS DEC_FLAG_TRACE:
+    CHOSEN: "Remove --ast flag; default all AST extraction to --ast-sem"
+    RATIONALE: "Simplifies the CLI and aligns with the focus on formal semantic ASTs. The legacy --ast flag is redundant in a verification-oriented system."
+    ALTERNATIVES: ["Remove --ast", "Keep --ast for legacy only", "Deprecate --ast"]
+    AFFECTS: [GASDCLI]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT GASDParser @trace(#AC-V2-001-01) AS COMP_PARSER_TRACE:
+    PATTERN: "ANTLR4 Lexer/Parser"
+    INTERFACE:
+        parse(source: String) -> Any
+
+COMPONENT ASTGenerator @trace(#AC-V2-001-03) AS COMP_ASTGEN_TRACE:
+    PATTERN: "Tree Transformer"
+    INTERFACE:
+        generate_ast(tree: Any, version: String) -> Any
+
+COMPONENT ValidationPipeline @trace(#AC-V2-001-02) AS COMP_VALPIPE_TRACE:
+    PATTERN: "Semantic Analyzer"
+    INTERFACE:
+        validate(ast: Any, version: String) -> Result<Any>
+
+COMPONENT SemanticASTExporter @trace(#AC-PARSER-007-02) AS COMP_ASTEXP_TRACE:
+    PATTERN: "JSON Exporter"
+    INTERFACE:
+        export(ast: Any) -> String
+
+// GASDCLI is defined in Design/cli_design.gasd
+
+// ===================================================================
+// Execution Flow
+// ===================================================================
+
+FLOW system_execution_flow(args: List<String>):
+    1. ACHIEVE "Parse CLI arguments":
+        POSTCONDITION:
+            flags.ast_sem == true
+            flags.ast == undefined
+        @trace(#AC-PARSER-007-01, #AC-PARSER-007-02, #AC-V2-001-03) AS FLOW_TRACE
+    2. CREATE version: "Resolve version from --gasd-ver OR default to 1.2"
+    3. ACHIEVE "Process input files":
+        POSTCONDITION: "Input files processed"
+        4. ACHIEVE "Invoke GASDParser.parse()":
+            POSTCONDITION: result IS Any
+        5. ACHIEVE "Invoke ASTGenerator.generate_ast()":
+            POSTCONDITION: result IS Any
+        6. IF "flags.validate == true":
+            7. ACHIEVE "Invoke ValidationPipeline.validate()":
+                POSTCONDITION: result IS Any
+                @trace(#AC-V2-001-02) AS VAL_INVOKE_TRACE
+        8. IF "flags.ast_sem == true":
+            9. ACHIEVE "Export semantic AST JSON":
+                POSTCONDITION: result IS String
+    10. RETURN
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every file declaring VERSION 1.2 MUST comply with GEP-6 requirements" @trace(#AC-V2-001-02) AS CONST_GEP6_VER
+CONSTRAINT: "The CLI MUST treat --ast as an unknown argument" @trace(#AC-PARSER-007-01) AS CONST_AST_REM
+CONSTRAINT: "--ast-sem MUST be the default behavior for AST extraction" @trace(#AC-PARSER-007-02) AS CONST_ASTSEM_DEF
+CONSTRAINT: "--no-validate flag MUST skip all semantic analysis steps" @trace(#AC-PARSER-007-04) AS CONST_NOVAL_DEB

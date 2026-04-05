@@ -31,8 +31,9 @@ def test_semast_annotation_resolution():
 
 def test_semast_annotation_validation():
     resolver = AnnotationResolver()
-    syn_ann = DummyASTAnnotation("trace", [DummyASTAnnotationArg("value", "123")])
-    with pytest.raises(SemanticError, match="expects a string argument"):
+    # Provide a non-primitive argument (list) to trigger the type error
+    syn_ann = DummyASTAnnotation("trace", [DummyASTAnnotationArg("value", ["list", "not", "allowed"])])
+    with pytest.raises(SemanticError, match="expects a primitive argument"):
         resolver.resolve([syn_ann], ScopeEnum.FLOW)
 
 def test_semast_annotation_hierarchy():

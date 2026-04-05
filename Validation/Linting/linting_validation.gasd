@@ -1,68 +1,87 @@
-VERSION 1.1
+VERSION 1.2
 /*
-   Validation: GEP-6 Linting Engine (1.1 Syntax)
-   =============================================
-   Exhaustive validation of all 12 lint rules defined in GEP-6 §9.1.
-   Traces: US-V2-001 to US-V2-008
+   Validation: GEP-6 Linting Engine (Strict 1.2 Syntax)
+   ====================================================
+   Exhaustive validation of all 13 lint rules defined in GEP-6 §9.1 and §10.2.
+   Traces: US-V2-001 to US-V2-009
 */
 
 NAMESPACE: "GASD-Validator.Validation.Linting"
 CONTEXT: "Validation of Linting Rules and Severity Mapping"
 TARGET: "GASD Agent"
-TRACE: "US-V2-001"
+TRACE: "US-V2-001", "US-V2-009"
 
 FLOW validate_lint_rules():
-    1. ACHIEVE "Validate LINT-001: ACHIEVE without POSTCONDITION"
-    2. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-001: ACHIEVE without POSTCONDITION
+    1. ACHIEVE "Validate LINT-001":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L001_TRACE
     
-    3. ACHIEVE "Validate LINT-002: IMPORT without CONTRACT"
-    4. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-002: IMPORT without CONTRACT
+    2. ACHIEVE "Validate LINT-002":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L002_TRACE
     
-    5. ACHIEVE "Validate LINT-003: INVARIANT without scope qualifier"
-    6. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Info'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-003: INVARIANT without scope qualifier
+    3. ACHIEVE "Validate LINT-003":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Info"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L003_TRACE
     
-    7. ACHIEVE "Validate LINT-004: @retry without @idempotent"
-    8. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-004: @retry without @idempotent
+    4. ACHIEVE "Validate LINT-004":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L004_TRACE
     
-    9. ACHIEVE "Validate LINT-005: @transaction_type without ASSUMPTION"
-    10. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-005: @transaction_type without ASSUMPTION
+    5. ACHIEVE "Validate LINT-005":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L005_TRACE
     
-    11. ACHIEVE "Validate LINT-006: GLOBAL INVARIANT only app enforcement"
-    12. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-006: GLOBAL INVARIANT only app enforcement
+    6. ACHIEVE "Validate LINT-006":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L006_TRACE
     
-    13. ACHIEVE "Validate LINT-007: CONTRACT CASE without THROWS or POSTCONDITION"
-    14. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-007: CONTRACT CASE without THROWS or POSTCONDITION
+    7. ACHIEVE "Validate LINT-007":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Error"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L007_TRACE
     
-    15. ACHIEVE "Validate LINT-008: DEPENDS_ON non-existent step"
-    16. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-008: DEPENDS_ON non-existent step
+    8. ACHIEVE "Validate LINT-008":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Error"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L008_TRACE
     
-    17. ACHIEVE "Validate LINT-009: DEPENDS_ON circular dependency"
-    18. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-009: DEPENDS_ON circular dependency
+    9. ACHIEVE "Validate LINT-009":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Error"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L009_TRACE
     
-    19. ACHIEVE "Validate LINT-010: Obligation identifier collision"
-    20. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-010: Obligation identifier collision
+    10. ACHIEVE "Validate LINT-010":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Error"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L010_TRACE
     
-    21. ACHIEVE "Validate LINT-011: Annotation without AS identifier"
-    22. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Info'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-011: Annotation without AS identifier
+    11. ACHIEVE "Validate LINT-011":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Info"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L011_TRACE
     
-    23. ACHIEVE "Validate LINT-012: Env-dep annotation without ASSUMPTION"
-    24. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Warning'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-012: Env-dep annotation without ASSUMPTION
+    12. ACHIEVE "Validate LINT-012":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Warning"
+        @trace(#AC-V2-001-02) AS ACHIEVE_L012_TRACE
 
-    25. ACHIEVE "Validate LINT-013: VERSION_MISMATCH between CLI and File" @trace #AC-V2-009-02, #AC-V2-009-06
-    26. ENSURE "result.severity_v12 == 'ERROR' AND result.severity_v11 == 'Error'"
-        OTHERWISE THROW "Validation Failed"
+    /// LINT-013: VERSION_MISMATCH between CLI and File
+    13. ACHIEVE "Validate LINT-013":
+        POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Error"
+        @trace(#AC-V2-009-02, #AC-V2-009-06) AS ACHIEVE_L013_TRACE
 
-    27. ENSURE "All 13 rules are correctly mapped in the engine"
+    14. ENSURE "All 13 rules are correctly mapped in the engine"
         OTHERWISE THROW "Linting Rule Mapping Error"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "GEP-6 rules MUST escalate severity to ERROR in VERSION 1.2" @trace(#AC-V2-001-02) AS CONST_SEVERITY_ESC

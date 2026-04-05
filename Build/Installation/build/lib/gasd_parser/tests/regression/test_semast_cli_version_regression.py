@@ -24,7 +24,7 @@ def test_cli_version_build_time_not_development():
     
     # Output format: gasd-parser 1.1.2 (built: 2026-03-21T17:53:08Z)
     output = result.stdout.strip()
-    assert "gasd-parser" in output
+    assert "gasd_parser" in output
     assert "(built: " in output
     assert "DEVELOPMENT" not in output
     # Verify it looks like an ISO-8601-ish timestamp (contains 'T' and 'Z')

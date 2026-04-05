@@ -29,6 +29,7 @@ from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticErro
 from .NamespaceResolver import DependencyError
 from .ConstraintValidator import ConstraintValidator
 from .LintEngine import LintEngine
+from .VersionResolver import VersionResolver
 
 class SemanticPipeline:
     def __init__(self, validate_built_in_types: bool = True):
@@ -57,7 +58,13 @@ class SemanticPipeline:
         return self.reporter
 
     def _get_range(self, node: Any, file: str) -> SourceRange:
-        return SourceRange(file or "", node.line, node.column, node.endLine or node.line, node.endColumn or node.column)
+        return SourceRange(
+            file or "", 
+            getattr(node, 'line', 0), 
+            getattr(node, 'column', 0), 
+            getattr(node, 'endLine', getattr(node, 'line', 0)), 
+            getattr(node, 'endColumn', getattr(node, 'column', 0))
+        )
 
     def _res_type_expr(self, expr, file: str = "unknown") -> Optional[TypeContract]:
         """Convert a syntactic type expression into its semantic form."""
@@ -68,7 +75,8 @@ class SemanticPipeline:
         # GASD 1.1: Literal types (baseType == "literal") are self-resolving; skip resolution.
         # @trace #AC-X-SEMAST-004-05
         if expr.baseType in ("literal", "Record", "Enum"):
-            return TypeContract(expr.baseType, args=args)
+            lit_val = getattr(expr, "literalValue", None)
+            return TypeContract(expr.baseType, args=args, literal_value=lit_val)
 
         # AC-X-SEMAST-004-04: Resolve type reference
         symbol = self.symbol_table.resolve(expr.baseType)
@@ -82,7 +90,7 @@ class SemanticPipeline:
                  code="V008",
                  message=f"UnknownType reference: '{expr.baseType}'",
                  level=level,
-                 location=SourceRange(file, 1, 1, 1, 1) # Fallback range
+                 location=self._get_range(expr, file)
              )
              self.reporter.report(err)
              if level == ErrorLevel.ERROR:
@@ -534,17 +542,23 @@ class SemanticPipeline:
         self.file_versions = {}
         for fn in file_nodes.values():
             if fn.syntacticRoot:
-                # Use effective_version as the default for files without a VERSION directive
-                fver = getattr(fn.syntacticRoot, 'version', None) or effective_version
+                fver = VersionResolver.resolve_version(fn.syntacticRoot, cli_version=global_version)
                 self.file_versions[fn.filePath] = fver
                 
-        # If no global override, system version is the highest explicit version found
+                # LINT-013: Validate version consistency
+                v_errors = VersionResolver.validate_version_consistency(fn.syntacticRoot, global_version)
+                for v_err in v_errors:
+                    self.reporter.report(v_err)
+
+        # Update effective_version based on resolved file versions if not overridden by CLI
         if not global_version:
-            for fn in file_nodes.values():
-                if getattr(fn.syntacticRoot, 'version', None) == "1.2":
-                    effective_version = "1.2"
-        
-        self.flow_analyzer.version = effective_version
+             # Highest version among all files
+             if any(v == "1.2" for v in self.file_versions.values()):
+                 effective_version = "1.2"
+             else:
+                 effective_version = "1.1"
+        else:
+             effective_version = global_version
         
         for ns in ns_nodes.values():
             for flow in ns.flows.values():
@@ -574,6 +588,7 @@ class SemanticPipeline:
         # Pass 4: Linting Engine (GEP-6)
         linter = LintEngine(self.reporter, version=effective_version)
         linter.file_versions = self.file_versions
+        linter.cli_version_override = (global_version is not None)
         linter.lint_system(system)
         
         constraint_errors = self.constraint_validator.validate_system(system)

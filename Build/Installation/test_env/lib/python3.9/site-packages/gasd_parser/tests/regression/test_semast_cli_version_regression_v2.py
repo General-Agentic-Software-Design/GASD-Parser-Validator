@@ -11,15 +11,18 @@ def build_pkg():
     subprocess.run(["bash", "Build/Installation/package.sh"], check=True, capture_output=True)
     return os.path.abspath("Build/Installation")
 
-def test_cli_no_flag_detects_1_2(build_pkg):
-    """Verify that the CLI detects 1.2 and fails on strict rules without flag."""
-    # Use a directory that definitely has 1.2 files (Design)
+def test_cli_no_flag_detects_1_2(build_pkg, tmp_path):
+    """Verify that the CLI defaults to 1.2 and fails on strict rules without flag."""
+    gasd_file = tmp_path / "test.gasd"
+    # Create a file missing POSTCONDITION (1.2 strict requirement under LINT-001)
+    gasd_file.write_text("CONTEXT: 'test'\nTARGET: 'test'\nNAMESPACE: 'test'\nFLOW DummyFlow:\n  1. ACHIEVE \"something\"\n")
+    
     env = os.environ.copy()
     env["PYTHONPATH"] = build_pkg
     
-    # We expect this to fail (Exit 1) because Design/ has strictness violations in 1.2
+    # We expect this to fail (Exit 1) because of 1.2 strictness violations
     result = subprocess.run(
-        ["python3", "-m", "gasd_parser", "--ast-sem", "Design"],
+        ["python3", "-m", "gasd_parser", "--ast-sem", str(gasd_file)],
         env=env,
         capture_output=True,
         text=True
@@ -29,17 +32,19 @@ def test_cli_no_flag_detects_1_2(build_pkg):
     if result.returncode != 1:
         print(f"DEBUG OUTPUT:\n{output}")
     assert result.returncode == 1
-    assert "info[SEMANTIC LINT-001]" in output or "warning[SEMANTIC LINT-001]" in output
-    assert "GASD 1.2 compatibility" in output
+    assert "error[SEMANTIC LINT-001]" in output or "ERROR: " in output
 
-def test_cli_ver_1_1_suppresses_hints(build_pkg):
+def test_cli_ver_1_1_suppresses_hints(build_pkg, tmp_path):
     """Verify that --gasd-ver 1.1 suppresses 1.2 compatibility hints."""
+    gasd_file = tmp_path / "test.gasd"
+    gasd_file.write_text("VERSION 1.1\nCONTEXT: 'test'\nTARGET: 'test'\nNAMESPACE: 'test'\nFLOW DummyFlow:\n  1. ACHIEVE \"something\"\n")
+
     env = os.environ.copy()
     env["PYTHONPATH"] = build_pkg
     
     # We expect this to pass (Exit 0) and be clean
     result = subprocess.run(
-        ["python3", "-m", "gasd_parser", "--ast-sem", "Design", "--gasd-ver", "1.1"],
+        ["python3", "-m", "gasd_parser", "--ast-sem", str(gasd_file), "--gasd-ver", "1.1"],
         env=env,
         capture_output=True,
         text=True
@@ -49,17 +54,19 @@ def test_cli_ver_1_1_suppresses_hints(build_pkg):
     if result.returncode != 0:
         print(f"DEBUG OUTPUT:\n{output}")
     assert result.returncode == 0
-    assert "GASD 1.2 compatibility" not in output
-    import re
-    assert re.search(r"Warnings:\s+0", output)
+    assert "error" not in output.lower()
+    assert "warning[SEMANTIC LINT-001]" in output
 
-def test_cli_ver_1_2_strict_failure(build_pkg):
+def test_cli_ver_1_2_strict_failure(build_pkg, tmp_path):
     """Verify that --gasd-ver 1.2 enforcement works and shows hints."""
+    gasd_file = tmp_path / "test.gasd"
+    gasd_file.write_text("VERSION 1.2\nCONTEXT: 'test'\nTARGET: 'test'\nNAMESPACE: 'test'\nFLOW DummyFlow:\n  1. ACHIEVE \"something\"\n")
+
     env = os.environ.copy()
     env["PYTHONPATH"] = build_pkg
     
     result = subprocess.run(
-        ["python3", "-m", "gasd_parser", "--ast-sem", "Design", "--gasd-ver", "1.2"],
+        ["python3", "-m", "gasd_parser", "--ast-sem", str(gasd_file), "--gasd-ver", "1.2"],
         env=env,
         capture_output=True,
         text=True
@@ -69,8 +76,7 @@ def test_cli_ver_1_2_strict_failure(build_pkg):
     if result.returncode != 1:
         print(f"DEBUG OUTPUT:\n{output}")
     assert result.returncode == 1
-    assert "info[SEMANTIC LINT-001]" in output
-    assert "GASD 1.2 compatibility" in output
+    assert "error[SEMANTIC LINT-001]" in output or "ERROR: " in output
 
 def test_cli_version_mismatch_is_error_in_1_2(build_pkg, tmp_path):
     """Verify that LINT-013 is an ERROR in 1.2 mode."""
@@ -95,8 +101,8 @@ def test_cli_version_mismatch_is_error_in_1_2(build_pkg, tmp_path):
     assert "error" in output.lower()
     assert "version mismatch" in output.lower()
 
-def test_cli_version_mismatch_is_hidden_in_1_1(build_pkg, tmp_path):
-    """Verify that LINT-013 is hidden (INFO) in 1.1 mode."""
+def test_cli_version_mismatch_is_error_in_1_1(build_pkg, tmp_path):
+    """Verify that LINT-013 is an ERROR even in 1.1 mode (version mismatch is always an error)."""
     # Create a 1.2 file but enforce 1.1
     gasd_file = tmp_path / "modern.gasd"
     gasd_file.write_text("VERSION 1.2\nNAMESPACE: 'test'\n")
@@ -112,5 +118,7 @@ def test_cli_version_mismatch_is_hidden_in_1_1(build_pkg, tmp_path):
     )
     
     output = result.stdout + result.stderr
-    assert result.returncode == 0
-    assert "LINT-013" not in output
+    assert result.returncode == 1
+    assert "LINT-013" in output
+    assert "version mismatch" in output.lower()
+

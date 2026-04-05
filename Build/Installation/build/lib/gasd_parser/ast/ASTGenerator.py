@@ -39,17 +39,28 @@ class ASTGenerator(GASDParserVisitor):
         matches = []
         version = None # Default to None to allow pipeline to determine default
 
+        first_directive_seen = False
+        version_first = True
+        
         for section in ctx.section():
             node = self.visit(section)
             if not node: continue
             
-            if isinstance(node, str) and getattr(section, 'version_dir', None) and section.version_dir():
-                # print(f"!!!! DEBUG: visitGasd_file found version '{node}' !!!!")
+            is_version = isinstance(node, str) and getattr(section, 'version_dir', None) and section.version_dir()
+            
+            if is_version:
                 version = node
-            elif isinstance(node, str):
-                # Check for other string-yielding sections that might be VERSION
-                # In standard ANTLR4, if section : version_dir, then section.version_dir() should work.
-                pass
+                if first_directive_seen:
+                    version_first = False
+            
+            # Any non-annotation, non-comment section counts as a directive/construct
+            if node and not is_version and not isinstance(node, list):
+                first_directive_seen = True
+
+            if not node: continue
+            
+            if is_version:
+                pass # Already handled
             elif isinstance(node, Directive): directives.append(node)
             elif isinstance(node, Decision): decisions.append(node)
             elif isinstance(node, TypeDefinition): types.append(node)
@@ -76,6 +87,7 @@ class ASTGenerator(GASDParserVisitor):
         # Set GASDFile line to 1 (file root always starts at line 1)
         res_file = GASDFile(
             version=version,
+            version_first=version_first,
             line=1,
             column=0,
             directives=directives,
