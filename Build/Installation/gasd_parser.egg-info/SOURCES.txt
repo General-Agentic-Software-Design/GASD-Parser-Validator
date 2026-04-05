@@ -45,6 +45,7 @@ gasd_parser/semantic/SemanticPipeline.py
 gasd_parser/semantic/StrategyResolver.py
 gasd_parser/semantic/SymbolTable.py
 gasd_parser/semantic/TypeContractBinder.py
+gasd_parser/semantic/VersionResolver.py
 gasd_parser/semantic/__init__.py
 gasd_parser/tests/__init__.py
 gasd_parser/tests/acceptance/__init__.py

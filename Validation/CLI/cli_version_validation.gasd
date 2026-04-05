@@ -1,52 +1,75 @@
-VERSION 1.1
+VERSION 1.2
 /*
    Validation: Command-Line Versioning & LINT-013
    ================================================
    Exhaustive validation of CLI version overrides, defaulting behavior,
-   and GEP-6 enforcement logic as defined in US-V2-009.
+   and GEP-6 enforcement logic as defined in US-V2-009 and US-PARSER-007.
 */
 
 NAMESPACE: "GASD-Validator.Validation.CLI"
 CONTEXT: "Validation of CLI Versioning and Multi-Version Enforcement"
 TARGET: "GASD Agent"
-TRACE: "US-V2-009"
+TRACE: "US-V2-009", "US-PARSER-007"
 
-IMPORT "Design/cli_design.gasd"
-IMPORT "Design/version_directive_design.gasd"
+IMPORT "Design/cli_design.gasd" AS CLI
+IMPORT "Design/version_directive_design.gasd" AS SVV
+
+CONTRACT CLI.GASDCLI:
+    /// Behavioral requirement: CLI MUST support version-aware parsing and flag consolidation.
+    ENSURE "main interfaces are present"
+
+CONTRACT SVV.VersionResolver:
+    /// Behavioral requirement: VersionResolver MUST correctly resolve defaults and CLI overrides.
+    ENSURE "resolveVersion() is present"
 
 FLOW validate_cli_versioning():
     /// Test Case: CLI Override (AT-V2-118)
-    1. ACHIEVE "Validate: --gasd-ver 1.1 vs file with VERSION 1.2" @trace #AT-V2-118
+    1. ACHIEVE "Validate: --gasd-ver 1.1 vs file with VERSION 1.2":
+        POSTCONDITION: result IS "LINT-013 (VERSION_MISMATCH) Error"
+        @trace(#AT-V2-118) AS ACHIEVE_V2_118_TRACE
+    
     2. ENSURE "Result is LINT-013 (VERSION_MISMATCH) Error"
         OTHERWISE THROW "Validation Failed: AT-V2-118"
 
     /// Test Case: CLI Override (AT-V2-119)
-    3. ACHIEVE "Validate: --gasd-ver 1.2 vs file with VERSION 1.1" @trace #AT-V2-119
+    3. ACHIEVE "Validate: --gasd-ver 1.2 vs file with VERSION 1.1":
+        POSTCONDITION: result IS "LINT-013 (VERSION_MISMATCH) Error"
+        @trace(#AT-V2-119) AS ACHIEVE_V2_119_TRACE
+    
     4. ENSURE "Result is LINT-013 (VERSION_MISMATCH) Error"
         OTHERWISE THROW "Validation Failed: AT-V2-119"
 
     /// Test Case: Defaulting (AT-V2-120)
-    5. ACHIEVE "Validate: No flag vs file with no VERSION directive" @trace #AT-V2-120
+    5. ACHIEVE "Validate: No flag vs file with no VERSION directive":
+        POSTCONDITION: effective_version == "1.2"
+        @trace(#AT-V2-120) AS ACHIEVE_V2_120_TRACE
+    
     6. ENSURE "Effective version is 1.2 AND GEP-6 strict rules applied"
         OTHERWISE THROW "Validation Failed: AT-V2-120"
 
-    /// Test Case: Batch Consistency (AT-V2-121)
-    7. ACHIEVE "Validate: --gasd-ver 1.1 on multiple files (some with VERSION 1.1, some empty)" @trace #AT-V2-121
-    8. ENSURE "All files evaluated with 1.1 legacy semantics"
-        OTHERWISE THROW "Validation Failed: AT-V2-121"
+    // --- Flag Consolidation (#US-PARSER-007) ---
+    
+    /// Test Case: Legacy --ast Flag (AT-PARSER-007-01)
+    7. ACHIEVE "Validate: Use of --ast flag":
+        POSTCONDITION: result IS "UnknownArgumentError"
+        @trace(#AT-PARSER-007-01) AS ACHIEVE_P007_01_TRACE
+    
+    /// Test Case: Default --ast-sem (AT-PARSER-007-02)
+    8. ACHIEVE "Validate: Default execution (no AST flag)":
+        POSTCONDITION: output_mode == "SemanticAST"
+        @trace(#AT-PARSER-007-02) AS ACHIEVE_P007_02_TRACE
 
-    /// GEP-6 Strict Enforcement Scenarios (AT-V2-122 to AT-V2-124)
-    9. ACHIEVE "Validate: --gasd-ver 1.2 on file with ACHIEVE (missing postcondition)" @trace #AT-V2-122
-    10. ENSURE "Result is LINT-001 (Missing POSTCONDITION) Error"
-        OTHERWISE THROW "Validation Failed: AT-V2-122"
+    /// Test Case: --no-validate (AT-PARSER-007-04)
+    9. ACHIEVE "Validate: --no-validate flag":
+        POSTCONDITION: semantic_validation_skipped == true
+        @trace(#AT-PARSER-007-04) AS ACHIEVE_P007_04_TRACE
 
-    11. ACHIEVE "Validate: --gasd-ver 1.2 on file with IMPORT (missing contract)" @trace #AT-V2-123
-    12. ENSURE "Result is LINT-002 (Missing CONTRACT) Error"
-        OTHERWISE THROW "Validation Failed: AT-V2-123"
-
-    13. ACHIEVE "Validate: --gasd-ver 1.2 on file with @retry (missing AS ID)" @trace #AT-V2-124
-    14. ENSURE "Result is LINT-011 (Missing AS identifier) Error"
-        OTHERWISE THROW "Validation Failed: AT-V2-124"
-
-    15. ENSURE "All CLI versioning scenarios are covered by these validations"
+    10. ENSURE "All CLI versioning and consolidation scenarios are covered"
         OTHERWISE THROW "Validation Coverage Gap"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "CLI MUST NOT accept --ast as a valid argument in v2.0" @trace(#AC-PARSER-007-01) AS CONST_AST_REM
+CONSTRAINT: "Default AST output mode MUST be semantic if no mode specified" @trace(#AC-PARSER-007-02) AS CONST_DEFAULT_MODE

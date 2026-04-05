@@ -94,7 +94,7 @@ def test_semast_cli_combine():
 
     try:
         result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast", "--ast-combine", "--json"],
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--json"],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
             cwd=PROJECT_ROOT
@@ -103,7 +103,9 @@ def test_semast_cli_combine():
         data = json.loads(result.stdout)
         output = data["asts"]
         assert isinstance(output, list)
-        assert len(output) == 2
+        # In Ph4, --ast-sem with multiple files produces 1 unified SemanticSystem
+        assert len(output) == 1
+        assert output[0]["kind"] == "SemanticSystem"
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
@@ -223,5 +225,5 @@ def test_cli_version_build_time():
     assert result.returncode == 0
     assert result.stdout.strip() != ""
     # In development it should be "DEVELOPMENT", but might be a real timestamp
-    assert "gasd-parser" in result.stdout
+    assert "gasd_parser" in result.stdout
     assert "built:" in result.stdout

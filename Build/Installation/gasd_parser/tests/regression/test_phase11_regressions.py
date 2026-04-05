@@ -2,6 +2,8 @@ import subprocess
 import os
 import pytest
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
 def test_cli_strict_warnings():
     """
     Regression Test: Ensure that a semantic warning causes a non-zero exit code
@@ -27,9 +29,11 @@ FLOW main:
     try:
         # Run standard validation
         result = subprocess.run(
-            ["python3", "-m", "gasd_parser", "test_strict.gasd", "--ast-sem"],
+            ["python3", "-m", "Impl.cli", "test_strict.gasd", "--ast-sem"],
             capture_output=True,
-            text=True
+            text=True,
+            env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+            cwd=PROJECT_ROOT
         )
         
         # Should fail (exit code 1) due to strict warnings
@@ -68,9 +72,11 @@ TYPE Request:
     try:
         # Run validation on directory
         result = subprocess.run(
-            ["python3", "-m", "gasd_parser", "test_multi/"],
+            ["python3", "-m", "Impl.cli", "test_multi/"],
             capture_output=True,
-            text=True
+            text=True,
+            env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+            cwd=PROJECT_ROOT
         )
         
         # Should pass with 0 warnings/errors
@@ -81,3 +87,4 @@ TYPE Request:
         import shutil
         if os.path.exists("test_multi"):
             shutil.rmtree("test_multi")
+

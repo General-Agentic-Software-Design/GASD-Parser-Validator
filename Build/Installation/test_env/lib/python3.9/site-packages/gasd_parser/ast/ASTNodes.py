@@ -218,3 +218,4 @@ class GASDFile(ASTNodeBase):
     todos: Optional[List[TodoNode]] = None
     reviews: Optional[List[ReviewNode]] = None
     version: Optional[str] = None # Defaults to None to allow pipeline to determine default
+    version_first: bool = True # US-V2-001: VERSION MUST be first

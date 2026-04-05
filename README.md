@@ -4,6 +4,17 @@ The official, canonical parser and validator for the **General Agentic Software 
 
 This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
 
+## `--ast` vs `--ast-sem` — Validation Mode Comparison
+
+| | `--ast-sem` | `--ast` |
+| --- | --- | --- |
+| `do_full_sem` | **`True`** | **`False`** |
+| `ReferenceResolutionPass` | **Skipped** (deferred to cross-file Phase 4) | **Runs** per-file in Phase 1-3 |
+| Phase 4 (`SemanticPipeline`) | **Runs** — resolves types/deps cross-file | **Does NOT run** |
+
+> [!IMPORTANT]
+> When validating multi-file projects, use `--ast-sem` to get correct cross-file type resolution. `--ast` performs per-file reference resolution only, which will report false errors for types defined in other files.
+
 ## Project Structure
 
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
@@ -130,7 +141,7 @@ The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Buil
 3. **Testing**: Acceptance and regression verification (565 tests).
 4. **Validation**: Full suite validation on all content directories (110+ files).
 5. **Quality Gate**: Final sign-off on GASD 1.2 compliance (Failed: 0).
-6. **Packaging**: Standalone distributable creation (v2.0.0).
+6. **Packaging**: Standalone distributable creation (v2.1.0).
 
 ## License
 

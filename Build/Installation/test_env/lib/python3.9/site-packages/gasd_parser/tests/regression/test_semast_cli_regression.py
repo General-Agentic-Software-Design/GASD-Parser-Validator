@@ -51,14 +51,14 @@ def test_cli_human_readable_failure():
 
 def test_cli_json_ast():
     """Verify --json --ast combines AST into the response"""
-    result, fp = run_cli("--ast", "--json")
+    result, fp = run_cli("--ast-sem", "--json")
     try:
         assert result.returncode == 0
         data = json.loads(result.stdout)
         assert data["success"] is True
         assert "asts" in data
         assert isinstance(data["asts"], list)
-        assert data["asts"][0]["kind"] == "GASDFile"
+        assert data["asts"][0]["kind"] == "SemanticSystem"
     finally:
         os.unlink(fp)
 
@@ -77,7 +77,7 @@ def test_cli_json_sem_ast():
 
 def test_cli_no_ast_printed_without_json():
     """Verify --ast alone does not print raw JSON to stdout"""
-    result, fp = run_cli("--ast")
+    result, fp = run_cli("--ast-sem")
     try:
         assert result.returncode == 0
         assert f"OK Passed: {fp}" in result.stderr
@@ -122,17 +122,17 @@ def test_semast_cli_combine():
     tmp2.close()
     try:
         result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast", "--ast-combine", "--json"],
+            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--json"],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
             cwd=PROJECT_ROOT
         )
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        # In combined mode with --json, we get a list of asts in the "asts" key (or similar)
-        # Actually our implementation of ast_combine might be different. Let's check cli.py logic.
+        # In combined mode, --ast-combine produces 1 unified SemanticSystem
         assert "asts" in data
-        assert len(data["asts"]) == 2
+        assert len(data["asts"]) == 1
+        assert data["asts"][0]["kind"] == "SemanticSystem"
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)

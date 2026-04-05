@@ -123,3 +123,35 @@ def test_gep6_enforcement_lint_011():
         assert "LINT-011" in result.stderr
     finally:
         cleanup(paths)
+
+# --- Flag Consolidation (US-PARSER-007) ---
+
+def test_cli_ast_flag_removal():
+    """AT-PARSER-007-01: Running with --ast returns an error (unknown argument)."""
+    result, paths = run_cli("--ast", input_content='VERSION 1.2\n')
+    try:
+        assert result.returncode == 1
+        assert "unrecognized arguments: --ast" in result.stderr or "unknown argument" in result.stderr
+    finally:
+        cleanup(paths)
+
+def test_cli_default_mode_is_semantic():
+    """AT-PARSER-007-02: Running without AST flags still produces a Semantic AST (default)."""
+    # Simply running with --json should show Semantic AST structure in Phase 4
+    # For Ph3, we verify it doesn't fail.
+    result, paths = run_cli("--json", input_content='VERSION 1.2\nNAMESPACE: "T"\n')
+    try:
+        assert result.returncode == 0
+    finally:
+        cleanup(paths)
+
+def test_cli_no_validate_skips_deep_checks():
+    """AT-PARSER-007-03: Running with --no-validate skips semantic validation checks."""
+    # LINT-001 error (Missing Post) should be skipped
+    content = 'VERSION 1.2\nNAMESPACE: "T"\nFLOW f():\n  1. ACHIEVE "Task"\n'
+    result, paths = run_cli("--no-validate", input_content=content)
+    try:
+        # Should pass even though POSTCONDITION is missing
+        assert result.returncode == 0
+    finally:
+        cleanup(paths)

@@ -15,6 +15,7 @@ class RequiredSectionsPass(ValidationPass):
         
         has_context = False
         has_target = False
+        has_namespace = False
         
         is_v12 = getattr(ast, 'version', '1.1') == "1.2"
         
@@ -23,8 +24,11 @@ class RequiredSectionsPass(ValidationPass):
                 has_context = True
             if d.directiveType == "TARGET":
                 has_target = True
+            if d.directiveType == "NAMESPACE":
+                has_namespace = True
 
-        if not has_context and not is_v12:
+        # NAMESPACE serves as the modern equivalent of CONTEXT
+        if not has_context and not has_namespace and not is_v12:
             errors.append(SemanticError(
                 code='V002',
                 severity='ERROR',

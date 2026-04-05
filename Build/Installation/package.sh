@@ -39,7 +39,7 @@ echo "Setting up clean test environment..."
 python3 -m venv test_env
 source test_env/bin/activate
 pip install wheel
-pip install dist/gasd_parser-2.0.0-py3-none-any.whl
+pip install dist/gasd_parser-2.1.0-py3-none-any.whl
 
 echo "Running packaging smoke tests..."
 
@@ -57,6 +57,6 @@ else
 fi
 
 echo "Running parse_tree_tests smoke test..."
-gasd_parser --ast ../../Validation/Design/parse_tree_tests.gasd
+gasd_parser --ast-sem --gasd-ver 1.1 ../../Validation/Design/parse_tree_tests.gasd
 
 echo "phase6_final_packaging completed successfully! Ready for distribution."

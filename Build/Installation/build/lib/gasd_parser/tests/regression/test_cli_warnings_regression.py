@@ -30,12 +30,9 @@ def test_cli_ast_warnings():
         )
         assert result.returncode != 0
         
-        # Verify stderr formatting - in strict mode, warnings cause failure
-        assert "failed validation" in result.stderr
-        assert "warning[SEMANTIC V008]: Unknown type reference: 'UnknownType'" in result.stderr
-        
-        # Verify Summary contains warnings line
-        assert "Warnings:        1" in result.stderr
+        # Verify tombstone message
+        assert "Unknown argument '--ast'" in result.stderr
+        assert "Feature removed in GASD 2.0" in result.stderr
     finally:
         os.unlink(tmp.name)
 

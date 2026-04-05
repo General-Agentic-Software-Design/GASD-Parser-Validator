@@ -1,40 +1,51 @@
-VERSION 1.1
+VERSION 1.2
 /*
-   Validation: Negative Tests (1.1 Syntax)
-   ========================================
-   Exhaustive validation of all failure cases and lint errors.
-   Traces: NT-GEP6-001 to NT-GEP6-006
+   Validation: Negative Tests (Strict 1.2 Syntax)
+   =============================================
+   Validates the system's ability to correctly identify and reject 
+   invalid inputs and configurations for GASD v2.0.
 */
 
 NAMESPACE: "GASD-Validator.Validation.Negative"
-CONTEXT: "Negative Testing and Error Path Validation"
+CONTEXT: "Verification of Error Handling and Reject Logic"
 TARGET: "GASD Agent"
-TRACE: "US-V2-001"
+TRACE: "US-V2-001", "US-PARSER-007"
 
-FLOW validate_negative_cases():
-    1. ACHIEVE "Validate NT-GEP6-001: DEPENDS_ON non-existent step"
-    2. ENSURE "result.error == 'Error LINT-008'"
-        OTHERWISE THROW "Validation Failed"
+FLOW validate_negative_scenarios():
+    // --- GEP-6 Semantic Errors ---
     
-    3. ACHIEVE "Validate NT-GEP6-002: DEPENDS_ON circular dependency"
-    4. ENSURE "result.error == 'Error LINT-009'"
-        OTHERWISE THROW "Validation Failed"
+    1. ACHIEVE "Reject: ACHIEVE without POSTCONDITION in 1.2 context":
+        POSTCONDITION: result.severity == "ERROR" AND result.code == "LINT-001"
+        @trace(#AC-V2-001-02) AS ACHIEVE_NEG_L001_TRACE
     
-    5. ACHIEVE "Validate NT-GEP6-003: Duplicate AS identifier collision"
-    6. ENSURE "result.error == 'Error LINT-010'"
-        OTHERWISE THROW "Validation Failed"
-    
-    7. ACHIEVE "Validate NT-GEP6-004: CONTRACT CASE without outcome"
-    8. ENSURE "result.error == 'Error LINT-007'"
-        OTHERWISE THROW "Validation Failed"
-    
-    9. ACHIEVE "Validate NT-GEP6-005: AS identifier with invalid lowercase"
-    10. ENSURE "result.error == 'Regex Match Error'"
-        OTHERWISE THROW "Validation Failed"
-    
-    11. ACHIEVE "Validate NT-GEP6-006: POSTCONDITION outside ACHIEVE"
-    12. ENSURE "result.error == 'Syntax Error'"
-        OTHERWISE THROW "Validation Failed"
+    2. ACHIEVE "Reject: IMPORT without CONTRACT in 1.2 context":
+        POSTCONDITION: result.severity == "ERROR" AND result.code == "LINT-002"
+        @trace(#AC-V2-001-02) AS ACHIEVE_NEG_L002_TRACE
 
-    13. ENSURE "All negative cases trigger expected error states"
-        OTHERWISE THROW "Validation Failed"
+    3. ACHIEVE "Reject: Annotation without AS identifier in 1.2 context":
+        POSTCONDITION: result.severity == "ERROR" AND result.code == "LINT-011"
+        @trace(#AC-V2-001-02) AS ACHIEVE_NEG_L011_TRACE
+
+    // --- CLI Errors ---
+    
+    4. ACHIEVE "Reject: Usage of legacy --ast flag":
+        POSTCONDITION: result.code == "UNKNOWN_ARGUMENT" AND exit_code == 1
+        @trace(#AC-PARSER-007-01) AS ACHIEVE_NEG_AST_TRACE
+    
+    5. ACHIEVE "Reject: Version mismatch between --gasd-ver and VERSION directive":
+        POSTCONDITION: result.severity == "ERROR" AND result.code == "LINT-013"
+        @trace(#AC-V2-009-02) AS ACHIEVE_NEG_VER_TRACE
+
+    // --- Structural Errors ---
+    6. ACHIEVE "Reject: Invalid VERSION directive placement (not at top)":
+        POSTCONDITION: result IS SyntaxError
+        @trace(#AC-V2-001-01) AS ACHIEVE_NEG_PLACE_TRACE
+
+    7. ENSURE "All critical error conditions are formally identified and rejected"
+        OTHERWISE THROW "Negative Validation Failure"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Syntactic errors MUST prevent any AST generation or semantic validation" @trace(#AC-V2-001-01) AS CONST_SYNTAX_BLOCK

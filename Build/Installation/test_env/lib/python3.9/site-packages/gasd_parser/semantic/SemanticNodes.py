@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 class ScopeEnum(str, Enum):
+    LOCAL = "LOCAL"
     GLOBAL = "GLOBAL"
     TYPE = "TYPE"
     FIELD = "FIELD"
@@ -96,17 +97,21 @@ class SemanticNodeBase:
 
 
 class TypeContract:
-    def __init__(self, base_type: str, args: Optional[List['TypeContract']] = None, constraints: Optional[List[str]] = None):
+    def __init__(self, base_type: str, args: Optional[List['TypeContract']] = None, constraints: Optional[List[str]] = None, literal_value: Optional[str] = None):
         self.baseType = base_type
         self.args = args or []
         self.constraints = constraints or []
+        self.literalValue = literal_value
 
     def to_dict(self):
-        return {
+        d = {
             "baseType": self.baseType,
             "args": [a.to_dict() for a in self.args],
             "constraints": self.constraints
         }
+        if self.literalValue is not None:
+            d["literalValue"] = self.literalValue
+        return d
 
 
 class ResolvedFieldNode:

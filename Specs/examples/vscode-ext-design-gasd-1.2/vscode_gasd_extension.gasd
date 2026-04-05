@@ -1,0 +1,98 @@
+VERSION 1.2
+/* 
+   --- GASD VS Code Extension Design (Orchestrator) ---
+   Main orchestrator for the official extension.
+   Strictly follows GASD 1.2.0 normative specification as an expert:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension / LSP"
+TARGET: "TypeScript 5.x"
+TRACE: "#US-1-TO-41"
+
+IMPORT "types.gasd" AS TypesMain
+IMPORT "lsp_server.gasd" AS Server
+IMPORT "extension_client.gasd" AS Client
+IMPORT "tests.gasd" AS Testing
+
+NAMESPACE: "gasd.vscode.main"
+
+/// Expert Pattern: Use a single orchestrator to manage lifecycle and components.
+
+COMPONENT GASDExtension @trace("#US-15") AS TRACE_US_15 @trace("#US-27") AS TRACE_US_27 @trace("#US-28") AS TRACE_US_28:
+    PATTERN: "Extension Entry Point"
+    DEPENDENCIES: [
+        Client.ExtensionClient,
+        Server.GASDServer,
+        Testing.AcceptanceTestSuite
+    ]
+    
+    RESOURCES:
+        - "language-configuration.json"
+        - "client/gasd.tmLanguage.json"
+        - "snippets/gasd.code-snippets" @trace("#US-2") AS TRACE_US_2
+        - "icons/gasd_icon.png" @trace("#AC-27-2") AS TRACE_AC_27_2// @trace("#AC-28-11 (GEP-4 Resource Spec)") AS TRACE_AC_28_11__GEP_4_RESOURCE_SPEC
+
+    INTERFACE:
+        on_startup() -> Void
+        on_shutdown() -> Void
+
+// --- Architectural Decisions ---
+
+DECISION "Process Model":
+    CHOSEN: "Multi-process (Client Main + Server Thread)"
+    RATIONALE: "Ensures responsiveness by offloading parsing and AI tasks"
+    ALTERNATIVES: ["Single-process", "Web Worker-based"]
+    AFFECTS: [Server.GASDServer]
+
+DECISION "Strict Compliance Enforcement":
+    CHOSEN: "Normative GASD 1.2.0 Validation"
+    RATIONALE: "Enforces expert-level patterns across all generated artifacts"
+    ALTERNATIVES: ["Loose Validation", "Warning-only mode"]
+    AFFECTS: [Server.Parser]
+
+DECISION "Version-Aware Severity" @trace("#US-29") AS TRACE_VER_SEVERITY:
+    CHOSEN: "Dual-mode severity: ERROR for 1.2 files, WARNING for 1.1 files"
+    RATIONALE: "GEP-6 mandates new constructs only in VERSION 1.2 files; 1.1 files must remain backward compatible"
+    ALTERNATIVES: ["Uniform ERROR severity", "No version detection"]
+    AFFECTS: [Server.GASD12LintEngine]
+
+// --- Global Invariants ---
+INVARIANT GLOBAL: "Expert Compliance: All components MUST trace back to #US or #AC identifiers."
+INVARIANT GLOBAL: "LSP 3.17 compliance for all core features." @trace("#US-18-TO-26") AS TRACE_US_18_TO_US_26
+INVARIANT GLOBAL: "Expert Compliance: Design MUST be derived directly from user-story.md, gasd-1.1-user-story.md, and ver-1.2/user-story.md." @trace("#US-27") AS TRACE_US_27 @trace("#US-28") AS TRACE_US_28
+INVARIANT GLOBAL: "GEP-3/4 Compliance: All flow logic MUST use formalized keywords and permissive math expressions." @trace("#AC-28-4 to #AC-28-12") AS TRACE_AC_28_4_TO_AC_28_12
+INVARIANT GLOBAL: "GEP-5 Compliance: All VALIDATE steps MUST use explicit AS TYPE binding." @trace("#AC-28-13") AS TRACE_AC_28_13
+INVARIANT GLOBAL: "GEP-6 Compliance: All GASD 1.2 files MUST comply with VERSION, POSTCONDITION, CONTRACT, INVARIANT scope, and AS identifier rules." @trace("#US-29 to #US-41") AS TRACE_GEP_6
+
+
+CONTRACT Types:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"
+
+CONTRACT Server:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"
+
+CONTRACT Client:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"
+
+CONTRACT Testing:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"

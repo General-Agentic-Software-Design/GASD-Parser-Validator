@@ -4,6 +4,7 @@
    Phases cover Design, Validation, Testing, Implementation, Quality, and Packaging.
 */
 
+VERSION: "1.2"
 NAMESPACE: "GASD-Parser-Validator-v2.0"
 
 CONTEXT: "Compiler / Language Tooling"
@@ -21,11 +22,13 @@ CONSTRAINT: "GASD agent MUST read and master 'Requirements/ver-2.x/ver-2.0/User_
 // ===================================================================
 
 FLOW phase1_generate_design():
-    1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md"
-    2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2 IDs are extracted"
+    1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md" and "Requirements/ver-2.x/ver-2.1/remove-ast-opt.md"
+        POSTCONDITION: "Requirements IDs extracted from both documents"
+    2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2, #US-PARSER-007, #AC-PARSER-007, #AT-PARSER-007, #RT-PARSER-007 IDs are extracted"
         OTHERWISE THROW "Requirements Traceability Failed"
-    3. ACHIEVE "Generate Design/component_design.gasd" @trace #US-V2-001
-    4. ENSURE "All AC-V2 IDs are traced in design files"
+    3. ACHIEVE "Generate Design/component_design.gasd" @trace #US-V2-001, #US-PARSER-007
+        POSTCONDITION: "Design/component_design.gasd exists and incorporates flag consolidation logic"
+    4. ENSURE "All AC-V2 and AC-PARSER-007 IDs are traced in design files"
         OTHERWISE THROW "Design Traceability Failed"
     5. ENSURE "All generated design gasd pass 'gasd-parser --ast-sem' with no errors"
         OTHERWISE THROW "Design Syntax or Semantic Error Detected"
@@ -39,15 +42,23 @@ FLOW phase1_generate_design():
 
 FLOW phase2_generate_validations():
     1. ACHIEVE "Read and master Requirements/ver-2.x/ and Design/ folders to ensure expertise before generation"
+        POSTCONDITION: "Expertise attained from source documents"
     2. ENSURE "All validation gasd are generated ONLY from Requirements/ and Design/"
         OTHERWISE THROW "Validation Source Violation: Implementation Leakage"
     3. ACHIEVE "Exhaustive validation of Design of all cases based on Design gasd; output to Validation/Design/"
+        POSTCONDITION: "Validation/Design/ updated"
     4. ACHIEVE "Exhaustive validation of Acceptance Tests of all cases; output to Validation/Acceptance/"
+        POSTCONDITION: "Validation/Acceptance/ updated"
     5. ACHIEVE "Validation of Regression Tests of all cases; output to Validation/Regression/"
+        POSTCONDITION: "Validation/Regression/ updated"
     6. ACHIEVE "Exhaustive validation of Negative Tests of all cases; output to Validation/Negative/"
+        POSTCONDITION: "Validation/Negative/ updated"
     7. ACHIEVE "Exhaustive validation of Annotation Semantic Registry (all 21 triples); output to Validation/SemanticRegistry/" @trace #US-V2-002
+        POSTCONDITION: "Validation/SemanticRegistry/ updated"
     8. ACHIEVE "Exhaustive validation of GEP-6 Linting Engine (Rules LINT-001 to LINT-012); output to Validation/Linting/" @trace #US-V2-001
+        POSTCONDITION: "Validation/Linting/ updated"
     9. ACHIEVE "Exhaustive validation of Command-Line Versioning and LINT-013; output to Validation/CLI/" @trace #US-V2-009
+        POSTCONDITION: "Validation/CLI/ updated"
     10. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting, Validation/CLI) passes 'gasd-parser --ast-sem' with no errors"
         OTHERWISE THROW "Validation Syntax or Semantic Error Detected"
     11. ENSURE "All steps 1-10 are completed correctly, faithfully, and thoroughly"
@@ -62,6 +73,7 @@ FLOW phase3_generate_tests():
     /// Requirement: Consult ONLY Requirements/ and Design/ folders.
     /// Do NOT use Impl/ (implementation) as a reference during test generation.
     1. ACHIEVE "Review Requirements/, Validation/ and Design/ for testing scope"
+        POSTCONDITION: "Scope of tests defined"
     2. ENSURE "No Impl/ (implementation) code is used as reference"
         OTHERWISE THROW "Design Violation: Implementation Leakage"
 
@@ -70,39 +82,46 @@ FLOW phase3_generate_tests():
         OTHERWISE THROW "Regression Detected: Existing Tests Failed"
 
     // --- Acceptance Tests ---
-    4. ACHIEVE "Generate most comprehensive Impl/tests/acceptance/test_component.py from Validation/Acceptance/ including all scenarios and cases" @trace #AT-001-01
+    4. ACHIEVE "Generate most comprehensive Impl/tests/acceptance/test_component.py from Validation/Acceptance/ including all scenarios and cases" @trace #AT-001-01, #US-PARSER-007
+        POSTCONDITION: "Acceptance tests generated"
     5. ENSURE "All AC and AT from Validation/Acceptance/ are covered by acceptance tests"
         OTHERWISE THROW "Testing Coverage Gap Detected: Acceptance"
 
     // --- Regression Tests ---
-    6. ACHIEVE "Generate most comprehensive Impl/tests/regression/test_component.py from Validation/Regression/ including all scenarios and cases" @trace #RT-001-01
+    6. ACHIEVE "Generate most comprehensive Impl/tests/regression/test_component.py from Validation/Regression/ including all scenarios and cases" @trace #RT-001-01, #US-PARSER-007
+        POSTCONDITION: "Regression tests generated"
     7. ENSURE "All RT from Validation/Regression/ are covered by regression tests"
         OTHERWISE THROW "Testing Coverage Gap Detected: Regression"
 
     // --- Negative Tests ---
     8. ACHIEVE "Add most comprehensive negative testing suite from Validation/Negative/ covering all spec constraints, scenarios, and cases"
+        POSTCONDITION: "Negative tests generated"
     9. ENSURE "Negative tests from Validation/Negative/ correctly trigger and validate expected failures"
         OTHERWISE THROW "Negative Testing Failure"
 
     // --- Design Validation Tests ---
     10. ACHIEVE "Generate most comprehensive Impl/tests/design_validation/component_tests.py from Validation/Design/ including all scenarios and cases"
+        POSTCONDITION: "Design validation tests generated"
     11. ENSURE "Design validation tests match the specifications in Validation/Design/"
         OTHERWISE THROW "Design Validation Mismatch"
 
     // --- Annotation Semantic Registry ---
     12. ACHIEVE "Generate exhaustive unit and integration tests for Annotation Semantic Registry from Validation/SemanticRegistry/" @trace #US-V2-002
+        POSTCONDITION: "Semantic Registry tests generated"
     13. ENSURE "Registry tests verify all 21 standard annotation triples"
         OTHERWISE THROW "Semantic Registry Coverage Failure"
 
     // --- GEP-6 Linting Engine ---
     14. ACHIEVE "Generate exhaustive unit and integration tests for GEP-6 Linting Engine from Validation/Linting/" @trace #US-V2-001
+        POSTCONDITION: "Linting Engine tests generated"
     15. ENSURE "Linting tests verify all 12 rules with version-sensitive severity"
         OTHERWISE THROW "Linting Engine Coverage Failure"
 
-    // --- Command-Line Versioning ---
-    16. ACHIEVE "Generate exhaustive acceptance tests for Command-Line Versioning and LINT-013 from Validation/CLI/" @trace #US-V2-009
-    17. ENSURE "CLI tests verify --gasd-ver flag, version mismatch, and defaulting"
-        OTHERWISE THROW "CLI Versioning Coverage Failure"
+    // --- Command-Line Versioning & Flag Consolidation ---
+    16. ACHIEVE "Generate exhaustive acceptance tests for Command-Line Versioning, Flag Consolidation (removing --ast), and LINT-013 from Validation/CLI/" @trace #US-V2-009, #US-PARSER-007
+        POSTCONDITION: "CLI tests generated"
+    17. ENSURE "CLI tests verify --gasd-ver flag, LINT-013 (version mismatch), --ast removal (unknown argument), --ast-sem default mode, and --no-validate behavior"
+        OTHERWISE THROW "CLI Versioning and Consolidation Coverage Failure"
 
     18. ENSURE "100% Traceability and Coverage for all AC, AT, RT, and Semantic Triples"
         OTHERWISE THROW "Testing Coverage Gap Detected"
@@ -119,17 +138,29 @@ FLOW phase4_generate_implementation():
     /// Do NOT use the Requirements/ folder as a reference during implementation.
     // --- Core Implementation Milestones ---
     1. ACHIEVE "Update Impl/parser/ to support VERSION 1.2 and new syntax invariants"
+        POSTCONDITION: "Parser supports 1.2 syntax"
     2. ACHIEVE "Implement Impl/semantic/AnnotationRegistry.py with 21 standard triples" @trace #US-V2-002
-    3. ACHIEVE "Implement Impl/semantic/LintEngine.py with 12 validation rules" @trace #US-V2-001
+        POSTCONDITION: "AnnotationRegistry.py implemented"
+    3. ACHIEVE "Implement Impl/semantic/LintEngine.py with 13 validation rules (LINT-001 to LINT-013)" @trace #US-V2-001, #US-V2-009
+        POSTCONDITION: "LintEngine.py implemented"
     4. ACHIEVE "Enhance Impl/semantic/ to support CONTRACT, CASE and POSTCONDITION enforcement"
+        POSTCONDITION: "Semantic support for 1.2 constructs added"
     5. ACHIEVE "Implement ENVIRONMENTAL vs ASSUMPTION validation logic"
-    6. ACHIEVE "Implement --gasd-ver {1.1 | 1.2} flag with version-sensitive validation and LINT-013 logic" @trace #US-V2-009
+        POSTCONDITION: "Assumption validation logic implemented"
+
+    // --- CLI Flag Consolidation (US-PARSER-007) ---
+    6. ACHIEVE "Implement version-sensitive CLI flag logic: --gasd-ver {1.1 | 1.2}, --ast-combine, and LINT-013 validation" @trace #US-V2-009, #US-PARSER-007
+        POSTCONDITION: "CLI versioning and batch logic updated"
+    7. ACHIEVE "Consolidate validation controls: Implement --ast-sem as primary mode with --validate (default) and --no-validate overrides" @trace #AC-PARSER-007-02, #AC-PARSER-007-03, #AC-PARSER-007-04
+        POSTCONDITION: "AST-SEM and validation flags implemented"
+    8. ACHIEVE "Remove --ast flag and ensure it is treated as an unknown option; ensure no-flag execution defaults to --ast-sem with validation" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
+        POSTCONDITION: "--ast removed and default mode set"
     
-    7. ENSURE "No information from the Requirements/ folder is used for implementation"
+    9. ENSURE "No information from the Requirements/ folder is used for implementation"
         OTHERWISE THROW "Design Violation: Implementation Leakage"
-    8. ENSURE "Implementation compiles successfully and passes all unit tests"
-        OTHERWISE THROW "Build Failed: Compilation or Unit Test Error"
-    9. ENSURE "All steps 1-8 are completed correctly, faithfully, and thoroughly"
+    10. ENSURE "Implementation compiles successfully and passes all unit tests generated in Phase 3"
+        OTHERWISE THROW "Build Failed: Compilation or Test Error"
+    11. ENSURE "All steps 1-10 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Implementation Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -138,18 +169,25 @@ FLOW phase4_generate_implementation():
 // ===================================================================
 
 FLOW phase5_full_quality_gate():
-    1. ACHIEVE "Execute full test suite including acceptance, regression, negative, and design validation tests via pytest Impl/tests/ -v"
-    2. ACHIEVE "Fix grammar edge cases (Category 1) allowing keywords to be used safely as field names and enum values"
-    3. ACHIEVE "Fix literal type AST generation (Category 2) for properly mapping integer and string literal constraints"
-    4. ACHIEVE "Fix semantic regression issues (Category 3) including circular dependency crashes and cross-file UnknownType handling"
-    5. ACHIEVE "Fix trace identifier format rules (Category 4) resolving LINT-003 constraints per GASD 1.2"
-    6. ACHIEVE "Fix AST location metadata extraction errors (Category 5) to resolve IndexErrors during translation"
-    7. ACHIEVE "Re-run all tests until the baseline becomes 100% passing"
-    8. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Design --gasd-ver 1.1"
-    9. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Validation --gasd-ver 1.1"
-    10. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/gasd-1.1 --gasd-ver 1.1"
-    11. ACHIEVE "Pass full suite validation on all content directories via: PYTHONPATH=./Build/Installation python3 -m gasd_parser --ast-sem Specs/examples/gasd-1.2 --gasd-ver 1.2"
-    12. ENSURE "All categories of tests specified in Phase 3 pass with 100% success rate"
+    1. ACHIEVE "Execute full test suite via: python3 -m pytest -p no:asyncio -q"
+        POSTCONDITION: "Full test suite executed; baseline failures and errors identified"
+    2. ACHIEVE "Fix --ast-combine semantics: ensure --ast-combine produces a single unified SemanticSystem (not per-file split)"
+        POSTCONDITION: "All test_semast_cli_combine acceptance tests pass with len(asts) == 1"
+    3. ACHIEVE "Fix CLI import portability: convert all 'from Impl.xxx' absolute imports to relative imports in cli.py"
+        POSTCONDITION: "CLI works in both development mode (python -m Impl.cli) and packaged mode (python -m gasd_parser)"
+    4. ACHIEVE "Fix LINT-013 version mismatch severity: version mismatch between CLI --gasd-ver and file VERSION directive is always ERROR regardless of direction"
+        POSTCONDITION: "LINT-013 emits ERROR in both VersionResolver and LintEngine; both 1.1→1.2 and 1.2→1.1 mismatches produce exit code 1"
+    5. ACHIEVE "Align contradictory test expectations across acceptance, regression, and packaging test suites"
+        POSTCONDITION: "No conflicting assertions across test suites for --ast-combine semantics or LINT-013 severity"
+    6. ACHIEVE "Eliminate duplicate LINT-013 diagnostic emission between VersionResolver and LintEngine"
+        POSTCONDITION: "Each version mismatch produces exactly one ERROR diagnostic per file"
+    7. ENSURE "All tests pass with 0 failures and 0 errors via: python3 -m pytest -p no:asyncio -q"
+        OTHERWISE THROW "Build Failure: Quality Gate Failed"
+    8. ACHIEVE "Pass full suite validation on GASD 1.1 examples via: PYTHONPATH=./Build/Installation python3 -m gasd_parser Specs/examples/gasd-1.1 --gasd-ver 1.1"
+        POSTCONDITION: "GASD 1.1 examples validated"
+    9. ACHIEVE "Pass full suite validation on GASD 1.2 examples via: PYTHONPATH=./Build/Installation python3 -m gasd_parser Specs/examples/gasd-1.2 --gasd-ver 1.2"
+        POSTCONDITION: "GASD 1.2 examples validated"
+    10. ENSURE "609+ tests pass with 100% success rate across acceptance, regression, negative, design validation, and semantic test suites"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================
@@ -158,14 +196,18 @@ FLOW phase5_full_quality_gate():
 // ===================================================================
 
 FLOW phase6_final_packaging():
-    1. ACHIEVE "Create build configuration with project metadata ensuring version is declared as 2.0"
+    1. ACHIEVE "Create build configuration with project metadata ensuring version is declared as 2.1"
+        POSTCONDITION: "Build configuration created with version 2.1"
     2. ACHIEVE "Perform top-to-bottom validation of all project artifacts (Requirements, Design, Validation, Implementation)"
+        POSTCONDITION: "All artifacts validated"
     3. ENSURE "All documents and information across all project folders are in sync"
         OTHERWISE THROW "Packaging Failed: Synchronicity Error"
     4. ACHIEVE "Prepare Build/Installation/ directory for distribution"
+        POSTCONDITION: "Build/Installation/ directory exists and is prepared"
     5. ENSURE "No operations modify, pollute, or delete the parent 'Build/' folder — all artifacts must strictly go to 'Build/Installation/'"
         OTHERWISE THROW "Packaging Failed: Build Directory Mutation"
     6. ACHIEVE "Assemble production artifacts strictly into the Build/Installation/ directory"
+        POSTCONDITION: "Production artifacts assembled in Build/Installation/"
     7. ENSURE "Installation into clean environment succeeds"
         OTHERWISE THROW "Packaging Failed: Installation Error"
     8. ENSURE "Final distribution passes all basic functionality smoke tests"

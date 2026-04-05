@@ -1,0 +1,124 @@
+VERSION 1.2
+/* 
+   --- Acceptance Test Specification (Expert Strict) ---
+   Normative test flows to verify VS Code extension quality gates.
+   Strictly follows GASD 1.2.0 normative specification:
+   https://github.com/General-Agentic-Software-Design/General-Agentic-Software-Design-Language
+*/
+CONTEXT: "VS Code Extension Testing"
+TARGET: "TypeScript (Mocha/Playwright-VSCode)"
+TRACE: "#US-1-TO-28", "#US-29-TO-41"
+
+
+
+
+IMPORT "types.gasd" AS TypesTest
+
+CONTRACT TypesTest:
+    INPUT: value: Any
+    OUTPUT: Any
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+    VERSION: "1.2.0"
+
+NAMESPACE: "gasd.vscode.design"
+
+COMPONENT AcceptanceTestSuite @trace("#US-1-TO-27") AS TRACE_US_1_TO_27:
+    PATTERN: "End-to-End Test Suite"
+    
+    INTERFACE:
+        test_file_association() -> Void @trace("#AC-27-1") AS TRACE_AC_27_1
+        test_syntax_highlighting() -> Void @trace("#AC-1-1") AS TRACE_AC_1_1
+        test_completion() -> Void @trace("#AC-5-1") AS TRACE_AC_5_1 @trace("#AC-5-2") AS TRACE_AC_5_2
+        test_diagnostics() -> Void @trace("#AC-9-1") AS TRACE_AC_9_1 @trace("#AC-9-2") AS TRACE_AC_9_2
+        test_hover() -> Void @trace("#AC-7-1") AS TRACE_AC_7_1
+        test_outline() -> Void @trace("#AC-19-1") AS TRACE_AC_19_1
+        test_quick_fix() -> Void @trace("#AC-18-1") AS TRACE_AC_18_1
+        test_semantic_tokens() -> Void @trace("#AC-21-1") AS TRACE_AC_21_1
+        test_formatting() -> Void @trace("#AC-4-1") AS TRACE_AC_4_1 @trace("#AC-4-3") AS TRACE_AC_4_3
+        // --- GASD 1.2 Acceptance Tests ---
+        test_version_directive() -> Void @trace("#AC-29-1") AS TRACE_AC_29_1 @trace("#AC-29-5") AS TRACE_AC_29_5
+        test_postcondition_lint() -> Void @trace("#AC-30-3") AS TRACE_AC_30_3
+        test_contract_symbols() -> Void @trace("#AC-31-3") AS TRACE_AC_31_3
+        test_depends_on_circular() -> Void @trace("#AC-32-3") AS TRACE_AC_32_3
+        test_invariant_scope_lint() -> Void @trace("#AC-33-2") AS TRACE_AC_33_2
+        test_annotation_id_lint() -> Void @trace("#AC-34-3") AS TRACE_AC_34_3
+        test_semantic_hover() -> Void @trace("#AC-38-1") AS TRACE_AC_38_1
+        test_backward_compat_11() -> Void @trace("#AC-40-1") AS TRACE_AC_40_1 @trace("#AC-40-2") AS TRACE_AC_40_2
+        test_upgrade_quick_fix() -> Void @trace("#AC-40-3") AS TRACE_AC_40_3
+        test_negative_syntax() -> Void @trace("#AC-41-1") AS TRACE_AC_41_1
+
+// --- Flows ---
+
+/// Implements Quality Gate for #US-5 & #US-21
+FLOW verify_lsp_features(file_path: String):
+    @trace("#AC-5-1") AS TRACE_AC_5_1_FLOW @trace("#AC-21-1") AS TRACE_AC_21_1_FLOW @trace("#US-28") AS TRACE_US_28_FLOW
+    1. ACHIEVE "Open .gasd file: " + file_path
+        POSTCONDITION: result != null
+    2. VALIDATE "Document languageId is 'gasd'" AS TYPE.Requirement @trace("#AC-27-1") AS TRACE_AC_27_1_VAL
+    3. ACHIEVE "Wait for LSP indexing"
+        POSTCONDITION: result != null
+    4. ACHIEVE "Trigger Completion(1, 1)"
+        POSTCONDITION: result != null
+    5. ENSURE "Result contains uppercase, case-sensitive GASD keywords" @trace("#AC-5-1") AS TRACE_AC_5_1_ENSURE
+        OTHERWISE THROW TestFailure
+    6. VALIDATE "Semantic tokens are returned for identifiers" AS TYPE.Requirement @trace("#AC-21-1") AS TRACE_AC_21_1_VAL
+
+/// Implements Quality Gate for #US-9 & #US-18
+FLOW verify_linting_and_fixes(uri: String):
+    @trace("#AC-9-1") AS TRACE_AC_9_1_FLOW @trace("#AC-18-1") AS TRACE_AC_18_1_FLOW
+    1. ACHIEVE "Inject typo into COMPONENT name"
+        POSTCONDITION: result != null
+    2. ACHIEVE "Diagnostics reported" @trace("#AC-9-1") AS TRACE_AC_9_1_WAIT
+        POSTCONDITION: result != null
+    3. ACHIEVE "Open Code Action menu"
+        POSTCONDITION: result != null
+    4. VALIDATE "Quick Fix suggestion exists" AS TYPE.Requirement @trace("#AC-18-1") AS TRACE_AC_18_1_VAL
+    5. ACHIEVE "Apply fix"
+        POSTCONDITION: result != null
+    6. ENSURE "Typo is corrected and diagnostics cleared"
+        OTHERWISE THROW TestFailure
+
+// --- Constraints ---
+INVARIANT LOCAL: "Expert Compliance: Tests must run in a clean VS Code instance (Insiders/VSC-Test)."
+
+// ===================================================================
+// GASD 1.2 Test Flows — GEP-6 Verification
+// ===================================================================
+
+/// End-to-end test for all 12 GEP-6 lint rules.
+/// @trace("#US-39") AS TRACE_US_39
+FLOW verify_gasd12_linting(file_path: String):
+    @trace("#AC-39-1") AS TRACE_AC_39_1_LINT @trace("#US-41") AS TRACE_US_41_LINT
+    1. ACHIEVE "Open GASD 1.2 test fixture file: " + file_path
+        POSTCONDITION:
+            result != null
+    2. ACHIEVE "Wait for LSP indexing and lint engine initialization"
+        POSTCONDITION:
+            result != null
+    3. ENSURE "LINT-001 fires for ACHIEVE without POSTCONDITION"
+        OTHERWISE THROW TestFailure
+    4. ENSURE "LINT-003 fires for INVARIANT without LOCAL/GLOBAL"
+        OTHERWISE THROW TestFailure
+    5. ENSURE "LINT-011 fires for annotation without AS identifier"
+        OTHERWISE THROW TestFailure
+    6. ENSURE "No errors fire for valid GASD 1.2 file"
+        OTHERWISE THROW TestFailure
+    7. LOG "GEP-6 lint verification complete"
+
+/// Regression test: ensures 1.1 files produce zero errors.
+/// @trace("#US-40") AS TRACE_US_40_REGRESS
+FLOW verify_backward_compatibility(file_path: String):
+    @trace("#AC-40-1") AS TRACE_AC_40_1_FLOW @trace("#AC-40-2") AS TRACE_AC_40_2_FLOW
+    1. ACHIEVE "Open GASD 1.1 test fixture file (no VERSION): " + file_path
+        POSTCONDITION:
+            result != null
+    2. ACHIEVE "Wait for diagnostics"
+        POSTCONDITION:
+            result != null
+    3. ENSURE "Zero ERROR diagnostics reported for 1.1 file"
+        OTHERWISE THROW TestFailure
+    4. ENSURE "Only WARNING or INFO diagnostics are present"
+        OTHERWISE THROW TestFailure
+    5. LOG "Backward compatibility verified"

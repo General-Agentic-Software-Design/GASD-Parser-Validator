@@ -1,0 +1,6 @@
+VERSION 1.1
+NAMESPACE: 'Test'
+TARGET: 'Python'
+FLOW f():
+  1. ACHIEVE 'Task'
+
