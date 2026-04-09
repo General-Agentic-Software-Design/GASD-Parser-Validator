@@ -9,7 +9,7 @@ This parser is built using **ANTLR4** with a **Python 3** target, designed to be
 - **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
 - **[Design/](Design/)**: GASD-level specifications for each parser component (100% compliant).
 - **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
-  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 565 acceptance and regression tests.
+  - **[Impl/tests/](Impl/tests/)**: Comprehensive suite of 609+ acceptance and regression tests.
 - **[Requirements/](Requirements/)**: Traceable user stories and acceptance criteria (GEP-6 aligned).
 - **[Specs/](Specs/)**: Collection of valid and invalid GASD samples used for testing and demo (Includes GASD 1.2 examples).
 
@@ -48,7 +48,7 @@ pip3 install Build/Installation
 To uninstall the standalone CLI:
 
 ```bash
-pip3 uninstall gasd-parser
+pip3 uninstall gasd_parser
 ```
 
 See the [Installation README](Build/Installation/README.md) for more details.
@@ -77,26 +77,26 @@ python3 demo.py
 
 ### Validate a specification (Installed)
 
-Once installed, use the `gasd-parser` command:
+Once installed, use the `gasd_parser` command:
 
 ```bash
 # Validate a specification
-gasd-parser my_spec.gasd
+gasd_parser my_spec.gasd
 
 # Output results in JSON (for tooling integration)
-gasd-parser my_spec.gasd --json
+gasd_parser my_spec.gasd --json
 
 # Extract and output the Semantic AST in JSON format
-gasd-parser my_spec.gasd --ast-sem --json
+gasd_parser my_spec.gasd --ast-sem --json
 
 # Save the extracted Semantic AST to a specific file
-gasd-parser my_spec.gasd --ast-sem --ast-output sem.json
+gasd_parser my_spec.gasd --ast-sem --ast-output sem.json
 
 # Process multiple files and combine their Semantic ASTs into a single JSON
-gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-combine --json
+gasd_parser spec1.gasd spec2.gasd --ast-sem --ast-combine --json
 
 # Process multiple files into individual Semantic AST JSON files (out.spec1.json, out.spec2.json)
-gasd-parser spec1.gasd spec2.gasd --ast-sem --ast-output out.json
+gasd_parser spec1.gasd spec2.gasd --ast-sem --ast-output out.json
 ```
 
 ## Development
@@ -126,7 +126,7 @@ The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Buil
 3. **Testing**: Acceptance and regression verification (565 tests).
 4. **Validation**: Full suite validation on all content directories (110+ files).
 5. **Quality Gate**: Final sign-off on GASD 1.2 compliance (Failed: 0).
-6. **Packaging**: Standalone distributable creation (v2.1.0).
+6. **Packaging**: Standalone distributable creation (v2.1.1).
 
 ## License
 

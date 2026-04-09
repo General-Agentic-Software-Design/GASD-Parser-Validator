@@ -23,6 +23,17 @@ def run_cli(*args, input_content=None, file_path=None):
     )
     return result, file_path
 
+def test_cli_help_description_regression():
+    """Verify that the CLI help message displays the correct description."""
+    result = subprocess.run(
+        ["python3", "-m", "Impl.cli", "--help"],
+        capture_output=True, text=True,
+        env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+        cwd=PROJECT_ROOT
+    )
+    assert result.returncode == 0
+    assert "GASD-Parser: Validation for Agentic Software Design." in result.stdout
+
 def test_cli_human_readable_success():
     """Verify success output format: OK Passed + Summary"""
     result, fp = run_cli()
