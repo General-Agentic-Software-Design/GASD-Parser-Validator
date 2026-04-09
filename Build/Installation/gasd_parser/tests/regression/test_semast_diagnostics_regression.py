@@ -18,7 +18,7 @@ def test_semast_error_location_reporting():
     try:
         # Run gasd-parser --ast-sem --json
         # We use the module execution to ensure we use the current Impl/ source
-        cmd = ["python3", "-m", "gasd_parser", "--ast-sem", "--json", test_file]
+        cmd = ["python3", "-m", "Impl.cli", "--ast-sem", "--json", test_file]
         # Set PYTHONPATH to both the project root and the Impl folder to be safe
         env = os.environ.copy()
         env["PYTHONPATH"] = f".:{env.get('PYTHONPATH', '')}"
@@ -36,16 +36,15 @@ def test_semast_error_location_reporting():
         for report_str in reports:
             report = json.loads(report_str)
             for err in report.get("errors", []):
-                if err.get("code") == "SEMAST-ERR":
+                if err.get("code") == "SEMANTIC":
                     found_sem_err = True
                     loc = err.get("location", {})
-                    # Line 4 is where the second "TYPE T" is defined (if we use the old test content)
-                    # Let's use the UUID test content instead for consistency
+                    # Line 5 is where the second "TYPE UUID" is defined
                     line = loc.get("line")
-                    assert line in [4, 5], f"Expected line 4 or 5, got {line}"
+                    assert line in [5], f"Expected line 5, got {line}"
                     break
         
-        assert found_sem_err, "SEMAST-ERR not found in output"
+        assert found_sem_err, "SEMANTIC error not found in output"
         
     finally:
         if os.path.exists(test_file):

@@ -7,10 +7,15 @@ from .ast.ASTGenerator import ASTGenerator
 from .parser.ParseTreeAPI import ParseTreeAPI
 from .validation.ValidationPipeline import ValidationPipeline, SemanticError
 from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
+try:
+    from . import __version__, __build_time__
+except ImportError:
+    __version__ = "2.1.1"
+    __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
     # === Phase 1: Setup and Versioning ===
-    parser = argparse.ArgumentParser(prog="gasd_parser", description="GASD-Parser: Specialized validation for Agentic Software Design (GEP-6 compliant).")
+    parser = argparse.ArgumentParser(prog="gasd_parser", description="GASD-Parser: Validation for Agentic Software Design.")
     parser.add_argument("path", nargs='*', help="Path to .gasd file and/or directory for recursive traversal.")
     parser.add_argument("--json", action="store_true", help="Output validation results in JSON format.")
     parser.add_argument("--ast-sem", action="store_true", default=True, help="Full semantic AST validation (Default).")
@@ -18,7 +23,7 @@ def main():
     parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
-    parser.add_argument("-v", "--version", action="store_true", help="Show version information.")
+    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.1 (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
     if "--ast" in sys.argv:
@@ -26,14 +31,6 @@ def main():
         sys.exit(1)
 
     args = parser.parse_args()
-
-    if args.version:
-        try:
-            from . import __build_time__
-        except ImportError:
-            __build_time__ = "DEVELOPMENT"
-        print(f"gasd_parser 2.1.0 (built: {__build_time__})")
-        return
 
     if not args.path:
         # Check stdin
@@ -153,11 +150,13 @@ def main():
             err_msg = str(e)
             print(f"ERROR: Semantic validation failed", file=sys.stderr)
             print(f"error[SEMANTIC]: {err_msg}", file=sys.stderr)
+            loc = getattr(e, 'location', None)
             first_rep = list(reporters.values())[0] if reporters else None
             if first_rep:
                 first_rep.add_semantic_error(ValidationSemanticError(
                     code='SEMANTIC', severity='ERROR', message=err_msg,
-                    line=1, column=1
+                    line=loc.startLine if loc else 1,
+                    column=loc.startCol if loc else 1
                 ))
 
     # === Phase 5: Result Reporting ===
