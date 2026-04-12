@@ -1,0 +1,1176 @@
+{
+  "success": false,
+  "successCount": 0,
+  "failureCount": 1,
+  "reports": [
+    "{\n  \"version\": \"1.0.0\",\n  \"sourceFile\": \"<string>\",\n  \"success\": false,\n  \"errorCount\": 3,\n  \"warningCount\": 0,\n  \"errors\": [\n    {\n      \"type\": \"SEMANTIC\",\n      \"code\": \"LINT-012\",\n      \"severity\": \"ERROR\",\n      \"message\": \"Annotation @injectable has environmental dependencies and requires an ASSUMPTION block in GASD 1.2.\",\n      \"location\": {\n        \"line\": 23,\n        \"column\": 0,\n        \"endLine\": null,\n        \"endColumn\": null\n      },\n      \"context\": null,\n      \"suggestions\": null\n    },\n    {\n      \"type\": \"SEMANTIC\",\n      \"code\": \"LINT-012\",\n      \"severity\": \"ERROR\",\n      \"message\": \"Annotation @injectable has environmental dependencies and requires an ASSUMPTION block in GASD 1.2.\",\n      \"location\": {\n        \"line\": 29,\n        \"column\": 0,\n        \"endLine\": null,\n        \"endColumn\": null\n      },\n      \"context\": null,\n      \"suggestions\": null\n    },\n    {\n      \"type\": \"SEMANTIC\",\n      \"code\": \"LINT-012\",\n      \"severity\": \"ERROR\",\n      \"message\": \"Annotation @injectable has environmental dependencies and requires an ASSUMPTION block in GASD 1.2.\",\n      \"location\": {\n        \"line\": 35,\n        \"column\": 0,\n        \"endLine\": null,\n        \"endColumn\": null\n      },\n      \"context\": null,\n      \"suggestions\": null\n    }\n  ]\n}"
+  ],
+  "asts": [
+    {
+      "kind": "SemanticSystem",
+      "id": "4c95a49d-320f-4b52-8856-70c80019f26f",
+      "sourceMap": {
+        "file": "",
+        "startLine": 0,
+        "startCol": 0,
+        "endLine": 0,
+        "endCol": 0
+      },
+      "annotations": [],
+      "namespaces": {
+        "com.acme.auth": {
+          "kind": "Namespace",
+          "id": "d7ee19d4-c7da-4e55-813d-fd4dc261cf63",
+          "sourceMap": {
+            "file": "",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "com.acme.auth",
+          "types": {
+            "RequestData": {
+              "kind": "ResolvedType",
+              "id": "5b096e5d-3e79-4b25-b728-4ab8a5478040",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 8,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "RequestData",
+              "fields": {
+                "email": {
+                  "name": "email",
+                  "typeRef": {
+                    "baseType": "String",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                },
+                "password": {
+                  "name": "password",
+                  "typeRef": {
+                    "baseType": "String",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                }
+              },
+              "isEnum": false
+            },
+            "User": {
+              "kind": "ResolvedType",
+              "id": "ab44c26c-08cd-4fd5-9830-84937c070f36",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 16,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "User",
+              "fields": {
+                "id": {
+                  "name": "id",
+                  "typeRef": {
+                    "baseType": "UUID",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                },
+                "email": {
+                  "name": "email",
+                  "typeRef": {
+                    "baseType": "String",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                },
+                "password_hash": {
+                  "name": "password_hash",
+                  "typeRef": {
+                    "baseType": "String",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                },
+                "role": {
+                  "name": "role",
+                  "typeRef": {
+                    "baseType": "literal",
+                    "args": [],
+                    "constraints": [],
+                    "literalValue": "\"CUSTOMER\""
+                  },
+                  "isOptional": false
+                },
+                "created_at": {
+                  "name": "created_at",
+                  "typeRef": {
+                    "baseType": "DateTime",
+                    "args": [],
+                    "constraints": []
+                  },
+                  "isOptional": false
+                }
+              },
+              "isEnum": false
+            }
+          },
+          "components": {
+            "RegistrationService": {
+              "kind": "ResolvedComponent",
+              "id": "73c7b870-203b-4a29-aed3-a77db788177b",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 23,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [
+                {
+                  "name": "injectable",
+                  "scope": "COMPONENT",
+                  "arguments": {},
+                  "alias": "REG_SVC_INJECTABLE"
+                }
+              ],
+              "name": "RegistrationService",
+              "pattern": "Service",
+              "dependencies": [
+                {
+                  "symbolId": "UserRepository"
+                },
+                {
+                  "symbolId": "EmailService"
+                }
+              ],
+              "resources": [],
+              "methods": {
+                "register": {
+                  "kind": "ResolvedMethod",
+                  "id": "e21d06e7-a3dd-4b77-bc7e-8c9462b8ff19",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 27,
+                    "startCol": 8,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "name": "register",
+                  "inputs": [
+                    {
+                      "name": "request",
+                      "typeRef": {
+                        "baseType": "RequestData",
+                        "args": [],
+                        "constraints": []
+                      }
+                    }
+                  ],
+                  "output": {
+                    "baseType": "String",
+                    "args": [],
+                    "constraints": []
+                  }
+                }
+              },
+              "provides": [],
+              "requires": []
+            },
+            "UserRepository": {
+              "kind": "ResolvedComponent",
+              "id": "88834a06-3ac8-4a03-a16d-03c3505f07cf",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 29,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [
+                {
+                  "name": "injectable",
+                  "scope": "COMPONENT",
+                  "arguments": {},
+                  "alias": "REPO_INJECTABLE"
+                },
+                {
+                  "name": "mockable",
+                  "scope": "COMPONENT",
+                  "arguments": {},
+                  "alias": "REPO_MOCKABLE"
+                }
+              ],
+              "name": "UserRepository",
+              "pattern": "Repository",
+              "dependencies": [],
+              "resources": [],
+              "methods": {
+                "findByEmail": {
+                  "kind": "ResolvedMethod",
+                  "id": "8164c8f9-8c68-4729-ab86-9d1c2e140e53",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 32,
+                    "startCol": 8,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "name": "findByEmail",
+                  "inputs": [
+                    {
+                      "name": "email",
+                      "typeRef": {
+                        "baseType": "String",
+                        "args": [],
+                        "constraints": []
+                      }
+                    }
+                  ],
+                  "output": {
+                    "baseType": "Optional",
+                    "args": [
+                      {
+                        "baseType": "User",
+                        "args": [],
+                        "constraints": []
+                      }
+                    ],
+                    "constraints": []
+                  }
+                },
+                "save": {
+                  "kind": "ResolvedMethod",
+                  "id": "41d53c9d-fbe0-47ec-82de-5f6b387edb69",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 33,
+                    "startCol": 8,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "name": "save",
+                  "inputs": [
+                    {
+                      "name": "user",
+                      "typeRef": {
+                        "baseType": "User",
+                        "args": [],
+                        "constraints": []
+                      }
+                    }
+                  ],
+                  "output": {
+                    "baseType": "User",
+                    "args": [],
+                    "constraints": []
+                  }
+                }
+              },
+              "provides": [],
+              "requires": []
+            },
+            "EmailService": {
+              "kind": "ResolvedComponent",
+              "id": "e71ef133-413f-425e-8018-6ae62bfb369f",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 35,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [
+                {
+                  "name": "injectable",
+                  "scope": "COMPONENT",
+                  "arguments": {},
+                  "alias": "EMAIL_SVC_INJECTABLE"
+                },
+                {
+                  "name": "mockable",
+                  "scope": "COMPONENT",
+                  "arguments": {},
+                  "alias": "EMAIL_SVC_MOCKABLE"
+                }
+              ],
+              "name": "EmailService",
+              "pattern": "Service",
+              "dependencies": [],
+              "resources": [],
+              "methods": {
+                "sendWelcome": {
+                  "kind": "ResolvedMethod",
+                  "id": "c972f568-0e43-4e34-8a8e-6e665fad26bd",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 38,
+                    "startCol": 8,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "name": "sendWelcome",
+                  "inputs": [
+                    {
+                      "name": "email",
+                      "typeRef": {
+                        "baseType": "String",
+                        "args": [],
+                        "constraints": []
+                      }
+                    },
+                    {
+                      "name": "userId",
+                      "typeRef": {
+                        "baseType": "String",
+                        "args": [],
+                        "constraints": []
+                      }
+                    }
+                  ],
+                  "output": {
+                    "baseType": "Void",
+                    "args": [],
+                    "constraints": []
+                  }
+                }
+              },
+              "provides": [],
+              "requires": []
+            }
+          },
+          "flows": {
+            "register": {
+              "kind": "ResolvedFlow",
+              "id": "1d38a8c9-cb42-4829-ba2e-92763a9b1fbf",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 40,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "register",
+              "inputs": [
+                {
+                  "name": "request",
+                  "typeRef": {
+                    "baseType": "RequestData",
+                    "args": [],
+                    "constraints": []
+                  }
+                }
+              ],
+              "pipeline": [
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "a7be596d-d987-4dea-a299-5d3b4829d8af",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 41,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "ANNOTATION",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": ""
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": null
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "931ad226-a217-482c-8e26-f2d299326271",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 42,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "ANNOTATION",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": ""
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": null
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "c5f5983a-b44e-4394-a7ca-24c146a41583",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 44,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "VALIDATE",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "request"
+                  },
+                  "bindings": {
+                    "AS TYPE": {
+                      "symbolId": "RequestData"
+                    }
+                  },
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 1
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "ceb7ba41-4bb6-4485-99f7-f2b3e0b09c0a",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 45,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "ENSURE",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "NOTexists(request.email,UserRepository)"
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 2,
+                  "otherwisePath": {
+                    "kind": "SemanticFlowStep",
+                    "id": "c81edd04-4f53-4ceb-b471-042e31699ef1",
+                    "sourceMap": {
+                      "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                      "startLine": 46,
+                      "startCol": 9,
+                      "endLine": null,
+                      "endCol": null
+                    },
+                    "annotations": [],
+                    "operation": "THROW",
+                    "targetExpression": {
+                      "kind": "String",
+                      "type": {
+                        "baseType": "String",
+                        "args": [],
+                        "constraints": []
+                      },
+                      "dependencies": [],
+                      "value": "ConflictException(\"Email already registered\")"
+                    },
+                    "bindings": {},
+                    "postconditions": [],
+                    "timeout": null,
+                    "dependsOn": [],
+                    "stepNumber": null
+                  }
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "3147837e-5b1c-477f-aa7c-c382e579572a",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 47,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "CREATE",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "User :"
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 3,
+                  "subSteps": [
+                    {
+                      "kind": "SemanticFlowStep",
+                      "id": "d1a2de1f-b98b-4a06-9f94-34620c09cb55",
+                      "sourceMap": {
+                        "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                        "startLine": 48,
+                        "startCol": 9,
+                        "endLine": null,
+                        "endCol": null
+                      },
+                      "annotations": [],
+                      "operation": "PROPERTY",
+                      "targetExpression": {
+                        "kind": "String",
+                        "type": {
+                          "baseType": "String",
+                          "args": [],
+                          "constraints": []
+                        },
+                        "dependencies": [],
+                        "value": "password_hash: TRANSFORM(request.password,@hash(\"bcrypt\")ASPWD_HASH)"
+                      },
+                      "bindings": {},
+                      "postconditions": [],
+                      "timeout": null,
+                      "dependsOn": [],
+                      "stepNumber": null
+                    },
+                    {
+                      "kind": "SemanticFlowStep",
+                      "id": "d90d6061-4c69-419f-abb0-cc201694969e",
+                      "sourceMap": {
+                        "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                        "startLine": 49,
+                        "startCol": 9,
+                        "endLine": null,
+                        "endCol": null
+                      },
+                      "annotations": [],
+                      "operation": "PROPERTY",
+                      "targetExpression": {
+                        "kind": "String",
+                        "type": {
+                          "baseType": "String",
+                          "args": [],
+                          "constraints": []
+                        },
+                        "dependencies": [],
+                        "value": "role: \"CUSTOMER\""
+                      },
+                      "bindings": {},
+                      "postconditions": [],
+                      "timeout": null,
+                      "dependsOn": [],
+                      "stepNumber": null
+                    }
+                  ]
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "492e7591-f5ee-4e9d-b462-398336d3ec9d",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 50,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "PERSIST",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "User via UserRepository"
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 4
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "5cee4aad-2eb3-456e-acd2-fedda69e4486",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 51,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "ACHIEVE",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "Send welcome email"
+                  },
+                  "bindings": {},
+                  "postconditions": [
+                    "resultISVoid"
+                  ],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 5
+                },
+                {
+                  "kind": "SemanticFlowStep",
+                  "id": "d24acefb-9f53-4842-8f2e-89171f164980",
+                  "sourceMap": {
+                    "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                    "startLine": 53,
+                    "startCol": 4,
+                    "endLine": null,
+                    "endCol": null
+                  },
+                  "annotations": [],
+                  "operation": "RETURN",
+                  "targetExpression": {
+                    "kind": "String",
+                    "type": {
+                      "baseType": "String",
+                      "args": [],
+                      "constraints": []
+                    },
+                    "dependencies": [],
+                    "value": "User.id"
+                  },
+                  "bindings": {},
+                  "postconditions": [],
+                  "timeout": null,
+                  "dependsOn": [],
+                  "stepNumber": 6
+                }
+              ],
+              "output": {
+                "baseType": "String",
+                "args": [],
+                "constraints": []
+              }
+            }
+          },
+          "strategies": {},
+          "decisions": {
+            "Password Storage": {
+              "kind": "ResolvedDecision",
+              "id": "74f07c50-e04d-4c8b-a0f4-78442b222859",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 59,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "Password Storage",
+              "chosen": "bcrypt",
+              "rationale": [],
+              "alternatives": [],
+              "affectedComponents": [
+                {
+                  "symbolId": "User"
+                },
+                {
+                  "symbolId": "RegistrationService"
+                }
+              ]
+            },
+            "Error Strategy": {
+              "kind": "ResolvedDecision",
+              "id": "fa542ad4-ed23-48fe-b815-7ed808e5c1c4",
+              "sourceMap": {
+                "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+                "startLine": 65,
+                "startCol": 0,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "Error Strategy",
+              "chosen": "Exception-based",
+              "rationale": [],
+              "alternatives": [],
+              "affectedComponents": [
+                {
+                  "symbolId": "*"
+                }
+              ]
+            }
+          }
+        },
+        "global": {
+          "kind": "Namespace",
+          "id": "55098a19-0f8a-440c-9de8-84987bb696bb",
+          "sourceMap": {
+            "file": "",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "global",
+          "types": {
+            "String": {
+              "kind": "ResolvedType",
+              "id": "6a3aa3e1-1118-4098-8a86-be5c258e8661",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "String",
+              "fields": {},
+              "isEnum": false
+            },
+            "Integer": {
+              "kind": "ResolvedType",
+              "id": "f619b5ad-a778-4679-85c9-3b4ceb097763",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Integer",
+              "fields": {},
+              "isEnum": false
+            },
+            "Int": {
+              "kind": "ResolvedType",
+              "id": "9ba64936-c22e-4b4b-92a0-9442029d4d56",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Int",
+              "fields": {},
+              "isEnum": false
+            },
+            "Boolean": {
+              "kind": "ResolvedType",
+              "id": "c726b88c-0c3f-4d04-9b9e-61fd12ce4702",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Boolean",
+              "fields": {},
+              "isEnum": false
+            },
+            "Float": {
+              "kind": "ResolvedType",
+              "id": "5c863eb6-081a-4928-b127-6d520224e468",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Float",
+              "fields": {},
+              "isEnum": false
+            },
+            "Decimal": {
+              "kind": "ResolvedType",
+              "id": "ec8f7d91-f06c-4bbe-89da-536027c47d0c",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Decimal",
+              "fields": {},
+              "isEnum": false
+            },
+            "Bytes": {
+              "kind": "ResolvedType",
+              "id": "f3cbf345-29f8-457b-a7f3-f12b13e13cf3",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Bytes",
+              "fields": {},
+              "isEnum": false
+            },
+            "UUID": {
+              "kind": "ResolvedType",
+              "id": "25cc7be1-f3c0-4c79-b253-afc06d96db97",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "UUID",
+              "fields": {},
+              "isEnum": false
+            },
+            "Date": {
+              "kind": "ResolvedType",
+              "id": "2733a486-0322-4829-8880-25c65e16774a",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Date",
+              "fields": {},
+              "isEnum": false
+            },
+            "DateTime": {
+              "kind": "ResolvedType",
+              "id": "22074cfb-8ebc-45f9-a354-29088b215cc7",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "DateTime",
+              "fields": {},
+              "isEnum": false
+            },
+            "Optional": {
+              "kind": "ResolvedType",
+              "id": "793ddf8f-dac2-4684-90fc-52bd70010125",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Optional",
+              "fields": {},
+              "isEnum": false
+            },
+            "List": {
+              "kind": "ResolvedType",
+              "id": "a27039b7-b082-4aa7-abe5-5025b72b216c",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "List",
+              "fields": {},
+              "isEnum": false
+            },
+            "Map": {
+              "kind": "ResolvedType",
+              "id": "9f6a688d-ee2a-4d87-9c78-06aeff5319cc",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Map",
+              "fields": {},
+              "isEnum": false
+            },
+            "Enum": {
+              "kind": "ResolvedType",
+              "id": "e69fba7a-9448-46f6-9f27-d8263695a3c4",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Enum",
+              "fields": {},
+              "isEnum": false
+            },
+            "Result": {
+              "kind": "ResolvedType",
+              "id": "708cde67-e50a-4a18-a2e2-2fbcc747f46d",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Result",
+              "fields": {},
+              "isEnum": false
+            },
+            "Any": {
+              "kind": "ResolvedType",
+              "id": "0de7741a-3ac9-4d74-ac20-0ec53f92ac47",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Any",
+              "fields": {},
+              "isEnum": false
+            },
+            "Void": {
+              "kind": "ResolvedType",
+              "id": "d1d0f9f6-fea7-4dca-952b-98b933ea218b",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Void",
+              "fields": {},
+              "isEnum": false
+            },
+            "Int32": {
+              "kind": "ResolvedType",
+              "id": "80aae944-a8b6-43bf-93c8-94f66fa4fe8d",
+              "sourceMap": {
+                "file": "builtin",
+                "startLine": 0,
+                "startCol": 0,
+                "endLine": 0,
+                "endCol": 0
+              },
+              "annotations": [],
+              "name": "Int32",
+              "fields": {},
+              "isEnum": false
+            }
+          },
+          "components": {},
+          "flows": {},
+          "strategies": {},
+          "decisions": {}
+        }
+      },
+      "globalConstraints": [
+        {
+          "kind": "Constraint",
+          "id": "a276997a-3ba1-47ff-8559-94c3e01d391b",
+          "sourceMap": {
+            "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "startLine": 55,
+            "startCol": 0,
+            "endLine": 55,
+            "endCol": 0
+          },
+          "annotations": [],
+          "text": "All public methods must have input validation"
+        },
+        {
+          "kind": "Invariant",
+          "id": "da6ad601-8e8a-44b6-ba14-4c9290c3894a",
+          "sourceMap": {
+            "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "startLine": 57,
+            "startCol": 0,
+            "endLine": 57,
+            "endCol": 0
+          },
+          "annotations": [],
+          "text": "User email must be unique in the system at all times"
+        }
+      ],
+      "metadata": {
+        "context": "Spring Boot microservice",
+        "target": [
+          "Java 17"
+        ],
+        "trace": [
+          "AC-042-1",
+          "US-042"
+        ],
+        "files": [
+          {
+            "kind": "ProjectFileNode",
+            "annotations": [],
+            "filePath": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "namespace": "com.acme.auth",
+            "imports": []
+          }
+        ]
+      },
+      "compilationUnit": {
+        "kind": "CompilationUnit",
+        "id": "ec351d36-e44e-4b2d-b7a2-f240d52eddc0",
+        "sourceMap": {
+          "file": "",
+          "startLine": 0,
+          "startCol": 0,
+          "endLine": 0,
+          "endCol": 0
+        },
+        "annotations": [],
+        "fileNodes": {
+          "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd": {
+            "kind": "ProjectFileNode",
+            "id": "0d076daa-77cd-4332-9849-4c3894919da5",
+            "sourceMap": {
+              "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+              "startLine": 0,
+              "startCol": 0,
+              "endLine": 0,
+              "endCol": 0
+            },
+            "annotations": [],
+            "filePath": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "namespace": "com.acme.auth",
+            "imports": []
+          }
+        },
+        "deterministicOrder": [
+          "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd"
+        ]
+      },
+      "contracts": [],
+      "models": [],
+      "assumptions": [
+        {
+          "kind": "ResolvedAssumption",
+          "id": "a019d7cd-abbc-4d9e-9803-e2177ff6c9ea",
+          "sourceMap": {
+            "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "startLine": 70,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "DI container configured correctly",
+          "name_val": "DI container configured correctly",
+          "consequence": "Dependency resolution will fail if container is not initialized"
+        },
+        {
+          "kind": "ResolvedAssumption",
+          "id": "42e5ba6e-70f7-4759-a9d4-1e34d6e02cf0",
+          "sourceMap": {
+            "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "startLine": 74,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "DB-level unique constraint exists",
+          "name_val": "DB-level unique constraint exists",
+          "consequence": "Duplicate data in DB"
+        },
+        {
+          "kind": "ResolvedAssumption",
+          "id": "0938d1a6-1dbf-4c06-a767-eb4b876ae322",
+          "sourceMap": {
+            "file": "/Users/ming/Dev/GASD-Parser-Validator/Specs/examples/gasd-1.2/user_registration.gasd",
+            "startLine": 78,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "Thread pool size >= required concurrency",
+          "name_val": "Thread pool size >= required concurrency",
+          "consequence": "Async steps will fail"
+        }
+      ]
+    }
+  ]
+}

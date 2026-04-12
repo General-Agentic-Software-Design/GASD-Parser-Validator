@@ -470,7 +470,7 @@ class SemanticPipeline:
                 res_m.annotations = self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
                 all_models.append(res_m)
             for a in ast.assumptions:
-                res_a = ResolvedAssumptionNode(self._get_range(a, fpath), a.name, a.consequence)
+                res_a = ResolvedAssumptionNode(self._get_range(a, fpath), a.name, a.consequence, affected=getattr(a, 'affects', []))
                 res_a.annotations = self.annotation_resolver.resolve(getattr(a, "annotations", []), ScopeEnum.COMPONENT)
                 all_assumptions.append(res_a)
 
