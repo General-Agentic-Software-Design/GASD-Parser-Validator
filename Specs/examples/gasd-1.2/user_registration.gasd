@@ -1,0 +1,80 @@
+// user_registration.gasd
+VERSION 1.2
+CONTEXT: "Spring Boot microservice"
+TARGET: "Java 17"
+NAMESPACE: "com.acme.auth"
+TRACE: "US-042", "AC-042-1"
+
+TYPE RequestData:
+    email: String
+        @format("email") AS REQ_EMAIL_FORMAT
+        @max_length(254) AS REQ_EMAIL_MAX_LEN
+    password: String
+        @min_length(8) AS REQ_PWD_MIN_LEN
+        @constraint("must contain uppercase and digit") AS REQ_PWD_COMPLEXITY
+
+TYPE User:
+    id: UUID @auto_generate AS USER_ID_GEN
+    email: String @unique(scope: UserRepository) AS USER_EMAIL_UNIQUE
+    password_hash: String
+    role: "CUSTOMER"
+    created_at: DateTime @auto_generate AS USER_CREATED_GEN
+
+COMPONENT RegistrationService @injectable AS REG_SVC_INJECTABLE:
+    PATTERN: "Service"
+    DEPENDENCIES: [UserRepository, EmailService]
+    INTERFACE:
+        register(request: RequestData) -> String
+
+COMPONENT UserRepository @injectable AS REPO_INJECTABLE @mockable AS REPO_MOCKABLE:
+    PATTERN: "Repository"
+    INTERFACE:
+        findByEmail(email: String) -> Optional<User>
+        save(user: User) -> User
+
+COMPONENT EmailService @injectable AS EMAIL_SVC_INJECTABLE @mockable AS EMAIL_SVC_MOCKABLE:
+    PATTERN: "Service"
+    INTERFACE:
+        sendWelcome(email: String, userId: String) -> Void
+
+FLOW register(request: RequestData) -> String:
+    @pattern("Service Method") AS FLOW_PATTERN
+    @error_strategy("Exception-based") AS FLOW_ERROR_STRATEGY
+
+    1. VALIDATE request AS TYPE.RequestData
+    2. ENSURE NOT exists(request.email, UserRepository)
+         OTHERWISE THROW ConflictException("Email already registered")
+    3. CREATE User:
+         password_hash = TRANSFORM(request.password, @hash("bcrypt") AS PWD_HASH)
+         role          = "CUSTOMER"
+    4. PERSIST User via UserRepository
+    5. ACHIEVE "Send welcome email" @async AS SEND_EMAIL_ASYNC
+         POSTCONDITION: result IS Void
+    6. RETURN User.id
+
+CONSTRAINT: "All public methods must have input validation"
+// Enforcement points: App-level check in FLOW register, DB-level UNIQUE constraint on User table
+GLOBAL INVARIANT: "User email must be unique in the system at all times"
+
+DECISION "Password Storage":
+    CHOSEN: "bcrypt"
+    RATIONALE: "Industry standard adaptive hash function"
+    ALTERNATIVES: ["Argon2", "scrypt", "PBKDF2"]
+    AFFECTS: [User, RegistrationService]
+
+DECISION "Error Strategy":
+    CHOSEN: "Exception-based"
+    ALTERNATIVES: ["Error codes", "Result monad", "Optional-based"]
+    AFFECTS: [*]
+
+ASSUMPTION "DI container configured correctly":
+    AFFECTS: [RegistrationService, UserRepository, EmailService]
+    CONSEQUENCE: "Dependency resolution will fail if container is not initialized"
+
+ASSUMPTION "DB-level unique constraint exists":
+    AFFECTS: [USER_EMAIL_UNIQUE]
+    CONSEQUENCE: "Duplicate data in DB"
+
+ASSUMPTION "Thread pool size >= required concurrency":
+    AFFECTS: [SEND_EMAIL_ASYNC]
+    CONSEQUENCE: "Async steps will fail"

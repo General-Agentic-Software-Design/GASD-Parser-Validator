@@ -10,7 +10,7 @@ from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.1"
+    __version__ = "2.1.2"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
-    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.1 (built: "+__build_time__+")")
+    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.2 (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
     if "--ast" in sys.argv:

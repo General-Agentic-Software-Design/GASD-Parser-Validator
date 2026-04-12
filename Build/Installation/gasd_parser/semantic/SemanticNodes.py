@@ -563,17 +563,19 @@ class ResolvedModelNode(SemanticNodeBase):
 
 
 class ResolvedAssumptionNode(SemanticNodeBase):
-    def __init__(self, source_map: SourceRange, name: str, consequence: Optional[str] = None):
+    def __init__(self, source_map: SourceRange, name: str, consequence: Optional[str] = None, affected: Optional[List[str]] = None):
         super().__init__("ResolvedAssumption", source_map)
         self.name = name
         self.consequence = consequence
+        self.affected = affected or []
 
     def to_dict(self):
         d = super().to_dict()
         d.update({
             "name": self.name,
             "name_val": self.name,
-            "consequence": self.consequence
+            "consequence": self.consequence,
+            "affected": self.affected
         })
         return d
 

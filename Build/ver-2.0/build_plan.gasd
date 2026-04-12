@@ -196,15 +196,15 @@ FLOW phase5_full_quality_gate():
 // ===================================================================
 
 FLOW phase6_final_packaging():
-    1. ACHIEVE "Update project version metadata to 2.1.1 across codebase"
-        POSTCONDITION: "__init__.py, cli.py, setup.py, package.sh, and READMEs updated to version 2.1.1"
+    1. ACHIEVE "Update project version metadata to 2.1.2 across codebase"
+        POSTCONDITION: "__init__.py, cli.py, setup.py, package.sh, and READMEs updated to version 2.1.2"
     2. ACHIEVE "Synchronize and clean up all project artifacts and documentation"
         POSTCONDITION: "Deprecated --ast flag references removed from documentation and test docstrings"
     3. ACHIEVE "Assemble production artifacts into Build/Installation/ directory"
-        POSTCONDITION: "gasd_parser-2.1.1-py3-none-any.whl and gasd_parser-2.1.1.tar.gz built via package.sh"
+        POSTCONDITION: "gasd_parser-2.1.2-py3-none-any.whl and gasd_parser-2.1.2.tar.gz built via package.sh"
     4. ENSURE "No operations modify, pollute, or delete the parent 'Build/' folder — all artifacts must strictly go to 'Build/Installation/dir'"
         OTHERWISE THROW "Packaging Failed: Build Directory Mutation"
     5. ACHIEVE "Verify clean installation of the packaged wheel"
-        POSTCONDITION: "pip install dist/gasd_parser-2.1.1-py3-none-any.whl succeeds in temporary venv"
-    6. ENSURE "Final distribution passes all basic functionality smoke tests (Built-time version injection succeeds, output is gasd_parser 2.1.1)"
+        POSTCONDITION: "pip install dist/gasd_parser-2.1.2-py3-none-any.whl succeeds in temporary venv"
+    6. ENSURE "Final distribution passes all basic functionality smoke tests (Built-time version injection succeeds, output is gasd_parser 2.1.2)"
         OTHERWISE THROW "Packaging Failed: Functionality Sanity Error"
