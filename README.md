@@ -126,7 +126,7 @@ The project follows a 4-phase build plan defined in [Build_plan.gasd](Build/Buil
 3. **Testing**: Acceptance and regression verification (565 tests).
 4. **Validation**: Full suite validation on all content directories (110+ files).
 5. **Quality Gate**: Final sign-off on GASD 1.2 compliance (Failed: 0).
-6. **Packaging**: Standalone distributable creation (v2.1.2).
+6. **Packaging**: Standalone distributable creation (v2.1.3).
 
 ## License
 

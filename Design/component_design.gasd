@@ -31,20 +31,11 @@ DECISION "Flag Consolidation" @trace(#AC-PARSER-007-01, #AC-PARSER-007-02, #AC-P
 // Components
 // ===================================================================
 
-COMPONENT GASDParser @trace(#AC-V2-001-01) AS COMP_PARSER_TRACE:
-    PATTERN: "ANTLR4 Lexer/Parser"
-    INTERFACE:
-        parse(source: String) -> Any
+// Redundant definitions for GASDParser and ASTGenerator removed 
+// (they are defined in Design/ast_design.gasd)
 
-COMPONENT ASTGenerator @trace(#AC-V2-001-03) AS COMP_ASTGEN_TRACE:
-    PATTERN: "Tree Transformer"
-    INTERFACE:
-        generate_ast(tree: Any, version: String) -> Any
-
-COMPONENT ValidationPipeline @trace(#AC-V2-001-02) AS COMP_VALPIPE_TRACE:
-    PATTERN: "Semantic Analyzer"
-    INTERFACE:
-        validate(ast: Any, version: String) -> Result<Any>
+// Redundant definition for ValidationPipeline removed 
+// (it is defined in Design/semantic_validation_design.gasd)
 
 COMPONENT SemanticASTExporter @trace(#AC-PARSER-007-02) AS COMP_ASTEXP_TRACE:
     PATTERN: "JSON Exporter"

@@ -39,7 +39,7 @@ echo "Setting up clean test environment..."
 python3 -m venv test_env
 source test_env/bin/activate
 pip install wheel
-pip install dist/gasd_parser-2.1.2-py3-none-any.whl
+pip install dist/gasd_parser-2.1.3-py3-none-any.whl
 
 echo "Running packaging smoke tests..."
 

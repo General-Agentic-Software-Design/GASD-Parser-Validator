@@ -92,6 +92,7 @@ IMPORT "symbol_resolution_design.gasd"
 IMPORT "global_invariants_design.gasd"
 IMPORT "semantic_error_reporting_design.gasd"
 IMPORT "type_contract_binding_design.gasd"
+IMPORT "grammar_design.gasd"
 
 TYPE SystemMetadata:
     version: String

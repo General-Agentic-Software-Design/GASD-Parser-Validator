@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+import datetime
 
 from .ast.ASTGenerator import ASTGenerator
 from .parser.ParseTreeAPI import ParseTreeAPI
@@ -10,7 +11,7 @@ from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.2"
+    __version__ = "2.1.3"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
@@ -23,7 +24,7 @@ def main():
     parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
-    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.2 (built: "+__build_time__+")")
+    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.3 (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
     if "--ast" in sys.argv:
@@ -197,6 +198,32 @@ def main():
                 elif args.ast_output and not args.ast_combine and not args.ast_sem:
                     print(f"OK Passed: {file_path} (Exported to {args.ast_output})", file=sys.stderr)
 
+    # === Phase 4.5: Validation Marker Construction ===
+    marker = None
+    if args.ast_sem:
+        # Check if we should include the marker (v1.2+ feature)
+        # AC-PARSER-008-01: Only in strict 1.2+ environments
+        is_v12 = (args.gasd_ver == "1.2")
+        if not args.gasd_ver:
+             if sem_pipeline and any(v == "1.2" for v in sem_pipeline.file_versions.values()):
+                 is_v12 = True
+             else:
+                 is_v12 = False
+        
+        if is_v12:
+            status = "PASSED"
+            if args.no_validate:
+                status = "NOT_PERFORMED"
+            elif failure_count > 0:
+                status = "FAILED"
+            
+            marker = {
+                "status": status,
+                "parser_version": __version__,
+                "build_time": __build_time__,
+                "validation_time": datetime.datetime.utcnow().isoformat() + "Z"
+            }
+
     if args.json:
         combined = {
             "success": failure_count == 0,
@@ -204,6 +231,9 @@ def main():
             "failureCount": failure_count,
             "reports": all_reports
         }
+        if marker:
+            combined["semantic_validate"] = marker
+        
         if args.ast_sem and semantic_system and not args.ast_output:
             combined["asts"] = [semantic_system.to_dict()]
         print(json.dumps(combined, indent=2))
@@ -222,7 +252,7 @@ def main():
 
     if args.ast_output and failure_count == 0:
         if export_data is not None and exporter:
-            combined_ast_json = exporter.to_json(export_data)
+            combined_ast_json = exporter.to_json(export_data, marker=marker)
             try:
                 with open(args.ast_output, "w") as out_f:
                     out_f.write(combined_ast_json)

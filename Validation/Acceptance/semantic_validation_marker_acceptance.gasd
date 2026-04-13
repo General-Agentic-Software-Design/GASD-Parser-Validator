@@ -1,0 +1,30 @@
+VERSION 1.2
+/*
+   Validation: Semantic Validation Marker — Acceptance Tests
+   ========================================================
+   Verifies that the parser meets the final acceptance criteria for the 
+   validation marker feature as defined in US-PARSER-008.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Verification of Validation Marker"
+TARGET: "GASD Agent"
+TRACE: "US-PARSER-008"
+
+IMPORT "../../Design/semantic_validation_marker_design.gasd"
+
+FLOW validate_marker_acceptance():
+    1. ACHIEVE "Verify US-PARSER-008 goal: User can identify if the JSON AST passed formal semantic checks":
+        POSTCONDITION: "Resulting JSON contains 'semantic_validate' key with status 'PASSED'"
+        @trace(#AC-PARSER-008-01, #AC-PARSER-008-02) AS ACHIEVE_AC_01_02_TRACE
+
+    2. ACHIEVE "Verify US-PARSER-008 goal: JSON AST contains parser version and build timestamp":
+        POSTCONDITION: "semantic_validate.parser_version and semantic_validate.build_time are present"
+        @trace(#AC-PARSER-008-03, #AC-PARSER-008-04) AS ACHIEVE_AC_03_04_TRACE
+
+    3. ACHIEVE "Verify US-PARSER-008 goal: JSON AST contains timestamp of when validation was performed":
+        POSTCONDITION: "semantic_validate.validation_time matches the current execution cycle"
+        @trace(#AC-PARSER-008-05) AS ACHIEVE_AC_05_TRACE
+
+    4. ENSURE "All acceptance criteria for US-PARSER-008 are satisfied upon successful execution"
+        OTHERWISE THROW "Acceptance Validation Failure: US-PARSER-008"
