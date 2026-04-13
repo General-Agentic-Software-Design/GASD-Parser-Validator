@@ -1,0 +1,30 @@
+VERSION 1.2
+/*
+   Validation: Semantic Validation Marker — Negative Scenarios
+   ===========================================================
+   Ensures the system correctly rejects or handles invalid states 
+   related to the validation marker (§ US-PARSER-008).
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Verification of Validation Marker"
+TARGET: "GASD Agent"
+TRACE: "US-PARSER-008"
+
+IMPORT "../../Design/semantic_validation_marker_design.gasd"
+
+FLOW validate_marker_negative():
+    1. ACHIEVE "Reject: Status 'PASSED' when ERROR or FATAL diagnostics exist":
+        POSTCONDITION: "semantic_validate.status is 'FAILED' OR marker is absent"
+        @trace(#AC-PARSER-008-06) AS ACHIEVE_NEG_L008_TRACE
+
+    2. ACHIEVE "Reject: Manually injected 'semantic_validate' in source GASD file":
+        POSTCONDITION: "Parser ignores the injected key or treats it as an unknown type property"
+        @trace(#AC-PARSER-008-01) AS ACHIEVE_NEG_INJECT_TRACE
+
+    3. ACHIEVE "Reject: Invalid timestamp formats in generator configuration":
+        POSTCONDITION: "System crashes or reports an internal error if non-ISO-8601 strings are provided by the build environment"
+        @trace(#AC-PARSER-008-04) AS ACHIEVE_NEG_TIME_TRACE
+
+    4. ENSURE "The validation marker NEVER indicates a False Positive 'PASSED' state"
+        OTHERWISE THROW "Integrity Validation Failure: US-PARSER-008"

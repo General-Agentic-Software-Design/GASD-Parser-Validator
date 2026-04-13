@@ -166,7 +166,7 @@ TYPE IndentationTokens:
 
 /// Top-level file structure: a GASD file is a sequence of sections.
 /// This rule proves a complete ANTLR grammar file exists for GASD.
-TYPE GasdFileRule @trace #AC-PARSER-001-01:
+TYPE GASDFile @trace #AC-PARSER-001-01:
     description: "gasd_file ::= { section } EOF"
     name: String
     arguments: List<AnnotationArg> @optional

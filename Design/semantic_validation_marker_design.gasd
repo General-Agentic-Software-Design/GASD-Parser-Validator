@@ -1,0 +1,60 @@
+VERSION 1.2
+/*
+   Design: Semantic Validation Marker
+   ==================================
+   Defines the structure and injection logic for the semantic validation 
+   certificate (marker) in the generated Semantic AST.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Semantic Validation Marker"
+TARGET: "Python3"
+TRACE: "US-PARSER-008"
+
+IMPORT "semantic_ast_model_design.gasd"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Marker Placement" @trace(#AC-PARSER-008-01):
+    CHOSEN: "Root-level key 'semantic_validate' in the JSON output"
+    RATIONALE: "Placing the marker at the root level ensures that downstream tools can verify the validation status without traversing the node tree."
+    ALTERNATIVES: ["Nested in SystemMetadata", "Root-level key"]
+    AFFECTS: [SemanticSystem]
+
+DECISION "Time Format" @trace(#AC-PARSER-008-04, #AC-PARSER-008-05):
+    CHOSEN: "ISO-8601 String"
+    RATIONALE: "Standardized, human-readable, and machine-parsable format for build and validation timestamps."
+    ALTERNATIVES: ["Unix Timestamp", "ISO-8601 String"]
+    AFFECTS: [ValidationMarker]
+
+// ===================================================================
+// Semantic Model Extension
+// ===================================================================
+
+/// Validation certificate for the Semantic AST.
+TYPE ValidationMarker @trace(#AC-PARSER-008-02, #AC-PARSER-008-03, #AC-PARSER-008-04, #AC-PARSER-008-05):
+    status: Enum("PASSED", "FAILED", "NOT_PERFORMED")
+    parser_version: String
+    build_time: String // ISO-8601
+    validation_time: String // ISO-8601
+
+// ===================================================================
+// Logic & Constraints
+// ===================================================================
+
+FLOW inject_validation_marker(system: SemanticSystem, passed: Boolean) -> SemanticSystem:
+    1. ACHIEVE "Create ValidationMarker instance"
+    2. ACHIEVE "Set status based on validation result":
+        POSTCONDITION: "status is PASSED if passed is true, FAILED otherwise"
+    3. ACHIEVE "Inject parser version and build timestamp"
+    4. ACHIEVE "Inject current ISO-8601 validation timestamp"
+    5. ACHIEVE "Attach marker to result root"
+    @trace(#AC-PARSER-008-06) AS FLOW_MARKER_INJECT
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "The 'semantic_validate' marker MUST ONLY be present in the final JSON output when --json and --ast-sem are both active." @trace(#AC-PARSER-008-01) AS CONST_MARKER_VISIBILITY
+CONSTRAINT: "Status MUST NOT be 'PASSED' if any FATAL or ERROR diagnostics were emitted during the semantic pass." @trace(#AC-PARSER-008-06) AS CONST_MARKER_INTEGRITY

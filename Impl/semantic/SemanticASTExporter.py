@@ -1,18 +1,24 @@
 import json
-from typing import List, Union
+from typing import List, Union, Optional
 from .SemanticNodes import SemanticSystem
 
 class SemanticASTExporter:
     """Exports Semantic AST objects to JSON format."""
     
-    def to_json(self, ast: Union[SemanticSystem, List[SemanticSystem]]) -> str:
+    def to_json(self, ast: Union[SemanticSystem, List[SemanticSystem]], marker: Optional[dict] = None) -> str:
         if isinstance(ast, list):
             # Combine multiple systems into one
-            combined_dict = [system.to_dict() for system in ast]
-            return json.dumps(combined_dict, indent=2)
+            data = [system.to_dict() for system in ast]
+            if marker:
+                # If list, we wrap in a dict to allow marker injection at root
+                return json.dumps({"asts": data, "semantic_validate": marker}, indent=2)
+            return json.dumps(data, indent=2)
         else:
-            return json.dumps(ast.to_dict(), indent=2)
+            data = ast.to_dict()
+            if marker:
+                data["semantic_validate"] = marker
+            return json.dumps(data, indent=2)
 
-    def write_to_file(self, ast: Union[SemanticSystem, List[SemanticSystem]], file_path: str):
+    def write_to_file(self, ast: Union[SemanticSystem, List[SemanticSystem]], file_path: str, marker: Optional[dict] = None):
         with open(file_path, "w") as f:
-            f.write(self.to_json(ast))
+            f.write(self.to_json(ast, marker=marker))

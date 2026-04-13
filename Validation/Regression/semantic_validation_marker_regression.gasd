@@ -1,0 +1,27 @@
+/*
+   Validation: Semantic Validation Marker — Regression & Compatibility
+   ==================================================================
+   Ensures that the new validation marker feature (US-PARSER-008) does 
+   not negatively impact legacy (v1.1) processing or existing JSON consumers.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Regression Verification for US-PARSER-008"
+TARGET: "GASD Agent"
+TRACE: "US-PARSER-008"
+
+IMPORT "../../Design/semantic_validation_marker_design.gasd"
+
+FLOW validate_marker_regression():
+    1. ACHIEVE "Run gasd_parser on a legacy VERSION 1.1 file with --json":
+    2. ENSURE "The root JSON object DOES NOT contain the 'semantic_validate' key"
+        RATIONALE: "The validation marker certificate is a v1.2+ feature for strict formal semantics."
+        @trace(#AC-PARSER-008-01) AS REG_MARKER_ABSENCE_TRACE
+
+    3. ACHIEVE "Run gasd_parser on a VERSION 1.2 file WITHOUT --ast-sem":
+    4. ENSURE "The root JSON object DOES NOT contain the 'semantic_validate' key"
+        RATIONALE: "The marker is only applicable for semantic AST exports."
+        @trace(#AC-PARSER-008-01) AS REG_MARKER_VISIBILITY_TRACE
+
+    5. ENSURE "The addition of the 'semantic_validate' field to v1.2 output preserves backward compatibility for JSON readers"
+        @trace(#AC-PARSER-008-01) AS REG_READER_COMPAT_TRACE

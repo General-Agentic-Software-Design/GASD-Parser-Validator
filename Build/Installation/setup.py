@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="gasd_parser",
-    version="2.1.2",
+    version="2.1.3",
     description="GASD Parser and Validator Engine v2.1",
     packages=find_packages(),
     include_package_data=True,

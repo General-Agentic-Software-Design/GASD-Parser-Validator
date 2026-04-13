@@ -1,0 +1,58 @@
+VERSION 1.2
+/*
+   Validation: Semantic Validation Marker Tests
+   ===========================================
+   Verifies the presence and integrity of the semantic validation marker 
+   (certificate) in the generated Semantic AST.
+   Based on Design/semantic_validation_marker_design.gasd and US-PARSER-008.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Design"
+CONTEXT: "Verification of Semantic Validation Marker"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-008"
+
+IMPORT "../../Design/semantic_validation_marker_design.gasd"
+
+// ===================================================================
+// Design Validation Flows
+// ===================================================================
+
+FLOW test_marker_root_presence():
+    @trace #AT-PARSER-008-01, #AC-PARSER-008-01
+    1. ACHIEVE "Run gasd_parser with --json and --ast-sem on a valid file"
+    2. ENSURE "The resulting JSON root contains the key 'semantic_validate'"
+        OTHERWISE THROW "Validation Failed: Marker missing at root level"
+
+FLOW test_marker_passed_status():
+    @trace #AT-PARSER-008-01, #AC-PARSER-008-02
+    1. ACHIEVE "Successfully validate a GASD specification"
+    2. ENSURE "semantic_validate.status is exactly 'PASSED'"
+        OTHERWISE THROW "Validation Failed: Expected status 'PASSED'"
+
+FLOW test_marker_version_metadata():
+    @trace #AT-PARSER-008-02, #AC-PARSER-008-03
+    1. ACHIEVE "Extract semantic_validate from JSON output"
+    2. ENSURE "parser_version is a non-empty string matching the current project version"
+        OTHERWISE THROW "Validation Failed: parser_version mismatch"
+
+FLOW test_marker_timestamps():
+    @trace #AT-PARSER-008-03, #AC-PARSER-008-04, #AC-PARSER-008-05
+    1. ACHIEVE "Extract build_time and validation_time from semantic_validate"
+    2. ENSURE "build_time is a valid ISO-8601 timestamp"
+        OTHERWISE THROW "Validation Failed: Invalid build_time format"
+    3. ENSURE "validation_time is a valid ISO-8601 timestamp"
+        OTHERWISE THROW "Validation Failed: Invalid validation_time format"
+
+FLOW test_marker_integrity_on_failure():
+    @trace #AT-PARSER-008-04, #AC-PARSER-008-06
+    1. ACHIEVE "Run gasd_parser on a semantically invalid file"
+    2. ENSURE "The 'semantic_validate' marker is either absent or status is NOT 'PASSED'"
+        OTHERWISE THROW "Validation Failed: Marker incorrectly indicates 'PASSED' on failure"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every validation flow MUST produce a deterministic result." @trace #AC-PARSER-008-01
+CONSTRAINT: "Timestamps MUST be verified against ISO-8601 regex pattern." @trace #AC-PARSER-008-04

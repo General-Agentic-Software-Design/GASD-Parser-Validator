@@ -62,6 +62,7 @@ gasd_parser/tests/acceptance/test_literal_types.py
 gasd_parser/tests/acceptance/test_metamodel_validation.py
 gasd_parser/tests/acceptance/test_parse_tree.py
 gasd_parser/tests/acceptance/test_semantic.py
+gasd_parser/tests/acceptance/test_semantic_validation_marker.py
 gasd_parser/tests/acceptance/test_semast_annotations.py
 gasd_parser/tests/acceptance/test_semast_architecture.py
 gasd_parser/tests/acceptance/test_semast_backward_compat.py
