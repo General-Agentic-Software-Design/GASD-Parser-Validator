@@ -1,0 +1,13 @@
+VERSION 1.2
+/*
+   Validation: Negative testing for US-PARSER-009
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "Python3"
+TRACE: "US-PARSER-009"
+
+FLOW negative_version_marker_malformed() -> Void:
+    1. ACHIEVE "Run gasd_parser on a malformed GASD file without version":
+        POSTCONDITION: "gasd_file_version IS 'unknown' even if other errors occur"
+    @trace(AT-PARSER-009-03) AS FLOW_NEG_MALFORMED

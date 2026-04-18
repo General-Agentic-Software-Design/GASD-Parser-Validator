@@ -1,0 +1,20 @@
+VERSION 1.2
+/*
+   Validation: Acceptance testing for US-PARSER-009
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "Python3"
+TRACE: "US-PARSER-009"
+
+// No redundant type declarations needed in this file
+
+FLOW acceptance_version_marker_with_version() -> Void:
+    1. ACHIEVE "Run gasd_parser --json --ast-sem on a 1.2 file":
+        POSTCONDITION: "gasd_file_version IS '1.2'"
+    @trace(AC-PARSER-009-02) AS FLOW_ACC_SPECIFIED
+
+FLOW acceptance_version_marker_unknown() -> Void:
+    1. ACHIEVE "Run gasd_parser on a legacy file with no version directive":
+        POSTCONDITION: "gasd_file_version IS 'unknown'"
+    @trace(AC-PARSER-009-03) AS FLOW_ACC_UNKNOWN

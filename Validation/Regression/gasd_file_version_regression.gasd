@@ -1,0 +1,13 @@
+VERSION 1.2
+/*
+   Validation: Regression testing for US-PARSER-009
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "Python3"
+TRACE: "US-PARSER-009"
+
+FLOW regression_version_marker_legacy() -> Void:
+    1. ACHIEVE "Ensure existing AST consumers do not crash when given JSON with gasd_file_version":
+        POSTCONDITION: "Deserialization continues uninterrupted"
+    @trace(RT-PARSER-009-02) AS FLOW_REGRESSION_DESERIALIZE
