@@ -1,0 +1,57 @@
+VERSION 1.2
+/*
+   Design: GASD File Version in Semantic AST
+   =========================================
+   Defines the structure and injection logic for the gasd file 
+   version metadata within the semantic validation marker.
+*/
+
+CONTEXT: "Compiler / Language Tooling — GASD File Versioning"
+TARGET: "Python3"
+TRACE: "US-PARSER-009"
+
+TYPE ValidationMarker:
+    _internal: Boolean
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Version Field Placement" @trace(#AC-PARSER-009-01):
+    CHOSEN: "Nested key 'gasd_file_version' within 'semantic_validate' object"
+    RATIONALE: "Keeps all validation and parser metadata logically grouped in a single object for downstream consumers."
+    ALTERNATIVES: ["Root-level key 'gasd_file_version'", "Nested key in 'semantic_validate'"]
+    AFFECTS: [ValidationMarker]
+
+DECISION "Missing Version Fallback" @trace(#AC-PARSER-009-03):
+    CHOSEN: "Literal string 'unknown'"
+    RATIONALE: "Provides a non-null, unambiguous signal that the version was omitted in the source, triggering manual review or fallback rules."
+    ALTERNATIVES: ["Omit the field", "Empty string", "Literal string 'unknown'"]
+    AFFECTS: [GasdFileVersion]
+
+// ===================================================================
+// Semantic Model Extension
+// ===================================================================
+
+/// Extension of ValidationMarker for the Semantic AST to include explicitly specified file version.
+TYPE GasdFileVersion @trace(AC-PARSER-009-02, AC-PARSER-009-03) AS TYPE_VERSION_BINDING:
+    gasd_file_version: String // Contains explicit version e.g. "1.2", or "unknown"
+
+// ===================================================================
+// Logic & Constraints
+// ===================================================================
+
+FLOW inject_gasd_file_version(marker: ValidationMarker, source_version: String) -> ValidationMarker:
+    1. ACHIEVE "Evaluate source_version":
+        POSTCONDITION: "If source_version is empty or null, set gasd_file_version to 'unknown', else set to source_version"
+    2. ACHIEVE "Inject gasd_file_version into marker":
+        POSTCONDITION: "gasd_file_version securely injected"
+    3. ACHIEVE "Return updated ValidationMarker":
+        POSTCONDITION: "Marker returned successfully"
+    @trace(AC-PARSER-009-04) AS FLOW_VERSION_INJECT
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "The 'gasd_file_version' MUST always be correctly populated as long as 'semantic_validate' is emitted, even in cases of partial semantic failure." @trace(#AC-PARSER-009-03) AS CONST_VERSION_ROBUSTNESS

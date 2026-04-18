@@ -1,0 +1,19 @@
+VERSION 1.2
+/*
+   Validation: Design level validation for US-PARSER-009
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "Python3"
+TRACE: "US-PARSER-009"
+
+TYPE ValidationMarker:
+    _internal: Boolean
+
+TYPE GasdFileVersion:
+    _internal: Boolean
+
+FLOW validate_design_version_marker() -> Void:
+    1. ACHIEVE "Test GasdFileVersion structure definition":
+        POSTCONDITION: "Structure evaluated cleanly"
+    @trace(AC-PARSER-009-01) AS FLOW_VERIFY_DESIGN

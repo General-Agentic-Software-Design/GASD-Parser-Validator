@@ -11,7 +11,7 @@ from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.3"
+    __version__ = "2.1.4"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
-    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.3 (built: "+__build_time__+")")
+    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.4 (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
     if "--ast" in sys.argv:
@@ -217,11 +217,21 @@ def main():
             elif failure_count > 0:
                 status = "FAILED"
             
+            gasd_file_version = "unknown"
+            if valid_asts:
+                ast_obj = valid_asts[0][1]
+                v = getattr(ast_obj, "version", None)
+                if v and isinstance(v, str) and v.strip() != "":
+                    gasd_file_version = v.strip(' "\'')
+            if gasd_file_version == "unknown" and args.gasd_ver:
+                gasd_file_version = args.gasd_ver
+            
             marker = {
                 "status": status,
                 "parser_version": __version__,
                 "build_time": __build_time__,
-                "validation_time": datetime.datetime.utcnow().isoformat() + "Z"
+                "validation_time": datetime.datetime.utcnow().isoformat() + "Z",
+                "gasd_file_version": gasd_file_version
             }
 
     if args.json:
