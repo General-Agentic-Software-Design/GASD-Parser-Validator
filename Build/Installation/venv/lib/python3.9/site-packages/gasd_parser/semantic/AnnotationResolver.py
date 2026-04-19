@@ -1,0 +1,83 @@
+from typing import Dict, Any, List, Optional
+from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, ScopeEnum
+
+from .SymbolTable import SemanticError
+
+class AnnotationResolver:
+    def __init__(self):
+        pass
+
+    def resolve(self, syntactic_annotations: List[Any], scope: ScopeEnum) -> List[ResolvedAnnotation]:
+        if not syntactic_annotations:
+            return []
+            
+        resolved = []
+        for ann in syntactic_annotations:
+            args = {}
+            if getattr(ann, 'arguments', None):
+                from .AnnotationRegistry import REGISTRY
+                defn = REGISTRY.get(ann.name)
+                
+                for i, arg in enumerate(ann.arguments):
+                    # Determine key: 
+                    # 1. Use explicit key if present
+                    # 2. Use positional map from registry if available
+                    # 3. Default to "value"
+                    key = arg.key if hasattr(arg, 'key') and arg.key else None
+                    if not key and defn and i < len(defn.positional_map):
+                        key = defn.positional_map[i]
+                    if not key:
+                        key = "value"
+                    
+                    val = arg.value
+                    
+                    # Primitive type inference (only for string values)
+                    if isinstance(val, str):
+                        if val.isdigit():
+                            val = int(val)
+                        elif val.lstrip('-').isdigit():
+                            val = int(val)
+                        elif val.lower() == "true":
+                            val = True
+                        elif val.lower() == "false":
+                            val = False
+                        elif (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                            val = val[1:-1]
+
+                    args[key] = val
+                    
+            res_ann = ResolvedAnnotation(ann.name, scope, args, alias=getattr(ann, 'alias', None))
+            self.validate(res_ann)
+            resolved.append(res_ann)
+            
+        return resolved
+
+    def validate(self, annotation: ResolvedAnnotation) -> None:
+        from .AnnotationRegistry import validate_annotation_semantics
+        error = validate_annotation_semantics(annotation.name, annotation.scope, annotation.arguments)
+        if error:
+            raise SemanticError(error)
+
+    def get(self, node: SemanticNodeBase, name: str, parent_node: Optional[SemanticNodeBase] = None) -> Optional[ResolvedAnnotation]:
+        # Local annotation
+        for ann in getattr(node, "annotations", []):
+            if ann.name == name:
+                return ann
+                
+        # Hierarchy walking if parent given
+        if parent_node:
+            for ann in getattr(parent_node, "annotations", []):
+                if ann.name == name:
+                    return ann
+                    
+        return None
+
+    def get_all_inherited(self, node: SemanticNodeBase, parent_node: Optional[SemanticNodeBase] = None) -> List[ResolvedAnnotation]:
+        # Merge parent and local. Local overrides parent.
+        anns = {}
+        if parent_node:
+            for ann in getattr(parent_node, "annotations", []):
+                anns[ann.name] = ann
+        for ann in getattr(node, "annotations", []):
+            anns[ann.name] = ann # Overrides parent
+        return list(anns.values())
