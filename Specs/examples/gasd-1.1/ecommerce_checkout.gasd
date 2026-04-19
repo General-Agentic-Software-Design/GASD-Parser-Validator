@@ -72,10 +72,12 @@ TYPE OrderItem:
 // 5. Design Decisions
 DECISION "ID Generation" @status("APPROVED"):
     CHOSEN: "UUID v4"
+    RATIONALE: "Ensures global uniqueness without central coordination"
     ALTERNATIVES: ["Snowflake ID", "Atomic Counter"]
     AFFECTS: [OrderItem]
 
 DECISION "Payment Integration":
     CHOSEN: "Stripe API"
+    RATIONALE: "Provides best-in-class developer experience and international support"
     ALTERNATIVES: ["PayPal SDK", "Adyen API"]
     AFFECTS: [CheckoutService]

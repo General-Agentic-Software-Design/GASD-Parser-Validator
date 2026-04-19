@@ -1,0 +1,29 @@
+VERSION 1.2
+/*
+   Validation: Negative — Rationale Field Mandatory (BUG-2)
+   ========================================================
+   Negative tests validating that the parser correctly rejects
+   DECISION blocks with missing or malformed RATIONALE fields.
+   Traces: BUG-2
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Validation for Rationale Field Fix"
+TARGET: "GASD Agent"
+TRACE: "BUG-2"
+
+FLOW validate_rationale_negative():
+    1. ACHIEVE "Reject: DECISION block with CHOSEN but no RATIONALE":
+        POSTCONDITION: result IS SyntaxError
+        @trace(#BUG-2) AS ACHIEVE_BUG2_NEG_01
+
+    2. ACHIEVE "Reject: DECISION block with RATIONALE as empty string":
+        POSTCONDITION: result IS SyntaxError OR result.rationale == ""
+        @trace(#BUG-2) AS ACHIEVE_BUG2_NEG_02
+
+    3. ACHIEVE "Reject: DECISION block with RATIONALE placed before CHOSEN":
+        POSTCONDITION: result IS SyntaxError
+        @trace(#BUG-2) AS ACHIEVE_BUG2_NEG_03
+
+    4. ENSURE "All invalid RATIONALE scenarios produce parser errors"
+        OTHERWISE THROW "Negative Validation Failure: Invalid DECISION was accepted"

@@ -64,6 +64,7 @@ DECISION "Password Storage":
 
 DECISION "Error Strategy":
     CHOSEN: "Exception-based"
+    RATIONALE: "Standardizes error handling across all microservices"
     ALTERNATIVES: ["Error codes", "Result monad", "Optional-based"]
     AFFECTS: [*]
 

@@ -19,6 +19,7 @@ FLOW F():
 
 DECISION "D":
     CHOSEN: "A"
+    RATIONALE: "Test"
 """
     api = ParseTreeAPI()
     tree, reporter = api.parse(content)

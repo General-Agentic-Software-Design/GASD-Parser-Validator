@@ -1,0 +1,26 @@
+VERSION 1.2
+/*
+   Design: Rationale Field Fix (BUG-2)
+   ====================================================
+   Makes the RATIONALE field mandatory in DECISION blocks to align with the GASD 1.2 Specification.
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "ANTLR4", "Python3"
+TRACE: "BUG-2"
+
+TYPE DecisionRule:
+    description: "Overrides the grammar rule to make RATIONALE mandatory."
+    syntax: "DECISION STRING_LITERAL annotations? ':' INDENT CHOSEN ':' STRING_LITERAL RATIONALE ':' STRING_LITERAL (ALTERNATIVES ':' list_literal)? (AFFECTS ':' list_literal)? DEDENT"
+
+TYPE DecisionNode:
+    description: "AST Node Definition for Decision"
+    name: String
+    chosen: String
+    rationale: String
+    kind: String
+    alternatives: Optional<List<String>>
+    affects: Optional<List<String>>
+
+CONSTRAINT: "Parser grammar MUST require RATIONALE to be present."
+CONSTRAINT: "AST node MUST define rationale as a strictly typed String rather than Optional."

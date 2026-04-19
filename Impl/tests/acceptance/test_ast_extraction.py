@@ -9,7 +9,7 @@ Acceptance Test for US-PARSER-007: Bulk AST Extraction
 """
 
 def test_cli_ast_output_console():
-    """AT-PARSER-007-02: Print AST to console with --ast."""
+    """AT-PARSER-007-02: Print AST to console with --ast-sem and --json."""
     with open("ast_test.gasd", "w") as f: f.write('VERSION 1.2\nNAMESPACE: "Test"\nCONTEXT: "AST"\nTARGET: "Python3"\nTYPE Dummy: f: String\n')
     try:
         result = subprocess.run(["python3", "-m", "Impl.cli", "ast_test.gasd", "--ast-sem", "--json"], capture_output=True, text=True, env={"PYTHONPATH": "."})

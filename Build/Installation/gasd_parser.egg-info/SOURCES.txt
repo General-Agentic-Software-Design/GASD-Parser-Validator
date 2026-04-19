@@ -57,6 +57,7 @@ setup.py
 ../../Impl/tests/acceptance/test_literal_types.py
 ../../Impl/tests/acceptance/test_metamodel_validation.py
 ../../Impl/tests/acceptance/test_parse_tree.py
+../../Impl/tests/acceptance/test_rationale_field_acceptance.py
 ../../Impl/tests/acceptance/test_relative_json_paths.py
 ../../Impl/tests/acceptance/test_relative_source_map_paths.py
 ../../Impl/tests/acceptance/test_semantic.py
@@ -101,6 +102,7 @@ setup.py
 ../../Impl/tests/regression/test_parse_tree.py
 ../../Impl/tests/regression/test_parser_regression_fixes.py
 ../../Impl/tests/regression/test_phase11_regressions.py
+../../Impl/tests/regression/test_rationale_field_regression.py
 ../../Impl/tests/regression/test_ref_spec_features.py
 ../../Impl/tests/regression/test_relative_json_paths_regression.py
 ../../Impl/tests/regression/test_relative_source_map_paths_regression.py
