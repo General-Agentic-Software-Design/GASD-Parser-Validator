@@ -1,0 +1,28 @@
+VERSION 1.2
+NAMESPACE: "gasd.validation.acceptance.json"
+CONTEXT: "Acceptance Validation for JSON Paths"
+TARGET: "Python3"
+TRACE: "#US-PARSER-010", "#AT-PARSER-010-01", "#AT-PARSER-010-02", "#AT-PARSER-010-03", "#AT-PARSER-010-04"
+
+INVARIANT LOCAL: "Standard JSON and Semantic AST must not leak absolute paths"
+
+DECISION "Acceptance Scenarios":
+    CHOSEN: "Validate CLI end-to-end execution"
+    RATIONALE: "Ensures end-user perspective is valid."
+    ALTERNATIVES: ["Unit test only"]
+    AFFECTS: [AcceptanceValidation]
+
+COMPONENT AcceptanceValidation:
+    INTERFACE:
+        test_cli_relativization() -> Boolean
+
+FLOW test_cli_relativization() -> Boolean:
+    1. ACHIEVE "Execute gasd_parser on file in cwd and verify path is 'test.gasd'" @trace #AT-PARSER-010-01
+        POSTCONDITION: "result == true"
+    2. ACHIEVE "Execute gasd_parser on subdir file and verify path is 'subdir/test.gasd'" @trace #AT-PARSER-010-02
+        POSTCONDITION: "result == true"
+    3. ACHIEVE "Execute gasd_parser on parent file and verify path is '../test.gasd'" @trace #AT-PARSER-010-03
+        POSTCONDITION: "result == true"
+    4. ACHIEVE "Execute gasd_parser on Windows path and verify backslashes are replaced" @trace #AT-PARSER-010-04
+        POSTCONDITION: "result == true"
+    5. RETURN true

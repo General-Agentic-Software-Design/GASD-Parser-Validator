@@ -1,0 +1,27 @@
+VERSION 1.2
+NAMESPACE: "gasd.parser.serialization"
+CONTEXT: "Parser Core Validation Serialization"
+TARGET: "Python3"
+TRACE: "#US-PARSER-010", "#AC-PARSER-010-01", "#AC-PARSER-010-02", "#AC-PARSER-010-03", "#AC-PARSER-010-04", "#AC-PARSER-010-05", "#AC-PARSER-010-06"
+
+INVARIANT GLOBAL: "Absolute file paths MUST NOT appear in any field of the JSON payload under any circumstances"
+
+DECISION "Path Relativization Approach":
+    CHOSEN: "Deep-scrub structural relativization during JSON export"
+    RATIONALE: "Aggressively applies CWD-relative, POSIX-style standard paths across all dictionary keys, list elements, and sourceMap objects, guaranteeing Zero-Leak portability."
+    ALTERNATIVES: ["Relativize only sourceMap fields"]
+    AFFECTS: [SemanticASTExporter]
+
+COMPONENT SemanticASTExporter:
+    INTERFACE:
+        export_json(data: Any, cwd_path: String) -> String
+
+STRATEGY relativize_path:
+    ALGORITHM: "Compute relative path from cwd_path. Convert to forward slashes. Preserve 'stdin'."
+    INPUT: path: String, cwd_path: String
+    OUTPUT: String
+
+FLOW export_json(data: Any, cwd_path: String) -> String:
+    1. ACHIEVE "Recursively copy and modify data structural elements replacing absolute paths with relativized_path output"
+        POSTCONDITION: "result != null"
+    2. RETURN "JSON.stringify(result)"

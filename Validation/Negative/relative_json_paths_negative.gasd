@@ -1,0 +1,22 @@
+VERSION 1.2
+NAMESPACE: "gasd.validation.negative.json"
+CONTEXT: "Negative Validation for JSON Paths"
+TARGET: "Python3"
+TRACE: "#US-PARSER-010", "#AC-PARSER-010-02"
+
+INVARIANT LOCAL: "Failure to relativize an absolute path must drop it without leaking"
+
+DECISION "Negative Scenarios":
+    CHOSEN: "Validate un-relativizable paths"
+    RATIONALE: "Ensures boundary paths don't leak."
+    ALTERNATIVES: ["No negative path tests"]
+    AFFECTS: [NegativeValidation]
+
+COMPONENT NegativeValidation:
+    INTERFACE:
+        test_unrelativizable_paths() -> Boolean
+
+FLOW test_unrelativizable_paths() -> Boolean:
+    1. ACHIEVE "Inject invalid or unrecognizable paths and assert handler converts them safely or drops them correctly without leaking absolute structure"
+        POSTCONDITION: "result == true"
+    2. RETURN true

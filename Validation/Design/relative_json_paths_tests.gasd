@@ -1,0 +1,22 @@
+VERSION 1.2
+NAMESPACE: "gasd.validation.design.json"
+CONTEXT: "Design Validation for JSON Paths"
+TARGET: "Python3"
+TRACE: "#US-PARSER-010", "#AC-PARSER-010-06"
+
+INVARIANT LOCAL: "Every path emitted by SemanticASTExporter must be relative"
+
+DECISION "Test Coverage for Path Relativization":
+    CHOSEN: "Unit-test SemanticASTExporter path conversion recursively"
+    RATIONALE: "Ensures Deep-scrub dictionary validations work correctly."
+    ALTERNATIVES: ["Integration tests only"]
+    AFFECTS: [DesignValidation]
+
+COMPONENT DesignValidation:
+    INTERFACE:
+        test_deep_scrub_logic() -> Boolean
+
+FLOW test_deep_scrub_logic() -> Boolean:
+    1. ACHIEVE "Mock payload with absolute paths and verify all are relativized POSIX style"
+        POSTCONDITION: "result == true"
+    2. RETURN true
