@@ -11,7 +11,7 @@ from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.4"
+    __version__ = "2.1.5"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
-    parser.add_argument("-v", "--version", action="version", version="gasd_parser 2.1.4 (built: "+__build_time__+")")
+    parser.add_argument("-v", "--version", action="version", version="gasd_parser " + __version__ + " (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
     if "--ast" in sys.argv:
@@ -43,8 +43,11 @@ def main():
              return
 
     target_files = []
+    use_stdin = False
     for p in args.path:
-        if os.path.isfile(p):
+        if p == "-":
+            use_stdin = True
+        elif os.path.isfile(p):
             target_files.append(os.path.abspath(p))
         elif os.path.isdir(p):
             for root, _, files in os.walk(p):
@@ -55,7 +58,10 @@ def main():
             print(f"Error: Path not found {p}", file=sys.stderr)
             sys.exit(1)
 
-    if not target_files:
+    if not args.path and not sys.stdin.isatty():
+        use_stdin = True
+
+    if not target_files and not use_stdin:
         print("Error: No .gasd files found to validate.", file=sys.stderr)
         sys.exit(1)
 
@@ -114,6 +120,18 @@ def main():
                         abs_import = os.path.abspath(os.path.join(os.path.dirname(file_path), val_clean))
                         if os.path.exists(abs_import) and abs_import not in processed_files:
                             queue.append(abs_import)
+    
+    if use_stdin:
+        stdin_content = sys.stdin.read()
+        tree, reporter = parser_api.parse(stdin_content, source_file="stdin")
+        reporters["stdin"] = reporter
+        if not reporter.has_errors():
+            generator = ASTGenerator(source_file="stdin")
+            ast = generator.visit(tree)
+            valid_asts.append(("stdin", ast))
+            if args.ast_sem:
+                 collected_asts.append(ast)
+        processed_files.add("stdin")
     
     target_files = sorted(processed_files)
 
@@ -184,7 +202,7 @@ def main():
         warning_total += reporter.get_warning_count()
 
         if args.json:
-            all_reports.append(reporter.to_json())
+            all_reports.append(reporter.to_dict())
         else:
             if reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
                 if is_failure:
@@ -246,6 +264,11 @@ def main():
         
         if args.ast_sem and semantic_system and not args.ast_output:
             combined["asts"] = [semantic_system.to_dict()]
+        
+        # Apply path relativization to the entire combined dictionary
+        from .semantic.SemanticASTExporter import SemanticASTExporter
+        combined = SemanticASTExporter().relativize_dict(combined, os.getcwd())
+        
         print(json.dumps(combined, indent=2))
     
     # === AST Export ===

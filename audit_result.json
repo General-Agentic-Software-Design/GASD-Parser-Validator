@@ -1,0 +1,46 @@
+{
+  "success": false,
+  "successCount": 0,
+  "failureCount": 1,
+  "reports": [
+    {
+      "version": "1.0.0",
+      "sourceFile": "audit_project/a.gasd",
+      "success": false,
+      "errorCount": 3,
+      "warningCount": 0,
+      "errors": [
+        {
+          "type": "SYNTAX",
+          "severity": "ERROR",
+          "message": "extraneous input 'COMP' expecting {<EOF>, 'CONTEXT', 'TARGET', 'TRACE', 'NAMESPACE', 'IMPORT', 'DECISION', 'TYPE', 'COMPONENT', 'FLOW', 'ENSURE', 'STRATEGY', 'VERSION', 'CONTRACT', 'LOCAL', 'GLOBAL', 'MODEL', 'ASSUMPTION', 'CONSTRAINT', 'INVARIANT', 'MATCH', 'QUESTION', 'APPROVE', 'TODO', 'REVIEW', '@', NEWLINE}",
+          "location": {
+            "line": 6,
+            "column": 0
+          },
+          "offendingToken": "COMP"
+        },
+        {
+          "type": "SYNTAX",
+          "severity": "ERROR",
+          "message": "extraneous input '.' expecting {'CONTEXT', 'TARGET', 'TRACE', 'NAMESPACE', 'IMPORT', 'AS', 'DECISION', 'CHOSEN', 'RATIONALE', 'ALTERNATIVES', 'AFFECTS', 'TYPE', 'List', 'Map', 'Enum', 'Optional', 'COMPONENT', 'INTERFACE', 'PATTERN', 'DEPENDENCIES', 'FLOW', 'VALIDATE', 'ACHIEVE', 'CREATE', 'PERSIST', 'RETURN', 'LOG', 'ENSURE', 'OTHERWISE', 'THROW', 'EXECUTE', 'TRANSFORM', 'UPDATE', 'APPLY', 'WITH', 'ON_ERROR', 'IF', 'ELSE', 'via', 'CONTAINS', 'HAS', 'to', 'RESOURCES', 'STRATEGY', 'ALGORITHM', 'PRECONDITION', 'COMPLEXITY', 'INPUT', 'OUTPUT', 'SORT_KEY', 'ORDER', 'IS', 'NOT', 'AND', 'OR', 'VERSION', 'CONTRACT', 'CASE', 'THROWS', 'AFTER', 'LOCAL', 'GLOBAL', 'MODEL', 'FILE', 'VERIFIES', 'ASSUMPTIONS', 'ASSUMPTION', 'CONSEQUENCE', 'IDEMPOTENT', 'TIMEOUT', 'SET', 'DELETE', 'DEPENDS_ON', 'STEP', 'POSTCONDITION', 'BEHAVIORS', 'ms', 's', 'm', 'CONSTRAINT', 'INVARIANT', 'MATCH', 'DEFAULT', 'QUESTION', 'APPROVE', 'STATUS', 'BY', 'DATE', 'NOTES', 'BLOCKING', 'TODO', 'REVIEW', IDENTIFIER}",
+          "location": {
+            "line": 6,
+            "column": 38
+          },
+          "offendingToken": "."
+        },
+        {
+          "type": "SYNTAX",
+          "severity": "ERROR",
+          "message": "mismatched input '\\n' expecting {':', '@'}",
+          "location": {
+            "line": 6,
+            "column": 40
+          },
+          "offendingToken": "\n"
+        }
+      ]
+    }
+  ]
+}

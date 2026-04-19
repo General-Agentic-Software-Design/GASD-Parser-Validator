@@ -1,0 +1,69 @@
+VERSION 1.2
+/*
+   Validation: Relative SourceMap Paths (Design)
+   ============================================
+   Verifies the internal logic for path relativization as defined 
+   in Design/relative_source_map_paths_design.gasd.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Design"
+CONTEXT: "Verification of Path Relativization Design"
+TARGET: "Python3"
+TRACE: "US-PARSER-010"
+
+IMPORT "../../Design/relative_source_map_paths_design.gasd"
+
+CONTRACT PathRelativizer.relativize:
+    INPUT: absolute_path: String, cwd: String
+    OUTPUT: String
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+            POSTCONDITION: result IS String
+
+// ===================================================================
+// Design Validation Flows
+// ===================================================================
+
+FLOW test_logic_relative_resolution():
+    @trace("AC-PARSER-010-01", "AC-PARSER-010-02") AS ID_REL_RES_TEST
+    1. ACHIEVE "Apply relativize_path to an absolute path inside CWD"
+        POSTCONDITION: "Result is a relative path string"
+    2. ENSURE "The resulting path does not start with a root slash or drive letter"
+        OTHERWISE THROW "Validation Failed: Output remains absolute"
+
+FLOW test_logic_normalization():
+    @trace("AC-PARSER-010-03") AS ID_NORM_TEST
+    1. ACHIEVE "Apply relativize_path on a Windows-style path with backslashes"
+        POSTCONDITION: "Result uses forward slashes"
+    2. ENSURE "Result only contains forward slashes (/)"
+        OTHERWISE THROW "Validation Failed: Backslashes detected in output"
+
+FLOW test_logic_parent_navigation():
+    @trace("AC-PARSER-010-04") AS ID_PARENT_TEST
+    1. ACHIEVE "Apply relativize_path to a file in a parent or sibling directory branch"
+        POSTCONDITION: "Result uses ../ notation"
+    2. ENSURE "Result starts with ../ or contains /../ sequences correctly"
+        OTHERWISE THROW "Validation Failed: Parent directory navigation failed"
+
+FLOW test_logic_virtual_files():
+    @trace("AC-PARSER-010-05") AS ID_VIRTUAL_TEST
+    1. ACHIEVE "Apply relativize_path to 'stdin' or identifier starting with 'virtual:'"
+        POSTCONDITION: "Result is returned as-is"
+    2. ENSURE "Output exactly matches the input 'stdin' or 'virtual:*'"
+        OTHERWISE THROW "Validation Failed: Virtual identifier was incorrectly modified"
+
+FLOW test_structural_leakage():
+    @trace("AC-PARSER-010-06") AS ID_STRUCT_LEAK_TEST
+    1. ACHIEVE "Apply relativize to a dictionary containing absolute paths as keys"
+        POSTCONDITION: "All keys in the resulting dictionary are relative"
+    2. ACHIEVE "Apply relativize to a list containing absolute path strings"
+        POSTCONDITION: "All strings in the resulting list are relative"
+    3. ENSURE "No absolute paths exist in the resulting structure"
+        OTHERWISE THROW "Validation Failed: Structural path leak detected"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Every validation flow MUST produce a deterministic result." @trace("AC-PARSER-010-01") AS ID_DET_CONST

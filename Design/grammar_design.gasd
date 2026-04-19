@@ -12,6 +12,9 @@ CONTEXT: "Compiler / Language Tooling — Grammar Design"
 TARGET: "ANTLR4"
 TRACE: "US-PARSER-001"
 
+TYPE AnnotationArg: _internal: Boolean
+
+
 // ===================================================================
 // Terminology Mapping (User Story -> Language Construct)
 // ===================================================================
@@ -31,7 +34,7 @@ DECISION "Lexer Architecture":
     CHOSEN: "Split Lexer + Parser Grammar (GASDLexer.g4 / GASDParser.g4)"
     RATIONALE: "Indentation handling requires custom lexer logic; separating lexer and parser keeps concerns clean."
     ALTERNATIVES: ["Split Lexer + Parser", "Combined Grammar"]
-    AFFECTS: [GASDLexer, GASDParser]
+    AFFECTS: [*]
 
 DECISION "Indentation Strategy":
     CHOSEN: "Custom Lexer with INDENT/DEDENT Token Emission"

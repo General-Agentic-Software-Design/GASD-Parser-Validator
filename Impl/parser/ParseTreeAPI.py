@@ -12,7 +12,7 @@ class ParseTreeAPI:
     def __init__(self):
         self.reporter = None
 
-    def parse(self, source: str):
+    def parse(self, source: str, source_file: str = "<string>"):
         """
         Parses a GASD source string and returns (tree, reporter).
         """
@@ -23,7 +23,7 @@ class ParseTreeAPI:
         
         parser = GASDParser(tokens)
 
-        self.reporter = ErrorReporter(source_file="<string>")
+        self.reporter = ErrorReporter(source_file=source_file)
         error_listener = GASDErrorListener(self.reporter)
         
         parser.removeErrorListeners()
@@ -37,8 +37,7 @@ class ParseTreeAPI:
         """Parses a GASD file from disk."""
         with open(file_path, 'r') as f:
             content = f.read()
-        self.reporter = ErrorReporter(source_file=file_path)
-        return self.parse(content)[0]
+        return self.parse(content, source_file=file_path)[0]
 
     def getErrors(self):
         return self.reporter.syntax_errors + self.reporter.semantic_errors if self.reporter else []

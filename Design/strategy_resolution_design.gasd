@@ -12,6 +12,9 @@ CONTEXT: "Compiler / Language Tooling — STRATEGY Design"
 TARGET: "TypeScript"
 TRACE: "US-SEMAST-007", "US-X-SEMAST-008"
 
+TYPE StrategyDefinition: _internal: Boolean
+
+
 // ===================================================================
 // Strategy Model
 // ===================================================================

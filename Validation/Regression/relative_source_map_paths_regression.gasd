@@ -1,0 +1,54 @@
+VERSION 1.2
+/*
+   Validation: Relative SourceMap Paths (Regression)
+   ================================================
+   Ensures that existing path resolution logic doesn't break under 
+   deep nesting or mixed absolute/relative inputs.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Regression Testing for Source Map Resolution"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-010"
+
+IMPORT "../../Design/relative_source_map_paths_design.gasd"
+
+CONTRACT PathRelativizer.relativize:
+    INPUT: absolute_path: String, cwd: String
+    OUTPUT: String
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+
+// ===================================================================
+// Regression Validation Flows
+// ===================================================================
+
+FLOW test_regression_deep_nesting():
+    @trace("AT-PARSER-010-02") AS ID_REGRESSION_DEEP
+    1. ACHIEVE "Construct a directory tree 10+ levels deep"
+        POSTCONDITION: "Tree constructed"
+    2. ACHIEVE "Execute gasd_parser at the root of the tree"
+        POSTCONDITION: "Execution finished"
+    3. ENSURE "All sourceMap.file paths are correctly relativized even at the leaf nodes"
+        OTHERWISE THROW "Regression Failure: Deep nesting caused incorrect path resolution"
+
+FLOW test_regression_absolute_input_consistency():
+    @trace("AT-PARSER-010-02") AS ID_REGRESSION_ABS
+    1. ACHIEVE "Supply an absolute path to the parser as CLI argument"
+        POSTCONDITION: "CLI command sent"
+    2. ENSURE "The exported JSON contains a relative path for that same absolute input"
+        OTHERWISE THROW "Regression Failure: Absolute CLI input leaked into exported JSON"
+
+FLOW test_regression_structural_consistency():
+    @trace("AC-PARSER-010-06") AS ID_REG_STRUCT
+    1. ACHIEVE "Run parser with absolute paths pointing to multiple files"
+        POSTCONDITION: "Binary execution completed"
+    2. ENSURE "All references in compilationUnit.fileNodes (keys) and deterministicOrder (items) are relative"
+        OTHERWISE THROW "Regression Failure: Structural absolute paths detected from absolute CLI input"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Path relativization MUST be idempotent." @trace("AC-PARSER-010-03") AS ID_IDEM_CONST
