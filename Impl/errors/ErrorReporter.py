@@ -55,8 +55,8 @@ class ErrorReporter:
     def get_info_count(self) -> int:
         return sum(1 for e in self.semantic_errors if e.severity == "INFO")
 
-    def to_json(self) -> str:
-        """Machine-readable output format @trace #AC-PARSER-005-03"""
+    def to_dict(self) -> dict:
+        """Returns the report as a dictionary for further processing or serialization."""
         report = {
             "version": "1.0.0",
             "sourceFile": self.source_file,
@@ -102,8 +102,11 @@ class ErrorReporter:
                 "path": err.path,
                 "operation": err.operation
             })
+        return report
 
-        return json.dumps(report, indent=2)
+    def to_json(self) -> str:
+        """Machine-readable output format @trace #AC-PARSER-005-03"""
+        return json.dumps(self.to_dict(), indent=2)
 
     def to_console(self) -> str:
         """Human-readable console output format @trace #AC-PARSER-005-01"""

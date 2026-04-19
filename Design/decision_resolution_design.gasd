@@ -12,6 +12,9 @@ CONTEXT: "Compiler / Language Tooling — DECISION Design"
 TARGET: "TypeScript"
 TRACE: "US-SEMAST-008", "US-X-SEMAST-008"
 
+TYPE Decision: _internal: Boolean
+
+
 // ===================================================================
 // Decision Model
 // ===================================================================

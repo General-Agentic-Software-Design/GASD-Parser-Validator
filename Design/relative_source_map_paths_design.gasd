@@ -1,0 +1,77 @@
+VERSION 1.2
+/*
+   Design: Relative SourceMap Paths
+   ================================
+   Specifies the logic for ensuring Semantic AST JSON output uses 
+   portable relative paths instead of absolute system paths.
+
+   Output: Impl/semantic/PathRelativizer.py
+*/
+
+NAMESPACE: "GASD-Parser-Validator.Design"
+CONTEXT: "Semantic AST Exporter — Path Relativization"
+TARGET: "Python3"
+TRACE: "US-PARSER-010"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Path Relativization Timing" @id("DEC_REL_TIMING") AS ID_REL_TIMING:
+    CHOSEN: "During JSON Export"
+    RATIONALE: "Internal processing requires canonical absolute paths."
+    ALTERNATIVES: ["During JSON Export", "During Semantic Node Construction"]
+    AFFECTS: [PathRelativizer]
+
+DECISION "Path Normalization Standard" @id("DEC_NORM_STD") AS ID_NORM_STD:
+    CHOSEN: "Forward-slash (/) characters"
+    RATIONALE: "Ensures consistency across OS environments."
+    ALTERNATIVES: ["Forward-slash (/) characters", "OS-native separators"]
+    AFFECTS: [relativize_path]
+
+// ===================================================================
+// Components
+// ===================================================================
+
+COMPONENT PathRelativizer @id("COMP_PATH_REL") AS ID_COMP_PATH_REL:
+    PATTERN: "Recursive Utility"
+    /// Walks JSON-compatible structures and relativizes all embedded path strings.
+    INTERFACE:
+        relativize(obj: Any, cwd: String) -> Any
+
+// ===================================================================
+// Flows
+// ===================================================================
+
+FLOW relativize_path(path: String, cwd: String) -> String @id("FLOW_RELAVI_LOGIC") AS ID_FLOW_RELAVI:
+    1. MATCH path:
+        "stdin" | "<string>" | "virtual:*" -> RETURN path @trace("AC-PARSER-010-05") AS ID_STDIN_TRACE
+        DEFAULT:
+            ACHIEVE "Compute real relative path" @trace("AC-PARSER-010-01") AS ID_REL_TRACE
+                POSTCONDITION: "Relative path calculated via realpath"
+    2. ACHIEVE "Apply normalization" @trace("AC-PARSER-010-03") AS ID_NORM_TRACE
+        POSTCONDITION: "Output uses forward slashes"
+    3. ACHIEVE "Handle parent directory escape" @trace("AC-PARSER-010-04") AS ID_PARENT_TRACE
+        POSTCONDITION: "Output uses ../ notation for parent paths"
+    4. RETURN path
+
+FLOW structural_relativization(obj: Any, cwd: String) -> Any @id("FLOW_STRUCT_REL") AS ID_FLOW_STRUCT:
+    @trace("AC-PARSER-010-06") AS ID_STRUCT_TRACE
+    1. MATCH obj:
+        IS Dictionary -> 
+            FOR EACH key, value in obj:
+                relativize(key, cwd)
+                relativize(value, cwd)
+        IS List ->
+            FOR EACH item in obj:
+                relativize(item, cwd)
+        IS String AND IS AbsolutePath ->
+            relativize_path(obj, cwd)
+    2. RETURN obj
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Absolute file paths MUST NOT be encoded in any JSON field, key, or list item." @trace("AC-PARSER-010-02", "AC-PARSER-010-06") AS CONST_NO_ABS
+CONSTRAINT: "Path resolution MUST standardize on forward slashes." @trace("AC-PARSER-010-03") AS CONST_SLASH_NORM

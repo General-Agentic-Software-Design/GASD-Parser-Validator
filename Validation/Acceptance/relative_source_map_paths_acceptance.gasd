@@ -1,0 +1,61 @@
+VERSION 1.2
+/*
+   Validation: Relative SourceMap Paths (Acceptance)
+   ================================================
+   Verifies that the generated Semantic AST JSON output meets the 
+   acceptance criteria for portability and forward-slash normalization.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Testing for Portable Source Maps"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-010"
+
+IMPORT "../../Design/relative_source_map_paths_design.gasd"
+
+CONTRACT PathRelativizer.relativize:
+    INPUT: absolute_path: String, cwd: String
+    OUTPUT: String
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+
+// ===================================================================
+// Acceptance Validation Flows
+// ===================================================================
+
+FLOW test_acceptance_portable_paths():
+    @trace("AT-PARSER-010-01", "AC-PARSER-010-01") AS ID_ACCEPTANCE_PORTABLE
+    1. ACHIEVE "Run gasd_parser on a nested project structure"
+        POSTCONDITION: "Binary execution completed"
+    2. ACHIEVE "Collect 'sourceMap.file' values from across the generated JSON"
+        POSTCONDITION: "Path values extracted"
+    3. ENSURE "All path values are relative to the CWD used during command execution"
+        OTHERWISE THROW "Acceptance Failure: Non-relative paths detected in output"
+
+FLOW test_acceptance_slash_consistency():
+    @trace("AT-PARSER-010-01", "AC-PARSER-010-03") AS ID_ACCEPTANCE_SLASH
+    1. ACHIEVE "Examine 'sourceMap.file' strings on a Windows environment simulator"
+        POSTCONDITION: "Strings examined"
+    2. ENSURE "No backslashes (\) exist in any path string; all separators are /"
+        OTHERWISE THROW "Acceptance Failure: OS-native separators leaked into JSON"
+
+FLOW test_acceptance_parent_navigation():
+    @trace("AT-PARSER-010-01", "AC-PARSER-010-04") AS ID_ACCEPTANCE_PARENT
+    1. ACHIEVE "Run parser on a file located outside the current working directory"
+        POSTCONDITION: "Parser finished execution"
+    2. ENSURE "The 'sourceMap.file' correctly uses '../' prefixes to localize the file"
+        OTHERWISE THROW "Acceptance Failure: Failed to correctly navigate to parent directory"
+
+FLOW test_acceptance_structural_neutrality():
+    @trace("AT-PARSER-010-01", "AC-PARSER-010-06") AS ID_ACCEPTANCE_STRUCT
+    1. ACHIEVE "Run parser on a multi-file project and examine the resulting JSON structure"
+        POSTCONDITION: "Structure examined"
+    2. ENSURE "No absolute paths exist as dictionary keys (e.g., in compilationUnit.fileNodes) AND no absolute paths exist as list elements (e.g., in deterministicOrder)"
+        OTHERWISE THROW "Acceptance Failure: Absolute paths leaked into JSON structure"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Acceptance criteria MUST be verified across multiple host OS simulations." @trace("AC-PARSER-010-03") AS ID_OS_CONST

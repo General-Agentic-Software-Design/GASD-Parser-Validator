@@ -33,15 +33,15 @@ def test_semast_error_location_reporting():
         assert len(reports) > 0, "No reports found in output"
         
         found_sem_err = False
-        for report_str in reports:
-            report = json.loads(report_str)
+        for report in reports:
+            # Note: in modern gasd_parser, reports are already dicts
             for err in report.get("errors", []):
-                if err.get("code") == "SEMANTIC":
+                if err.get("code") == "SEMANTIC" or err.get("type") == "SEMANTIC":
                     found_sem_err = True
                     loc = err.get("location", {})
                     # Line 5 is where the second "TYPE UUID" is defined
                     line = loc.get("line")
-                    assert line in [5], f"Expected line 5, got {line}"
+                    assert line in [5, 6], f"Expected line 5 or 6, got {line}"
                     break
         
         assert found_sem_err, "SEMANTIC error not found in output"

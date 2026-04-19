@@ -1,0 +1,52 @@
+VERSION 1.2
+/*
+   Validation: Relative SourceMap Paths (Negative)
+   ==============================================
+   Validates the rejection or correction of absolute paths and other 
+   malformed path scenarios.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Testing for Source Map Resolution"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-010"
+
+IMPORT "../../Design/relative_source_map_paths_design.gasd"
+
+CONTRACT PathRelativizer.relativize:
+    INPUT: absolute_path: String, cwd: String
+    OUTPUT: String
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result != null
+
+// ===================================================================
+// Negative Validation Flows
+// ===================================================================
+
+FLOW test_negative_absolute_path_leakage():
+    @trace("AC-PARSER-010-02", "AC-PARSER-010-06") AS ID_NEGATIVE_ABS
+    1. ACHIEVE "Scan generated JSON for ANY string value or key starting with '/' or containing 'C:\' (or equivalent)"
+        POSTCONDITION: "Full structural scan completed"
+    2. ENSURE "Zero absolute path patterns are found in ANY part of the JSON structure"
+        OTHERWISE THROW "Negative Validation Failed: Absolute system path leaked into JSON (field, key, or list item)"
+
+FLOW test_negative_separator_leakage():
+    @trace("AC-PARSER-010-03") AS ID_NEGATIVE_SEP
+    1. ACHIEVE "Execute parser on a Windows host"
+        POSTCONDITION: "Binary finished"
+    2. ENSURE "Structural path strings do NOT contain the \ character"
+        OTHERWISE THROW "Negative Validation Failed: OS-native separator escaped normalization"
+
+FLOW test_negative_empty_path_handling():
+    @trace("AC-PARSER-010-01") AS ID_NEGATIVE_EMPTY
+    1. ACHIEVE "Attempt to relativize an empty or null path source"
+        POSTCONDITION: "Operation attempted"
+    2. ENSURE "The system returns an error or a safe default (like './') rather than crashing"
+        OTHERWISE THROW "Negative Validation Failed: System failed on empty input"
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "Zero absolute file path strings MUST exist in the final --json output structure." @trace("AC-PARSER-010-06") AS ID_AUDIT_CONST
