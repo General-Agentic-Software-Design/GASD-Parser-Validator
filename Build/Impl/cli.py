@@ -39,6 +39,7 @@ def main():
              # Handle stdin...
              pass
         else:
+             print(f"GASD-Parser Version: {__version__} (Build: {__build_time__})\n")
              parser.print_help()
              return
 

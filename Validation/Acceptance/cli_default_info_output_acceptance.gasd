@@ -1,0 +1,26 @@
+VERSION 1.2
+NAMESPACE: "gasd.validation.acceptance.cli"
+CONTEXT: "Acceptance Validation for Default CLI Output"
+TARGET: "Python3"
+TRACE: "#US-PARSER-011", "#AT-PARSER-011-01", "#AT-PARSER-011-02", "#AT-PARSER-011-03"
+
+INVARIANT LOCAL: "CLI must print version, build info, and help strings when invoked without arguments"
+
+DECISION "Acceptance Scenarios":
+    CHOSEN: "Validate end-to-end execution of gasd_parser string output"
+    RATIONALE: "Ensures end-user perspective shows the correct banner alongside argparse help text."
+    ALTERNATIVES: ["Unit test only"]
+    AFFECTS: [AcceptanceValidation]
+
+COMPONENT AcceptanceValidation:
+    INTERFACE:
+        test_cli_default_output_end_to_end() -> Boolean
+
+FLOW test_cli_default_output_end_to_end() -> Boolean:
+    1. ACHIEVE "Execute gasd_parser without arguments and verify output contains version string" @trace #AT-PARSER-011-01
+        POSTCONDITION: "result == true"
+    2. ACHIEVE "Execute gasd_parser without arguments and verify output contains build info" @trace #AT-PARSER-011-02
+        POSTCONDITION: "result == true"
+    3. ACHIEVE "Execute gasd_parser without arguments and verify standard usage/help text is also present" @trace #AT-PARSER-011-03
+        POSTCONDITION: "result == true"
+    4. RETURN true
