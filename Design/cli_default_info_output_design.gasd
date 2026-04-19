@@ -1,0 +1,52 @@
+VERSION 1.2
+/*
+   Design: CLI Default Info Output
+   =========================================
+   Defines the structure and display logic for version and build info 
+   when the CLI is executed without options.
+*/
+
+CONTEXT: "Compiler / Language Tooling — CLI Output Formatting"
+TARGET: "Python3"
+TRACE: "US-PARSER-011"
+
+TYPE CLICommand:
+    _internal: Boolean
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "Default Output Information Layout" @trace(#AC-PARSER-011-03):
+    CHOSEN: "Print version and build info string first, followed by standard argparse help message"
+    RATIONALE: "Provides clear immediate visibility to the build info while preserving expected help workflow."
+    ALTERNATIVES: ["Print only version info", "Print help message first then version info", "Print version string first, followed by standard help message"]
+    AFFECTS: [DefaultOutputInfo]
+
+// ===================================================================
+// Semantic Model Extension
+// ===================================================================
+
+/// Extension for CLI display behavior when no arguments are detected
+TYPE DefaultOutputInfo @trace(AC-PARSER-011-01, AC-PARSER-011-02) AS TYPE_CLI_OUTPUT:
+    version_info_printed: Boolean // True if version number is printed
+    build_info_printed: Boolean  // True if build timestamp/commit is printed
+
+// ===================================================================
+// Logic & Constraints
+// ===================================================================
+
+FLOW display_default_info(args: List<String>) -> DefaultOutputInfo:
+    1. ACHIEVE "Check if args is empty":
+        POSTCONDITION: "Arguments evaluated"
+    2. ACHIEVE "Print version and build header":
+        POSTCONDITION: "Version and build string emitted to stdout"
+    3. ACHIEVE "Print standard help message":
+        POSTCONDITION: "Standard usage instructions emitted to stdout"
+    @trace(AC-PARSER-011-01, AC-PARSER-011-02, AC-PARSER-011-03) AS FLOW_CLI_DEFAULT_OUTPUT
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "The version and build information MUST exactly match the project's tracked metadata." @trace(#AC-PARSER-011-01, #AC-PARSER-011-02) AS CONST_CLI_METADATA_ACCURACY

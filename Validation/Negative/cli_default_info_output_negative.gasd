@@ -1,0 +1,22 @@
+VERSION 1.2
+NAMESPACE: "gasd.validation.negative.cli"
+CONTEXT: "Negative Validation for Default CLI Output"
+TARGET: "Python3"
+TRACE: "#US-PARSER-011"
+
+INVARIANT LOCAL: "Incorrect parameters must still be handled normally by argparse"
+
+DECISION "Negative Scenarios":
+    CHOSEN: "Verify standard error exit behavior when invalid flags are provided instead of empty"
+    RATIONALE: "Ensures default info doesn't corrupt error handling paths."
+    ALTERNATIVES: ["None"]
+    AFFECTS: [NegativeValidation]
+
+COMPONENT NegativeValidation:
+    INTERFACE:
+        test_invalid_cli_arguments() -> Boolean
+
+FLOW test_invalid_cli_arguments() -> Boolean:
+    1. ACHIEVE "Execute gasd_parser with unrecognized flag and verify it throws standard argparse error"
+        POSTCONDITION: "exit_code != 0 and result == true"
+    2. RETURN true
