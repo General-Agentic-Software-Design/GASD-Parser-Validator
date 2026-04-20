@@ -1,0 +1,27 @@
+VERSION 1.2
+/*
+   Validation: Invariant Order Regression Tests
+   =============================================
+   Ensures that existing valid invariant patterns continue to function correctly.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Regression Verification of Invariant Scope Ordering"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-012"
+
+FLOW test_regression_unscoped_invariant():
+    @trace #RT-PARSER-012-01
+    1. ACHIEVE "Run gasd_parser on file with unscoped 'INVARIANT: \"...\"'"
+        POSTCONDITION: "Parser processes unscoped INVARIANT"
+    2. ENSURE "The parser accepts the syntax (defaulting to LOCAL in 1.1 or triggering LINT-003 in 1.2)"
+        OTHERWISE THROW "Regression Failure: Unscoped INVARIANT rejected"
+    3. ENSURE "The syntactic order itself is not flagged as a SyntaxError"
+        OTHERWISE THROW "Regression Failure: Syntactic error on unscoped INVARIANT"
+
+FLOW test_regression_existing_12_examples():
+    @trace #RT-PARSER-012-01
+    1. ACHIEVE "Run gasd_parser on Specs/examples/gasd-1.2/smart_grid_load_balancer.gasd"
+        POSTCONDITION: "Example file processed"
+    2. ENSURE "Validation passes as it already uses 'INVARIANT GLOBAL:'"
+        OTHERWISE THROW "Regression Failure: Existing valid example rejected"

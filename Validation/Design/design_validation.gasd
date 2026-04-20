@@ -15,20 +15,24 @@ IMPORT "Design/component_design.gasd" AS CORE
 IMPORT "Design/cli_design.gasd" AS CLI
 
 CONTRACT CORE.GASDParser:
-    /// Behavioral requirement: Parser MUST support source code to parse tree translation.
-    ENSURE "parse() method exists"
+    CASE "Default":
+        /// Behavioral requirement: Parser MUST support source code to parse tree translation.
+        ENSURE "parse() method exists"
 
 CONTRACT CORE.ASTGenerator:
-    /// Behavioral requirement: AST generator MUST support tree to AST translation.
-    ENSURE "generate_ast() method exists"
+    CASE "Default":
+        /// Behavioral requirement: AST generator MUST support tree to AST translation.
+        ENSURE "generate_ast() method exists"
 
 CONTRACT CORE.ValidationPipeline:
-    /// Behavioral requirement: Validation pipeline MUST perform semantic analysis.
-    ENSURE "validate() method exists"
+    CASE "Default":
+        /// Behavioral requirement: Validation pipeline MUST perform semantic analysis.
+        ENSURE "validate() method exists"
 
 CONTRACT CLI.GASDCLI:
-    /// Behavioral requirement: CLI MUST provide the main entry point.
-    ENSURE "main() method exists"
+    CASE "Default":
+        /// Behavioral requirement: CLI MUST provide the main entry point.
+        ENSURE "main() method exists"
 
 FLOW validate_core_architecture():
     // --- Phase 1: Parsing ---

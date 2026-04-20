@@ -49,6 +49,7 @@ setup.py
 ../../Impl/tests/acceptance/test_cli_runner.py
 ../../Impl/tests/acceptance/test_design_validation_fixes.py
 ../../Impl/tests/acceptance/test_directives.py
+../../Impl/tests/acceptance/test_enforce_invariant_order.py
 ../../Impl/tests/acceptance/test_errors.py
 ../../Impl/tests/acceptance/test_explicit_binding.py
 ../../Impl/tests/acceptance/test_gasd_file_version.py
@@ -92,6 +93,7 @@ setup.py
 ../../Impl/tests/regression/test_binding_regression.py
 ../../Impl/tests/regression/test_cli_default_info_output_regression.py
 ../../Impl/tests/regression/test_cli_warnings_regression.py
+../../Impl/tests/regression/test_enforce_invariant_order_regression.py
 ../../Impl/tests/regression/test_enum_keyword_resolution.py
 ../../Impl/tests/regression/test_errors.py
 ../../Impl/tests/regression/test_examples_syntax_features.py

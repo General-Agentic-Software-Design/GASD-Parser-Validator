@@ -153,6 +153,10 @@ class GASDErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         token_text = offendingSymbol.text if offendingSymbol else None
         
+        # Improvement for US-PARSER-012: Provide helpful guidance for misordered invariants @trace #AC-PARSER-012-03
+        if token_text in ["GLOBAL", "LOCAL"] and "INVARIANT" in msg:
+            msg += ". Hint: Must use 'INVARIANT <SCOPE>' pattern (e.g., INVARIANT GLOBAL:)."
+
         error = SyntaxErrorData(
             message=msg,
             line=line,

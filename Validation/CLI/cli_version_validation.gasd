@@ -15,12 +15,14 @@ IMPORT "Design/cli_design.gasd" AS CLI
 IMPORT "Design/version_directive_design.gasd" AS SVV
 
 CONTRACT CLI.GASDCLI:
-    /// Behavioral requirement: CLI MUST support version-aware parsing and flag consolidation.
-    ENSURE "main interfaces are present"
+    CASE "Default":
+        /// Behavioral requirement: CLI MUST support version-aware parsing and flag consolidation.
+        ENSURE "main interfaces are present"
 
 CONTRACT SVV.VersionResolver:
-    /// Behavioral requirement: VersionResolver MUST correctly resolve defaults and CLI overrides.
-    ENSURE "resolveVersion() is present"
+    CASE "Default":
+        /// Behavioral requirement: VersionResolver MUST correctly resolve defaults and CLI overrides.
+        ENSURE "resolveVersion() is present"
 
 FLOW validate_cli_versioning():
     /// Test Case: CLI Override (AT-V2-118)

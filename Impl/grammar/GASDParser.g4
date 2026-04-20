@@ -312,8 +312,7 @@ strategy_item
 // ===================================================================
 
 constraint_stmt : CONSTRAINT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE ;
-invariant_stmt  : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE 
-                | INVARIANT_KW (GLOBAL_KW | LOCAL_KW) (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE
+invariant_stmt  : INVARIANT_KW (GLOBAL_KW | LOCAL_KW)? (soft_id | STRING_LITERAL)? COLON (STRING_LITERAL | expr) annotations? NEWLINE 
                 ;
 
 // --- GASD 1.2 NEW BLOCKS ---
@@ -357,8 +356,7 @@ model_def
       DEDENT
     ;
 
-invariant_ref : (GLOBAL_KW | LOCAL_KW)? INVARIANT_KW COLON STRING_LITERAL 
-              | INVARIANT_KW (GLOBAL_KW | LOCAL_KW) COLON STRING_LITERAL
+invariant_ref : INVARIANT_KW (GLOBAL_KW | LOCAL_KW)? COLON STRING_LITERAL 
               ;
 
 assumption_def

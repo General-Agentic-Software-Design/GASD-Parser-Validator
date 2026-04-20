@@ -1,0 +1,21 @@
+VERSION 1.2
+/*
+   Design: Enforce INVARIANT Scope Ordering (US-PARSER-012)
+   ====================================================
+   Forces the INVARIANT keyword to always precede the scope qualifier (LOCAL/GLOBAL).
+   This eliminates syntactic variance and aligns with the normative specification.
+*/
+
+CONTEXT: "Compiler / Language Tooling"
+TARGET: "ANTLR4", "Python3"
+TRACE: "US-PARSER-012"
+
+TYPE InvariantStmtRule:
+    description: "Restricts the invariant_stmt rule to the 'Keyword-then-Qualifier' pattern."
+    valid_syntax: "INVARIANT_KW (GLOBAL_KW | LOCAL_KW)? (soft_id | STRING_LITERAL)? ':' (STRING_LITERAL | expr) annotations? NEWLINE"
+    invalid_syntax: "(GLOBAL_KW | LOCAL_KW) INVARIANT_KW"
+
+CONSTRAINT: "Parser grammar MUST be updated to remove the alternative (Scope before Keyword) rule." @trace #AC-PARSER-012-02
+CONSTRAINT: "The parser MUST accept 'INVARIANT GLOBAL:' and 'INVARIANT LOCAL:' as the only valid scoped forms." @trace #AC-PARSER-012-01
+CONSTRAINT: "Syntactic enforcement MUST apply to all GASD versions to maintain grammar consistency." @trace #AC-PARSER-012-04
+CONSTRAINT: "The resulting SyntaxError for invalid ordering MUST suggest the correct 'INVARIANT <SCOPE>' pattern." @trace #AC-PARSER-012-03
