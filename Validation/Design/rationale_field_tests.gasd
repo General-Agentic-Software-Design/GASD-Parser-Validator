@@ -1,0 +1,37 @@
+VERSION 1.2
+/*
+   Validation: Design — Rationale Field Mandatory Tests (BUG-2)
+   ============================================================
+   Verifies the design decision to make RATIONALE mandatory in DECISION blocks,
+   as specified by the GASD 1.2 Specification.
+   Based on Design/rationale_field_design.gasd and Bug-Report/BUG-2.
+*/
+
+CONTEXT: "Compiler / Language Tooling — Rationale Field Validation"
+TARGET: "ANTLR4", "Python3"
+TRACE: "BUG-2"
+
+// ===================================================================
+// Design Tests
+// ===================================================================
+
+FLOW test_design_rationale_grammar_rule():
+    @trace #BUG-2
+    1. ACHIEVE "Verify GASDParser.g4 decision_blk rule requires RATIONALE_KW":
+        POSTCONDITION: "RATIONALE line is not wrapped in optional modifier"
+    2. ENSURE "Grammar rule does not contain '(RATIONALE_KW COLON STRING_LITERAL NEWLINE)?'"
+        OTHERWISE THROW "Design Validation Failed: RATIONALE still optional in grammar"
+
+FLOW test_design_rationale_ast_node():
+    @trace #BUG-2
+    1. ACHIEVE "Verify Decision AST node defines rationale as str, not Optional":
+        POSTCONDITION: "rationale field type is str"
+    2. ENSURE "Decision.rationale is typed as 'str' not 'Optional[str]'"
+        OTHERWISE THROW "Design Validation Failed: rationale still Optional in ASTNodes"
+
+FLOW test_design_rationale_field_populated():
+    @trace #BUG-2
+    1. ACHIEVE "Parse a valid DECISION block with RATIONALE present":
+        POSTCONDITION: "Decision AST node has non-empty rationale string"
+    2. ENSURE "result.rationale != '' AND result.rationale IS String"
+        OTHERWISE THROW "Design Validation Failed: rationale not populated"

@@ -1,0 +1,28 @@
+VERSION 1.2
+/*
+   Validation: Regression — Rationale Field Mandatory (BUG-2)
+   ==========================================================
+   Regression tests ensuring DECISION blocks without RATIONALE
+   are permanently rejected, preventing re-introduction of BUG-2.
+   Traces: BUG-2
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Regression Validation for Rationale Field Fix"
+TARGET: "GASD Agent"
+TRACE: "BUG-2"
+
+FLOW validate_rationale_regression():
+    1. ACHIEVE "Attempt to parse DECISION block missing RATIONALE":
+        POSTCONDITION: "Parser raises a syntax error and does not produce a Decision AST node"
+        @trace(#BUG-2) AS ACHIEVE_BUG2_REG_01
+
+    2. ENSURE "result IS SyntaxError"
+        OTHERWISE THROW "Regression Failure: DECISION without RATIONALE was accepted"
+
+    3. ACHIEVE "Verify that existing DECISION blocks with RATIONALE still parse correctly after the fix":
+        POSTCONDITION: "No false rejections of valid DECISION blocks"
+        @trace(#BUG-2) AS ACHIEVE_BUG2_REG_02
+
+    4. ENSURE "Valid DECISION blocks produce Decision AST nodes with rationale populated"
+        OTHERWISE THROW "Regression Failure: Valid DECISION incorrectly rejected"

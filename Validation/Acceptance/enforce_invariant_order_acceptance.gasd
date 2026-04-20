@@ -1,0 +1,39 @@
+VERSION 1.2
+/*
+   Validation: Invariant Order Acceptance Tests
+   =============================================
+   Verifies the core functional requirements for enforcing INVARIANT scope ordering.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Verification of Invariant Scope Ordering"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-012"
+
+FLOW test_acceptance_positive_global():
+    @trace #AT-PARSER-012-01, #AC-PARSER-012-01
+    1. ACHIEVE "Run gasd_parser on file with 'INVARIANT GLOBAL:'"
+        POSTCONDITION: "Parser accepts 'INVARIANT GLOBAL:'"
+    2. ENSURE "The parser accepts the syntax and validation passes"
+        OTHERWISE THROW "Acceptance Failure: Valid 'INVARIANT GLOBAL' rejected"
+
+FLOW test_acceptance_positive_local():
+    @trace #AT-PARSER-012-01, #AC-PARSER-012-01
+    1. ACHIEVE "Run gasd_parser on file with 'INVARIANT LOCAL:'"
+        POSTCONDITION: "Parser accepts 'INVARIANT LOCAL:'"
+    2. ENSURE "The parser accepts the syntax and validation passes"
+        OTHERWISE THROW "Acceptance Failure: Valid 'INVARIANT LOCAL' rejected"
+
+FLOW test_acceptance_negative_ordering():
+    @trace #AT-PARSER-012-02, #AC-PARSER-012-02
+    1. ACHIEVE "Run gasd_parser on file with 'GLOBAL INVARIANT:'"
+        POSTCONDITION: "Parser rejects 'GLOBAL INVARIANT:'"
+    2. ENSURE "The parser rejects the input with a SyntaxError"
+        OTHERWISE THROW "Acceptance Failure: Invalid 'GLOBAL INVARIANT' accepted"
+
+FLOW test_acceptance_error_message():
+    @trace #AT-PARSER-012-03, #AC-PARSER-012-03
+    1. ACHIEVE "Analyze SyntaxError from invalid ordering"
+        POSTCONDITION: "SyntaxError message is captured"
+    2. ENSURE "The error message suggests using the 'INVARIANT <SCOPE>' pattern"
+        OTHERWISE THROW "Acceptance Failure: SyntaxError lacks helpful guidance"

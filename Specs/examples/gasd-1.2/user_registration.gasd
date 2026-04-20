@@ -54,7 +54,7 @@ FLOW register(request: RequestData) -> String:
 
 CONSTRAINT: "All public methods must have input validation"
 // Enforcement points: App-level check in FLOW register, DB-level UNIQUE constraint on User table
-GLOBAL INVARIANT: "User email must be unique in the system at all times"
+INVARIANT GLOBAL: "User email must be unique in the system at all times"
 
 DECISION "Password Storage":
     CHOSEN: "bcrypt"
@@ -64,6 +64,7 @@ DECISION "Password Storage":
 
 DECISION "Error Strategy":
     CHOSEN: "Exception-based"
+    RATIONALE: "Standardizes error handling across all microservices"
     ALTERNATIVES: ["Error codes", "Result monad", "Optional-based"]
     AFFECTS: [*]
 

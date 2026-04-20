@@ -49,6 +49,7 @@ setup.py
 ../../Impl/tests/acceptance/test_cli_runner.py
 ../../Impl/tests/acceptance/test_design_validation_fixes.py
 ../../Impl/tests/acceptance/test_directives.py
+../../Impl/tests/acceptance/test_enforce_invariant_order.py
 ../../Impl/tests/acceptance/test_errors.py
 ../../Impl/tests/acceptance/test_explicit_binding.py
 ../../Impl/tests/acceptance/test_gasd_file_version.py
@@ -57,6 +58,7 @@ setup.py
 ../../Impl/tests/acceptance/test_literal_types.py
 ../../Impl/tests/acceptance/test_metamodel_validation.py
 ../../Impl/tests/acceptance/test_parse_tree.py
+../../Impl/tests/acceptance/test_rationale_field_acceptance.py
 ../../Impl/tests/acceptance/test_relative_json_paths.py
 ../../Impl/tests/acceptance/test_relative_source_map_paths.py
 ../../Impl/tests/acceptance/test_semantic.py
@@ -91,6 +93,7 @@ setup.py
 ../../Impl/tests/regression/test_binding_regression.py
 ../../Impl/tests/regression/test_cli_default_info_output_regression.py
 ../../Impl/tests/regression/test_cli_warnings_regression.py
+../../Impl/tests/regression/test_enforce_invariant_order_regression.py
 ../../Impl/tests/regression/test_enum_keyword_resolution.py
 ../../Impl/tests/regression/test_errors.py
 ../../Impl/tests/regression/test_examples_syntax_features.py
@@ -101,6 +104,7 @@ setup.py
 ../../Impl/tests/regression/test_parse_tree.py
 ../../Impl/tests/regression/test_parser_regression_fixes.py
 ../../Impl/tests/regression/test_phase11_regressions.py
+../../Impl/tests/regression/test_rationale_field_regression.py
 ../../Impl/tests/regression/test_ref_spec_features.py
 ../../Impl/tests/regression/test_relative_json_paths_regression.py
 ../../Impl/tests/regression/test_relative_source_map_paths_regression.py

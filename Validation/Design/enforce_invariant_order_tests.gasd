@@ -1,0 +1,35 @@
+VERSION 1.2
+/*
+   Validation: Invariant Order Design Tests
+   =========================================
+   Verifies that the design requirements for US-PARSER-012 are correctly formalized.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Design"
+CONTEXT: "Verification of Invariant Scope Ordering Design"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-012"
+
+IMPORT "../../Design/enforce_invariant_order_design.gasd"
+
+CONTRACT InvariantOrderVerification:
+    INPUT: None
+    OUTPUT: None
+
+FLOW test_design_rule_consistency():
+    @trace #AC-PARSER-012-01, #AC-PARSER-012-02
+    1. ACHIEVE "Review InvariantStmtRule in Design"
+        POSTCONDITION: "Rule definition for InvariantStmtRule is extracted"
+    2. ENSURE "valid_syntax matches 'INVARIANT_KW (GLOBAL_KW | LOCAL_KW)? ...'"
+        OTHERWISE THROW "Design Mismatch: Incorrect valid syntax pattern"
+    3. ENSURE "invalid_syntax includes '(GLOBAL_KW | LOCAL_KW) INVARIANT_KW'"
+        OTHERWISE THROW "Design Mismatch: Missing invalid syntax pattern"
+
+FLOW test_design_constraint_coverage():
+    @trace #AC-PARSER-012-04, #AC-PARSER-012-03
+    1. ACHIEVE "Examine constraints in Design/enforce_invariant_order_design.gasd"
+        POSTCONDITION: "Constraint set for US-PARSER-012 is extracted"
+    2. ENSURE "Global enforcement across versions is specified"
+        OTHERWISE THROW "Design Mismatch: Incomplete version coverage"
+    3. ENSURE "Helpful SyntaxError guidance is mandated"
+        OTHERWISE THROW "Design Mismatch: Missing error message requirement"

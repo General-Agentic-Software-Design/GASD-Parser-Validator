@@ -1,0 +1,29 @@
+VERSION 1.2
+/*
+   Validation: Invariant Order Negative Tests
+   ===========================================
+   Exhaustive check of invalid syntactic configurations for INVARIANT.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Verification of Invariant Scope Ordering"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-012"
+
+FLOW test_negative_repeated_keywords():
+    1. ACHIEVE "Run gasd_parser on 'INVARIANT GLOBAL GLOBAL:'"
+        POSTCONDITION: "Parser rejects repeated scope"
+    2. ENSURE "The parser rejects the duplicated scope qualifier"
+        OTHERWISE THROW "Negative Failure: Repeated scope qualifier accepted"
+
+FLOW test_negative_middle_keyword():
+    1. ACHIEVE "Run gasd_parser on 'GLOBAL INVARIANT LOCAL:'"
+        POSTCONDITION: "Parser rejects conflicting scopes"
+    2. ENSURE "The parser rejects the misordered and conflicting scopes"
+        OTHERWISE THROW "Negative Failure: Conflicting scopes accepted"
+
+FLOW test_negative_case_sensitivity():
+    1. ACHIEVE "Run gasd_parser on 'invariant global:'"
+        POSTCONDITION: "Parser rejects lowercase keywords"
+    2. ENSURE "The parser rejects lowercase keywords regardless of order"
+        OTHERWISE THROW "Negative Failure: Lowercase keywords accepted"

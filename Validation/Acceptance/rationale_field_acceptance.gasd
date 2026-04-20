@@ -1,0 +1,29 @@
+VERSION 1.2
+/*
+   Validation: Acceptance — Rationale Field Mandatory (BUG-2)
+   ==========================================================
+   Acceptance criteria validating that a DECISION block with RATIONALE
+   compiles correctly and produces the expected AST structure.
+   Traces: BUG-2
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Validation for Rationale Field Fix"
+TARGET: "GASD Agent"
+TRACE: "BUG-2"
+
+FLOW validate_rationale_acceptance():
+    1. ACHIEVE "Parse DECISION with all fields including RATIONALE":
+        POSTCONDITION: "Parser produces a valid Decision AST node with rationale populated"
+        @trace(#BUG-2) AS ACHIEVE_BUG2_ACC_01
+
+    2. ACHIEVE "Verify Decision AST node contains rationale as a non-empty string":
+        POSTCONDITION: result.rationale != "" AND result.rationale IS String
+        @trace(#BUG-2) AS ACHIEVE_BUG2_ACC_02
+
+    3. ACHIEVE "Verify Decision AST node retains chosen, alternatives, and affects alongside rationale":
+        POSTCONDITION: result.chosen IS String AND result.alternatives IS List AND result.affects IS List
+        @trace(#BUG-2) AS ACHIEVE_BUG2_ACC_03
+
+    4. ENSURE "DECISION block with RATIONALE passes gasd_parser --ast-sem with 0 errors"
+        OTHERWISE THROW "Acceptance Validation Failure: Valid DECISION rejected"

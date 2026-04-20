@@ -59,8 +59,8 @@ def test_negative_cross_file_signature_mismatch():
 def test_negative_cross_file_decision_conflict():
     # AC-X-SEMAST-008-01 / AT-X-SEMAST-008-01
     files = {
-        "D1.gasd": 'CONTEXT: "C"\nDECISION "D1":\n  CHOSEN: "Alt1"\n  AFFECTS: ["TargetType"]\n',
-        "D2.gasd": 'CONTEXT: "C"\nDECISION "D2":\n  CHOSEN: "Alt2"\n  AFFECTS: ["TargetType"]\n',
+        "D1.gasd": 'CONTEXT: "C"\nDECISION "D1":\n  CHOSEN: "Alt1"\n  RATIONALE: "R1"\n  AFFECTS: ["TargetType"]\n',
+        "D2.gasd": 'CONTEXT: "C"\nDECISION "D2":\n  CHOSEN: "Alt2"\n  RATIONALE: "R2"\n  AFFECTS: ["TargetType"]\n',
         "Model.gasd": 'CONTEXT: "C"\nTYPE TargetType:\n  f: String\n'
     }
     with pytest.raises(SemanticError, match="DecisionConflict"):

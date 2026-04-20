@@ -46,7 +46,7 @@ def test_v004_empty_file(api, pipeline):
     assert any(e.code == "V004" for e in errors)
 
 def test_v006_decision_missing_chosen(api, pipeline):
-    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION D:\n    ALTERNATIVES: "A"\n'
+    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION D:\n    CHOSEN: "C"\n    RATIONALE: "R"\n    ALTERNATIVES: "A"\n'
     tree, _ = api.parse(content)
     ast = ASTGenerator().visit(tree)
     errors = pipeline.validate(ast)
@@ -74,7 +74,7 @@ def test_v009_unknown_dependency_warning(api, pipeline):
     assert any(e.code == "V009" and e.severity == "WARNING" for e in errors)
 
 def test_v010_decision_affects_unknown(api, pipeline):
-    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION "D":\n    CHOSEN: "A"\n    ALTERNATIVES: ["A"]\n    AFFECTS: ["UnknownThing"]\n'
+    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION "D":\n    CHOSEN: "A"\n    RATIONALE: "R"\n    ALTERNATIVES: ["A"]\n    AFFECTS: ["UnknownThing"]\n'
     tree, _ = api.parse(content)
     ast = ASTGenerator().visit(tree)
     errors = pipeline.validate(ast)
@@ -95,7 +95,7 @@ def test_v013_strategy_missing_algorithm(api, pipeline):
     assert any(e.code == "V013" for e in errors)
 
 def test_v014_decision_missing_alternatives(api, pipeline):
-    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION D: CHOSEN: "A"\n' # No alternatives
+    content = 'CONTEXT: "C"\nTARGET: "P"\nDECISION D: CHOSEN: "A"\n    RATIONALE: "R"\n' # No alternatives
     tree, _ = api.parse(content)
     ast = ASTGenerator().visit(tree)
     errors = pipeline.validate(ast)

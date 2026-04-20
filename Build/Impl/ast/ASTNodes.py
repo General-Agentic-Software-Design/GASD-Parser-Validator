@@ -38,7 +38,7 @@ class Decision(ASTNodeBase):
     name: str = ""
     chosen: str = ""
     kind: str = "Decision"
-    rationale: Optional[str] = None
+    rationale: str = ""
     alternatives: Optional[List[str]] = None
     affects: Optional[List[str]] = None
 
