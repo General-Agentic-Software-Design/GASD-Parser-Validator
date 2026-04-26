@@ -45,6 +45,7 @@ setup.py
 ../../Impl/tests/acceptance/__init__.py
 ../../Impl/tests/acceptance/test_ast.py
 ../../Impl/tests/acceptance/test_ast_extraction.py
+../../Impl/tests/acceptance/test_ast_output_exclusive_file.py
 ../../Impl/tests/acceptance/test_cli_default_info_output.py
 ../../Impl/tests/acceptance/test_cli_runner.py
 ../../Impl/tests/acceptance/test_design_validation_fixes.py
@@ -89,6 +90,7 @@ setup.py
 ../../Impl/tests/acceptance/test_v2_acceptance.py
 ../../Impl/tests/regression/__init__.py
 ../../Impl/tests/regression/test_ast.py
+../../Impl/tests/regression/test_ast_output_exclusive_file_regression.py
 ../../Impl/tests/regression/test_ast_regression.py
 ../../Impl/tests/regression/test_binding_regression.py
 ../../Impl/tests/regression/test_cli_default_info_output_regression.py

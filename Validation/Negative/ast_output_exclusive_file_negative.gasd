@@ -1,0 +1,43 @@
+VERSION 1.2
+/*
+   Validation: Exclusive File Output Negative Tests
+   =================================================
+   Exhaustive check of invalid and edge-case configurations for --ast-output.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Negative"
+CONTEXT: "Negative Verification of Exclusive File Output"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-013"
+
+FLOW test_negative_permission_denied():
+    @trace #AC-PARSER-013-06
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output /root/forbidden.json valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "Exit code is non-zero"
+        OTHERWISE THROW "Negative Failure: Parser did not fail on permission-denied path"
+    3. ENSURE "stderr contains a descriptive error message"
+        OTHERWISE THROW "Negative Failure: Missing error output for permission-denied path"
+
+FLOW test_negative_directory_as_output():
+    @trace #AC-PARSER-013-06
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output /tmp/ valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "Exit code is non-zero or file is created inside directory"
+        OTHERWISE THROW "Negative Failure: Directory path not handled correctly"
+
+FLOW test_negative_empty_output_path():
+    @trace #AC-PARSER-013-06
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output '' valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "Exit code is non-zero"
+        OTHERWISE THROW "Negative Failure: Empty output path not rejected"
+    3. ENSURE "stderr contains a descriptive error message"
+        OTHERWISE THROW "Negative Failure: Missing error output for empty path"
+
+FLOW test_negative_no_json_on_stdout_any_flag_combination():
+    @trace #AC-PARSER-013-02
+    1. ACHIEVE "Run gasd_parser --ast-sem --json --ast-output out.json valid.gasd and capture stdout"
+        POSTCONDITION: "stdout is captured"
+    2. ENSURE "stdout does not contain any JSON braces or AST node data"
+        OTHERWISE THROW "Negative Failure: JSON content leaked to stdout under combined flags"

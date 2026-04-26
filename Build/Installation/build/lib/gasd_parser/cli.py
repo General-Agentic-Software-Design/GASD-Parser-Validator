@@ -279,21 +279,27 @@ def main():
          export_data = semantic_system
          from .semantic.SemanticASTExporter import SemanticASTExporter
          exporter = SemanticASTExporter()
-    elif args.ast_combine and collected_asts:
-         export_data = collected_asts
-         from .semantic.SemanticASTExporter import SemanticASTExporter
-         exporter = SemanticASTExporter()
+    elif collected_asts and (args.ast_combine or args.no_validate):
+         export_data = collected_asts if args.ast_combine or len(collected_asts) > 1 else collected_asts[0]
+         from .ast.ASTExporter import ASTExporter
+         exporter = ASTExporter()
 
-    if args.ast_output and failure_count == 0:
+    if args.ast_output:
         if export_data is not None and exporter:
-            combined_ast_json = exporter.to_json(export_data, marker=marker)
+            from .semantic.SemanticASTExporter import SemanticASTExporter
+            if isinstance(exporter, SemanticASTExporter):
+                combined_ast_json = exporter.to_json(export_data, marker=marker)
+            else:
+                combined_ast_json = exporter.to_json(export_data)
             try:
                 with open(args.ast_output, "w") as out_f:
                     out_f.write(combined_ast_json)
                 if not args.json:
                     print(f"Exported combined AST to {args.ast_output}", file=sys.stderr)
             except Exception as e:
+                print(f"Error: Could not write AST to {args.ast_output}: {str(e)}", file=sys.stderr)
                 failure_count += 1
+                exit_code = 1
     elif not args.json and export_data is not None and args.ast_combine:
         combined_ast_json = exporter.to_json(export_data)
         print(combined_ast_json)

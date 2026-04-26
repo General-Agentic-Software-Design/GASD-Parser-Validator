@@ -1,0 +1,59 @@
+VERSION 1.2
+/*
+   Validation: Exclusive File Output Design Tests
+   ===============================================
+   Verifies that the design requirements for US-PARSER-013 are correctly formalized.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Design"
+CONTEXT: "Verification of Exclusive File Output Design"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-013"
+
+IMPORT "../../Design/ast_output_exclusive_file_design.gasd"
+
+CONTRACT ASTOutputExclusiveFileDesignVerification:
+    INPUT: None
+    OUTPUT: None
+
+FLOW test_design_routing_decision():
+    @trace #AC-PARSER-013-01, #AC-PARSER-013-02
+    1. ACHIEVE "Review DEC_AST_OUTPUT_ROUTING in Design"
+        POSTCONDITION: "Decision for exclusive file write is extracted"
+    2. ENSURE "CHOSEN strategy specifies exclusive file write with stdout suppression"
+        OTHERWISE THROW "Design Mismatch: Routing decision does not mandate exclusive file output"
+
+FLOW test_design_error_handling_decision():
+    @trace #AC-PARSER-013-06
+    1. ACHIEVE "Review DEC_AST_OUTPUT_ERROR in Design"
+        POSTCONDITION: "Decision for unwritable output file handling is extracted"
+    2. ENSURE "CHOSEN strategy specifies non-zero exit code and stderr error message"
+        OTHERWISE THROW "Design Mismatch: Error handling decision does not mandate fail-fast behavior"
+
+FLOW test_design_constraint_coverage():
+    @trace #AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-03, #AC-PARSER-013-04, #AC-PARSER-013-05, #AC-PARSER-013-06
+    1. ACHIEVE "Examine constraints in Design/ast_output_exclusive_file_design.gasd"
+        POSTCONDITION: "Constraint set for US-PARSER-013 is extracted"
+    2. ENSURE "Exclusive file write constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_EXCLUSIVE_FILE_WRITE"
+    3. ENSURE "Stdout suppression constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_NO_STDOUT_JSON"
+    4. ENSURE "Non-JSON stdout allowance constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_ALLOW_NON_JSON_STDOUT"
+    5. ENSURE "Default behavior preservation constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_PRESERVE_DEFAULT"
+    6. ENSURE "Content identity constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_CONTENT_IDENTITY"
+    7. ENSURE "Write error handling constraint is present"
+        OTHERWISE THROW "Design Mismatch: Missing CONST_WRITE_ERROR_HANDLING"
+
+FLOW test_design_flow_coverage():
+    @trace #AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-04
+    1. ACHIEVE "Review FLOW_ROUTE_AST in Design"
+        POSTCONDITION: "Flow for AST output routing is extracted"
+    2. ENSURE "Flow handles both file output and default stdout output paths"
+        OTHERWISE THROW "Design Mismatch: Routing flow is incomplete"
+    3. ACHIEVE "Review FLOW_HANDLE_ERROR in Design"
+        POSTCONDITION: "Flow for error handling is extracted"
+    4. ENSURE "Flow emits error to stderr and returns non-zero exit code"
+        OTHERWISE THROW "Design Mismatch: Error flow is incomplete"
