@@ -1,0 +1,36 @@
+VERSION 1.2
+/*
+   Validation: Exclusive File Output Regression Tests
+   ===================================================
+   Ensures that existing --ast-output and --ast-sem workflows continue to function correctly.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Regression"
+CONTEXT: "Regression Verification of Exclusive File Output"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-013"
+
+FLOW test_regression_ast_combine_with_ast_output():
+    @trace #RT-PARSER-013-01
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-combine --ast-output out.json file1.gasd file2.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "out.json contains the aggregated AST from both files"
+        OTHERWISE THROW "Regression Failure: --ast-combine with --ast-output did not produce aggregated output"
+    3. ENSURE "stdout does not contain any AST JSON"
+        OTHERWISE THROW "Regression Failure: AST JSON leaked to stdout with --ast-combine and --ast-output"
+
+FLOW test_regression_no_validate_with_ast_output():
+    @trace #RT-PARSER-013-02
+    1. ACHIEVE "Run gasd_parser --ast-sem --no-validate --ast-output out.json valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "out.json contains the non-validated AST"
+        OTHERWISE THROW "Regression Failure: --no-validate with --ast-output did not produce output file"
+    3. ENSURE "stdout does not contain any AST JSON"
+        OTHERWISE THROW "Regression Failure: AST JSON leaked to stdout with --no-validate and --ast-output"
+
+FLOW test_regression_default_stdout_unchanged():
+    @trace #RT-PARSER-013-03
+    1. ACHIEVE "Run gasd_parser --ast-sem valid.gasd without --ast-output"
+        POSTCONDITION: "stdout is captured"
+    2. ENSURE "AST JSON is emitted to stdout as before"
+        OTHERWISE THROW "Regression Failure: Default stdout behavior changed without --ast-output"

@@ -1,0 +1,79 @@
+VERSION 1.2
+/*
+   Design: Exclusive File Output for --ast-output (US-PARSER-013)
+   ==============================================================
+   When --ast-output <output-file> is specified, the AST JSON content
+   MUST be written exclusively to the output file and MUST NOT appear
+   on stdout. This ensures clean pipeline composition and eliminates
+   duplicate I/O.
+*/
+
+CONTEXT: "Compiler / Language Tooling — CLI Output Routing"
+TARGET: "Python3"
+TRACE: "US-PARSER-013", "AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-03", "AC-PARSER-013-04", "AC-PARSER-013-05", "AC-PARSER-013-06"
+
+// ===================================================================
+// Decisions
+// ===================================================================
+
+DECISION "AST Output Routing When --ast-output Is Specified" @trace(#AC-PARSER-013-01, #AC-PARSER-013-02) AS DEC_AST_OUTPUT_ROUTING:
+    CHOSEN: "Exclusive file write — suppress stdout JSON emission when --ast-output is active"
+    RATIONALE: "Specifying an explicit output file implies intent to capture content there only. Dual-writing pollutes stdout pipelines and wastes I/O."
+    ALTERNATIVES: ["Dual write to file and stdout", "Write to file with optional --quiet flag to suppress stdout"]
+    AFFECTS: [ASTOutputRouter]
+
+DECISION "Unwritable Output File Handling" @trace(#AC-PARSER-013-06) AS DEC_AST_OUTPUT_ERROR:
+    CHOSEN: "Exit with non-zero code and emit error to stderr"
+    RATIONALE: "Fail-fast with a clear error message to stderr ensures the caller can detect and handle the failure programmatically."
+    ALTERNATIVES: ["Fallback to stdout on file write failure", "Silently skip file write"]
+    AFFECTS: [ASTOutputRouting]
+
+// ===================================================================
+// Component
+// ===================================================================
+
+COMPONENT ASTOutputRouter:
+    PATTERN: "Strategy"
+    INTERFACE:
+        route_ast_output(json_content: String, output_path: Optional<String>) -> Void
+        handle_ast_output_error(output_path: String, error: Any) -> Integer
+
+// ===================================================================
+// Semantic Model
+// ===================================================================
+
+/// Describes the output routing state for AST JSON content
+TYPE ASTOutputRouting @trace(AC-PARSER-013-01, AC-PARSER-013-02, AC-PARSER-013-04) AS TYPE_AST_OUTPUT_ROUTING:
+    ast_output_path: Optional<String>
+    write_to_file: Boolean
+    suppress_stdout_json: Boolean
+
+// ===================================================================
+// Logic
+// ===================================================================
+
+FLOW route_ast_output(json_content: String, output_path: Optional<String>) -> Void:
+    1. MATCH output_path:
+        DEFAULT -> ACHIEVE "Write json_content to stdout (default behavior)"
+    2. ACHIEVE "Write json_content to file at output_path":
+        POSTCONDITION: "File at output_path contains complete, valid JSON"
+    3. ACHIEVE "Suppress JSON content from stdout":
+        POSTCONDITION: "stdout does not contain any AST JSON data"
+    @trace(#AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-04, #AC-PARSER-013-05) AS FLOW_ROUTE_AST
+
+FLOW handle_ast_output_error(output_path: String, error: Any) -> Integer:
+    @trace(#AC-PARSER-013-06) AS FLOW_HANDLE_ERROR
+    1. ACHIEVE "Emit error message to stderr indicating file write failure for output_path":
+        POSTCONDITION: "stderr contains descriptive error message"
+    2. RETURN 1
+
+// ===================================================================
+// Constraints
+// ===================================================================
+
+CONSTRAINT: "When --ast-output is specified, AST JSON content MUST be written exclusively to the output file" @trace(#AC-PARSER-013-01) AS CONST_EXCLUSIVE_FILE_WRITE
+CONSTRAINT: "When --ast-output is specified, AST JSON content MUST NOT appear on stdout" @trace(#AC-PARSER-013-02) AS CONST_NO_STDOUT_JSON
+CONSTRAINT: "Non-JSON output (validation summary, warnings, errors) MAY still be emitted to stdout/stderr when --ast-output is active" @trace(#AC-PARSER-013-03) AS CONST_ALLOW_NON_JSON_STDOUT
+CONSTRAINT: "When --ast-output is NOT specified, existing stdout JSON emission behavior MUST be preserved" @trace(#AC-PARSER-013-04) AS CONST_PRESERVE_DEFAULT
+CONSTRAINT: "File content written by --ast-output MUST be identical to what would have been emitted to stdout" @trace(#AC-PARSER-013-05) AS CONST_CONTENT_IDENTITY
+CONSTRAINT: "If the output file path is not writable, the parser MUST exit with non-zero code and emit error to stderr" @trace(#AC-PARSER-013-06) AS CONST_WRITE_ERROR_HANDLING

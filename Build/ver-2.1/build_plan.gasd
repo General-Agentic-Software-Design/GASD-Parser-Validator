@@ -9,7 +9,7 @@ NAMESPACE: "GASD-Parser-Validator-v2.0"
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "ANTLR4", "Python3"
-TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008", "US-V2-009", "US-PARSER-008", "US-PARSER-009", "US-PARSER-010", "US-PARSER-011", "US-PARSER-012"
+TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008", "US-V2-009", "US-PARSER-008", "US-PARSER-009", "US-PARSER-010", "US-PARSER-011", "US-PARSER-012", "US-PARSER-013"
 
 CONSTRAINT: "GASD agent MUST only execute one phase and pause by default, unless explicitly instructed by a human."
 CONSTRAINT: "GASD agent MUST read and master 'GASD/GASD-1.2/GASD_Specification.md' and 'GASD/GASD-1.1/GASD_Specification-1.1.md' before generating any GASD files."
@@ -22,13 +22,13 @@ CONSTRAINT: "GASD agent MUST read and master 'Requirements/ver-2.x/ver-2.0/User_
 // ===================================================================
 
 FLOW phase1_generate_design():
-    1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md", "Requirements/ver-2.x/ver-2.1/remove-ast-opt.md", "Requirements/ver-2.x/ver-2.1/semantic_pass.md", "Requirements/ver-2.x/ver-2.1/gasd_file_version.md", "Requirements/ver-2.x/ver-2.1/relative_source_map_paths.md", "Requirements/ver-2.x/ver-2.1/cli_default_info_output.md and Requirements/ver-2.x/ver-2.1/enforce_invariant_order.md"
+    1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md", "Requirements/ver-2.x/ver-2.1/remove-ast-opt.md", "Requirements/ver-2.x/ver-2.1/semantic_pass.md", "Requirements/ver-2.x/ver-2.1/gasd_file_version.md", "Requirements/ver-2.x/ver-2.1/relative_source_map_paths.md", "Requirements/ver-2.x/ver-2.1/cli_default_info_output.md", "Requirements/ver-2.x/ver-2.1/enforce_invariant_order.md" and "Requirements/ver-2.x/ver-2.1/ast_output_exclusive_file.md"
         POSTCONDITION: "Requirements IDs extracted from all documents"
-    2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2, #US-PARSER-007, #AC-PARSER-007, #AT-PARSER-007, #RT-PARSER-007, #US-PARSER-008, #AC-PARSER-008, #AT-PARSER-008, #RT-PARSER-008, #US-PARSER-009, #AC-PARSER-009, #AT-PARSER-009, #RT-PARSER-009, #US-PARSER-010, #AC-PARSER-010, #AT-PARSER-010, #RT-PARSER-010, #US-PARSER-011, #AC-PARSER-011, #AT-PARSER-011, #RT-PARSER-011 IDs are extracted"
+    2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2, #US-PARSER-007, #AC-PARSER-007, #AT-PARSER-007, #RT-PARSER-007, #US-PARSER-008, #AC-PARSER-008, #AT-PARSER-008, #RT-PARSER-008, #US-PARSER-009, #AC-PARSER-009, #AT-PARSER-009, #RT-PARSER-009, #US-PARSER-010, #AC-PARSER-010, #AT-PARSER-010, #RT-PARSER-010, #US-PARSER-011, #AC-PARSER-011, #AT-PARSER-011, #RT-PARSER-011, #US-PARSER-012, #AC-PARSER-012, #AT-PARSER-012, #RT-PARSER-012, #US-PARSER-013, #AC-PARSER-013, #AT-PARSER-013, #RT-PARSER-013 IDs are extracted"
         OTHERWISE THROW "Requirements Traceability Failed"
     3. ACHIEVE "Generate Design/component_design.gasd" @trace #US-V2-001, #US-PARSER-007
         POSTCONDITION: "Design/component_design.gasd exists and incorporates flag consolidation logic"
-    4. ENSURE "All AC-V2, AC-PARSER-007, AC-PARSER-008, AC-PARSER-009, AC-PARSER-010 and AC-PARSER-011 IDs are traced in design files"
+    4. ENSURE "All AC-V2, AC-PARSER-007, AC-PARSER-008, AC-PARSER-009, AC-PARSER-010, AC-PARSER-011, AC-PARSER-012 and AC-PARSER-013 IDs are traced in design files"
         OTHERWISE THROW "Design Traceability Failed"
     ### Design: Semantic Validation Marker (US-PARSER-008)
     5. ACHIEVE "Generate Design/semantic_validation_marker_design.gasd" @trace #US-PARSER-008
@@ -45,9 +45,12 @@ FLOW phase1_generate_design():
     ### Design: Enforce INVARIANT Scope Ordering (US-PARSER-012)
     9. ACHIEVE "Generate Design/enforce_invariant_order_design.gasd" @trace #US-PARSER-012
         POSTCONDITION: "Design/enforce_invariant_order_design.gasd exists and defines mandatory INVARIANT <SCOPE> ordering"
-    9. ENSURE "All generated design gasd pass 'gasd_parser --ast-sem' with no errors"
+    ### Design: Exclusive File Output for --ast-output (US-PARSER-013)
+    10. ACHIEVE "Generate Design/ast_output_exclusive_file_design.gasd" @trace #US-PARSER-013
+        POSTCONDITION: "Design/ast_output_exclusive_file_design.gasd exists and defines exclusive file output logic for --ast-output"
+    11. ENSURE "All generated design gasd pass 'gasd_parser --ast-sem' with no errors"
         OTHERWISE THROW "Design Syntax or Semantic Error Detected"
-    10. ENSURE "All steps 1-9 are completed correctly, faithfully, and thoroughly"
+    12. ENSURE "All steps 1-11 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Design Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -56,7 +59,7 @@ FLOW phase1_generate_design():
 // ===================================================================
 
 FLOW phase2_generate_validations():
-    1. ACHIEVE "Read and master Requirements/ver-2.x/, Requirements/ver-2.x/ver-2.1/semantic_pass.md, Requirements/ver-2.x/ver-2.1/gasd_file_version.md, Requirements/ver-2.x/ver-2.1/relative_source_map_paths.md, Requirements/ver-2.x/ver-2.1/cli_default_info_output.md and Design/ folders to ensure expertise before generation":
+    1. ACHIEVE "Read and master Requirements/ver-2.x/, Requirements/ver-2.x/ver-2.1/semantic_pass.md, Requirements/ver-2.x/ver-2.1/gasd_file_version.md, Requirements/ver-2.x/ver-2.1/relative_source_map_paths.md, Requirements/ver-2.x/ver-2.1/cli_default_info_output.md, Requirements/ver-2.x/ver-2.1/enforce_invariant_order.md, Requirements/ver-2.x/ver-2.1/ast_output_exclusive_file.md and Design/ folders to ensure expertise before generation":
         POSTCONDITION: "Expertise attained from source documents"
     2. ENSURE "All validation gasd are generated ONLY from Requirements/ and Design/"
         OTHERWISE THROW "Validation Source Violation: Implementation Leakage"
@@ -85,9 +88,12 @@ FLOW phase2_generate_validations():
     ### Validation: Enforce INVARIANT Scope Ordering (US-PARSER-012)
     14. ACHIEVE "Exhaustive validation of Invariant Scope Ordering (US-PARSER-012); output to Validation/Design/enforce_invariant_order_tests.gasd, Validation/Acceptance/enforce_invariant_order_acceptance.gasd, Validation/Regression/enforce_invariant_order_regression.gasd, and Validation/Negative/enforce_invariant_order_negative.gasd" @trace #US-PARSER-012
         POSTCONDITION: "Validation/Design/, Validation/Acceptance/, Validation/Regression/, and Validation/Negative/ updated for US-PARSER-012"
-    15. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting, Validation/CLI) or file (Validation/Design/semantic_validation_marker_tests.gasd, Validation/Design/gasd_file_version_tests.gasd, Validation/Design/relative_json_paths_tests.gasd, Validation/Design/cli_default_info_output_tests.gasd) passes 'gasd_parser --ast-sem' with no errors"
+    ### Validation: Exclusive File Output for --ast-output (US-PARSER-013)
+    15. ACHIEVE "Exhaustive validation of Exclusive File Output (US-PARSER-013); output to Validation/Design/ast_output_exclusive_file_tests.gasd, Validation/Acceptance/ast_output_exclusive_file_acceptance.gasd, Validation/Regression/ast_output_exclusive_file_regression.gasd, and Validation/Negative/ast_output_exclusive_file_negative.gasd" @trace #US-PARSER-013
+        POSTCONDITION: "Validation/Design/, Validation/Acceptance/, Validation/Regression/, and Validation/Negative/ updated for US-PARSER-013"
+    16. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting, Validation/CLI) or file (Validation/Design/semantic_validation_marker_tests.gasd, Validation/Design/gasd_file_version_tests.gasd, Validation/Design/relative_json_paths_tests.gasd, Validation/Design/cli_default_info_output_tests.gasd, Validation/Design/enforce_invariant_order_tests.gasd, Validation/Design/ast_output_exclusive_file_tests.gasd) passes 'gasd_parser --ast-sem' with no errors"
         OTHERWISE THROW "Validation Syntax or Semantic Error Detected"
-    16. ENSURE "All steps 1-15 are completed correctly, faithfully, and thoroughly"
+    17. ENSURE "All steps 1-16 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Validation Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -159,9 +165,12 @@ FLOW phase3_generate_tests():
     ### Testing: Enforce INVARIANT Scope Ordering (US-PARSER-012)
     22. ACHIEVE "Generate exhaustive tests for Invariant Scope Ordering (US-PARSER-012) from Validation/ folders; output to Impl/tests/acceptance/test_enforce_invariant_order.py, Impl/tests/regression/test_enforce_invariant_order_regression.py, Impl/tests/negative/test_enforce_invariant_order_negative.py" @trace #US-PARSER-012
         POSTCONDITION: "Acceptance tests for US-PARSER-012 generated"
-    22. ENSURE "All acceptance tests (Steps 4-21) accurately reflect the logic defined in the Validation/ folders"
+    ### Testing: Exclusive File Output for --ast-output (US-PARSER-013)
+    23. ACHIEVE "Generate exhaustive tests for Exclusive File Output (US-PARSER-013) from Validation/ folders; output to Impl/tests/acceptance/test_ast_output_exclusive_file.py, Impl/tests/regression/test_ast_output_exclusive_file_regression.py, Impl/tests/negative/test_ast_output_exclusive_file_negative.py" @trace #US-PARSER-013
+        POSTCONDITION: "Acceptance tests for US-PARSER-013 generated"
+    24. ENSURE "All acceptance tests (Steps 4-23) accurately reflect the logic defined in the Validation/ folders"
         OTHERWISE THROW "Testing Quality Gate Failed: Mismatch with Validation Specifications"
-    23. ENSURE "All Steps 1-22 are completed correctly, faithfully, and thoroughly"
+    25. ENSURE "All Steps 1-24 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Phase 3 Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -202,12 +211,15 @@ FLOW phase4_generate_implementation():
     ### Implementation: Enforce INVARIANT Scope Ordering (US-PARSER-012)
     13. ACHIEVE "Update GASDParser.g4 grammar to enforce INVARIANT <SCOPE> ordering and reject reversed order" @trace #US-PARSER-012
         POSTCONDITION: "Grammar restricts invariant scope placement"
+    ### Implementation: Exclusive File Output for --ast-output (US-PARSER-013)
+    14. ACHIEVE "Implement exclusive file output logic for --ast-output in CLI, suppressing stdout" @trace #US-PARSER-013
+        POSTCONDITION: "--ast-output writes only to file and not to stdout"
     
-    13. ENSURE "No information from the Requirements/ folder is used for implementation"
+    15. ENSURE "No information from the Requirements/ folder is used for implementation"
         OTHERWISE THROW "Design Violation: Implementation Leakage"
-    14. ENSURE "Implementation compiles successfully and passes all unit tests generated in Phase 3"
+    16. ENSURE "Implementation compiles successfully and passes all unit tests generated in Phase 3"
         OTHERWISE THROW "Build Failed: Compilation or Test Error"
-    15. ENSURE "All steps 1-14 are completed correctly, faithfully, and thoroughly"
+    17. ENSURE "All steps 1-16 are completed correctly, faithfully, and thoroughly"
         OTHERWISE THROW "Implementation Quality Gate Failed: Incomplete or Unfaithful Execution"
 
 // ===================================================================
@@ -236,11 +248,14 @@ FLOW phase5_full_quality_gate():
     ### Quality Gate: Enforce INVARIANT Scope Ordering (US-PARSER-012)
     9. ACHIEVE "Verify US-PARSER-012 (Invariant Scope Ordering) acceptance criteria are fully met by the test suite" @trace #US-PARSER-012
         POSTCONDITION: "test_enforce_invariant_order.py passes 100%"
-    9. ACHIEVE "Align contradictory test expectations across acceptance, regression, and packaging test suites"
+    ### Quality Gate: Exclusive File Output for --ast-output (US-PARSER-013)
+    10. ACHIEVE "Verify US-PARSER-013 (Exclusive File Output) acceptance criteria are fully met by the test suite" @trace #US-PARSER-013
+        POSTCONDITION: "test_ast_output_exclusive_file.py passes 100%"
+    11. ACHIEVE "Align contradictory test expectations across acceptance, regression, and packaging test suites"
         POSTCONDITION: "No conflicting assertions across test suites for --ast-combine semantics or LINT-013 severity"
-    10. ACHIEVE "Eliminate duplicate LINT-013 diagnostic emission between VersionResolver and LintEngine"
+    12. ACHIEVE "Eliminate duplicate LINT-013 diagnostic emission between VersionResolver and LintEngine"
         POSTCONDITION: "Each version mismatch produces exactly one ERROR diagnostic per file"
-    11. ENSURE "All tests pass with 0 failures and 0 errors via: python3 -m pytest -p no:asyncio -q"
+    13. ENSURE "All tests pass with 0 failures and 0 errors via: python3 -m pytest -p no:asyncio -q"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
     12. ACHIEVE "Pass full suite validation on GASD 1.1 examples via: PYTHONPATH=./Build/Installation python3 -m gasd_parser Specs/examples/gasd-1.1 --gasd-ver 1.1"
         POSTCONDITION: "GASD 1.1 examples validated"

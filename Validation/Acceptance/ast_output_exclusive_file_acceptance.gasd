@@ -1,0 +1,59 @@
+VERSION 1.2
+/*
+   Validation: Exclusive File Output Acceptance Tests
+   ===================================================
+   Verifies the core functional requirements for --ast-output exclusive file behavior.
+*/
+
+NAMESPACE: "GASD-Validator.Validation.Acceptance"
+CONTEXT: "Acceptance Verification of Exclusive File Output"
+TARGET: "GASD Agent", "Python3"
+TRACE: "US-PARSER-013"
+
+FLOW test_acceptance_file_write():
+    @trace #AT-PARSER-013-01, #AC-PARSER-013-01
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd"
+        POSTCONDITION: "out.json is created"
+    2. ENSURE "out.json contains a valid, complete AST JSON document"
+        OTHERWISE THROW "Acceptance Failure: Output file does not contain valid AST JSON"
+
+FLOW test_acceptance_stdout_suppressed():
+    @trace #AT-PARSER-013-02, #AC-PARSER-013-02
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd and capture stdout"
+        POSTCONDITION: "stdout is captured"
+    2. ENSURE "stdout does not contain any JSON content (no '{', no AST nodes)"
+        OTHERWISE THROW "Acceptance Failure: AST JSON leaked to stdout when --ast-output was specified"
+
+FLOW test_acceptance_default_stdout_preserved():
+    @trace #AT-PARSER-013-03, #AC-PARSER-013-04
+    1. ACHIEVE "Run gasd_parser --ast-sem valid.gasd without --ast-output"
+        POSTCONDITION: "stdout is captured"
+    2. ENSURE "AST JSON is emitted to stdout"
+        OTHERWISE THROW "Acceptance Failure: Default stdout behavior broken without --ast-output"
+
+FLOW test_acceptance_content_identity():
+    @trace #AT-PARSER-013-04, #AC-PARSER-013-05
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd"
+        POSTCONDITION: "out.json is created"
+    2. ACHIEVE "Run gasd_parser --ast-sem valid.gasd and capture stdout"
+        POSTCONDITION: "stdout JSON is captured"
+    3. ENSURE "Content of out.json and stdout JSON are semantically identical"
+        OTHERWISE THROW "Acceptance Failure: File content differs from stdout content"
+
+FLOW test_acceptance_unwritable_path():
+    @trace #AT-PARSER-013-05, #AC-PARSER-013-06
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output /invalid/path/out.json valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "Exit code is non-zero"
+        OTHERWISE THROW "Acceptance Failure: Parser did not exit with non-zero code for unwritable path"
+    3. ENSURE "stderr contains an error message indicating the file could not be written"
+        OTHERWISE THROW "Acceptance Failure: Missing stderr error message for unwritable path"
+
+FLOW test_acceptance_json_flag_with_ast_output():
+    @trace #AT-PARSER-013-06, #AC-PARSER-013-02
+    1. ACHIEVE "Run gasd_parser --ast-sem --json --ast-output out.json valid.gasd"
+        POSTCONDITION: "Command execution completes"
+    2. ENSURE "stdout remains free of AST JSON"
+        OTHERWISE THROW "Acceptance Failure: AST JSON leaked to stdout with --json and --ast-output"
+    3. ENSURE "out.json contains the full AST output"
+        OTHERWISE THROW "Acceptance Failure: Output file missing content with --json flag"
