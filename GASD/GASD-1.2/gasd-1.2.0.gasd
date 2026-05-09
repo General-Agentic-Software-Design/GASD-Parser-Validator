@@ -1,3 +1,4 @@
+VERSION 1.2
 /* 
    GASD 1.2.0 — General Agentic Software Design Language
    ====================================================
@@ -8,8 +9,6 @@
    
    This file MUST be interpreted as the ground truth for GASD agents.
 */
-
-VERSION 1.1
 
 CONTEXT: "Metamodeling / Language Definition"
 TARGET: "GASD Agent / Transpiler / Verifier"
@@ -30,13 +29,13 @@ DECISION "Self-Definition Level":
 /// Defines the global settings that inform the transpiler.
 TYPE Directive:
     type: Enum(VERSION, CONTEXT, TARGET, TRACE, NAMESPACE, IMPORT)
-    value: String @min_length(1)
+    value: String @min_length(1) AS DIRECTIVE_VALUE_MIN
     alias: String @optional // Used for IMPORT AS
 
 // --- 3. Abstract Data Types (Section 5) ---
 
 /// Represents the Behavioral Contracts of GASD primitives.
-TYPE PrimitiveType @status("OFFICIAL"):
+TYPE PrimitiveType @status("OFFICIAL") AS PRIMITIVE_TYPE_STATUS:
     String: "UTF-8 Text Sequence. MUST be valid UTF-8."
     Integer: "Signed 64-bit safe numbers. MUST handle overflow."
     Float: "IEEE 754 Double Precision. MUST NOT be used for Money."
@@ -78,56 +77,255 @@ TYPE Diagnostic:
 TYPE GasdDocument:
     path: String
     content: String
+    directives: List<Directive> @optional
+    decisions: List<DecisionDefinition> @optional
+    types: List<TypeDefinition> @optional
+    components: List<ComponentDefinition> @optional
+    contracts: List<ContractDefinition> @optional
+    flows: List<FlowDefinition> @optional
+    strategies: List<StrategyDefinition> @optional
+    constraints: List<ConstraintDefinition> @optional
+    invariants: List<InvariantDefinition> @optional
+    ensures: List<EnsureDefinition> @optional
+    models: List<ModelDefinition> @optional
+    assumptions: List<AssumptionDefinition> @optional
+    resources: List<ResourceItem> @optional
+    questions: List<Question> @optional
+    approvals: List<Approval> @optional
 
-// --- 4. Standard Annotation Library (Section 14) ---
+// --- 4. Assumptions for Annotations with Environmental Dependencies (Section 9.2 / Section 14.7) ---
+// NOTE: Declared before StandardAnnotation to satisfy LINT-012 ordering requirements.
+
+ASSUMPTION "DI container configured correctly":
+    AFFECTS: [GasdTranspiler]
+    CONSEQUENCE: "Components will not be resolved if DI container is misconfigured."
+
+ASSUMPTION "Thread pool size >= required concurrency":
+    AFFECTS: [@async]
+    CONSEQUENCE: "Async operations may block if thread pool is exhausted."
+
+ASSUMPTION "Encryption key management configured":
+    AFFECTS: [@sensitive]
+    CONSEQUENCE: "Sensitive data may be exposed if encryption is not configured."
+
+ASSUMPTION "Auth service available":
+    AFFECTS: [@authorized]
+    CONSEQUENCE: "Authorization checks will fail if auth service is unavailable."
+
+ASSUMPTION "External service latency within bounds":
+    AFFECTS: [@timeout]
+    CONSEQUENCE: "TimeoutException behavior undefined if external service exceeds expected latency."
+
+ASSUMPTION "Cache infrastructure available":
+    AFFECTS: [@cacheable]
+    CONSEQUENCE: "Caching will be bypassed if cache infrastructure is unavailable."
+
+ASSUMPTION "DB-level unique constraint exists":
+    AFFECTS: [@unique]
+    CONSEQUENCE: "Uniqueness enforcement may be inconsistent without DB-level constraint."
+
+// --- 5. Standard Annotation Library (Section 14) ---
 
 /// The exhaustive set of official GASD annotations.
 /// Transpilers MUST support the entire library.
-TYPE StandardAnnotation:
-    category: Enum(VALIDATION, ARCHITECTURAL, IMPLEMENTATION, METADATA, EXTENDED)
-    
-    // 14.1 Data Validation
-    @range(min: Number, max: Number)
-    @min_length(n: Integer)
-    @max_length(n: Integer)
-    @format(fmt: String) // MUST be one of: "email", "uuid", "url"
-    @unique(scope: String @optional)
-    @default(value: Any)
+/// Each AnnotationDef TYPE below defines one annotation's name, parameters, and category.
 
-    // 14.2 Architectural
-    @injectable
-    @mockable
-    @optimize(goal: String)
-    @transaction_type(t: Enum("SAGA", "ACID"))
+// 14.1 Data Validation Annotations
+TYPE AnnotationDef_range:
+    name: "range"
+    category: "VALIDATION"
+    param_min: "Number"
+    param_max: "Number"
 
-    // 14.3 Implementation
-    @async
-    @external
-    @error_strategy(strategy: String)
-    @algorithm(name: String)
-    @hash(algo: String)
+TYPE AnnotationDef_min_length:
+    name: "min_length"
+    category: "VALIDATION"
+    param_n: "Integer"
 
-    // 14.4 Metadata & Lifecycle
-    @trace(id: String)
-    @status(s: Enum("DRAFT", "REVIEW_REQUIRED", "APPROVED", "OFFICIAL"))
-    @agent_note(txt: String)
-    @heuristic(txt: String)
+TYPE AnnotationDef_max_length:
+    name: "max_length"
+    category: "VALIDATION"
+    param_n: "Integer"
 
-    // 14.5 Extended Library
-    @sensitive
-    @authorized(role: String)
-    @mask
-    @retry(n: Integer)
-    @timeout(ms: Integer)
-    @circuit_breaker
-    @metric(name: String)
-    @trace_id(val: Any)
-    @cacheable(ttl: Integer)
-    @idempotent
-    @index
-    @transient
-    @deprecated
-    @rest(verb: Enum("GET", "POST", "PUT", "DELETE", "PATCH"), path: String)
+TYPE AnnotationDef_format:
+    name: "format"
+    category: "VALIDATION"
+    param_fmt: "String" // MUST be one of: "email", "uuid", "url"
+
+TYPE AnnotationDef_unique:
+    name: "unique"
+    category: "VALIDATION"
+    param_scope: "String" // optional
+
+TYPE AnnotationDef_default:
+    name: "default"
+    category: "VALIDATION"
+    param_value: "Any"
+
+TYPE AnnotationDef_auto_generate:
+    name: "auto_generate"
+    category: "VALIDATION"
+    // No parameters. Auto-populated field value (e.g., timestamps, sequences). §5
+
+TYPE AnnotationDef_constraint:
+    name: "constraint"
+    category: "VALIDATION"
+    param_desc: "String" // Inline constraint expression on TYPE field. §5/§14
+
+TYPE AnnotationDef_optional:
+    name: "optional"
+    category: "VALIDATION"
+    // No parameters. Marks field as nullable / not required. Shorthand for Optional<T>.
+
+// 14.2 Architectural Annotations
+TYPE AnnotationDef_injectable:
+    name: "injectable"
+    category: "ARCHITECTURAL"
+    // No parameters. Component is registered in DI container.
+
+TYPE AnnotationDef_mockable:
+    name: "mockable"
+    category: "ARCHITECTURAL"
+    // No parameters. Generates interface + mock impl for testing.
+
+TYPE AnnotationDef_optimize:
+    name: "optimize"
+    category: "ARCHITECTURAL"
+    param_goal: "String"
+
+TYPE AnnotationDef_transaction_type:
+    name: "transaction_type"
+    category: "ARCHITECTURAL"
+    param_t: "Enum(SAGA, ACID)"
+
+TYPE AnnotationDef_testable:
+    name: "testable"
+    category: "ARCHITECTURAL"
+    // No parameters. Function must be pure or mockable for testing. §9
+
+TYPE AnnotationDef_pattern:
+    name: "pattern"
+    category: "ARCHITECTURAL"
+    param_name: "String" // Component or flow stereotype. §6/§7
+
+// 14.3 Implementation Annotations
+TYPE AnnotationDef_async:
+    name: "async"
+    category: "IMPLEMENTATION"
+    // No parameters. Generates non-blocking/Promise-based code.
+
+TYPE AnnotationDef_external:
+    name: "external"
+    category: "IMPLEMENTATION"
+    // No parameters. Marks call as network boundary.
+
+TYPE AnnotationDef_error_strategy:
+    name: "error_strategy"
+    category: "IMPLEMENTATION"
+    param_strategy: "String"
+
+TYPE AnnotationDef_algorithm:
+    name: "algorithm"
+    category: "IMPLEMENTATION"
+    param_name: "String"
+
+TYPE AnnotationDef_hash:
+    name: "hash"
+    category: "IMPLEMENTATION"
+    param_algo: "String"
+
+// 14.4 Metadata & Lifecycle Annotations
+TYPE AnnotationDef_trace:
+    name: "trace"
+    category: "METADATA"
+    param_id: "String"
+
+TYPE AnnotationDef_status:
+    name: "status"
+    category: "METADATA"
+    param_s: "Enum(DRAFT, REVIEW_REQUIRED, APPROVED, OFFICIAL)"
+
+TYPE AnnotationDef_agent_note:
+    name: "agent_note"
+    category: "METADATA"
+    param_txt: "String"
+
+TYPE AnnotationDef_heuristic:
+    name: "heuristic"
+    category: "METADATA"
+    param_txt: "String"
+
+// 14.5 Extended Library Annotations
+TYPE AnnotationDef_sensitive:
+    name: "sensitive"
+    category: "EXTENDED"
+    // No parameters. Mask in logs, encrypt at rest.
+
+TYPE AnnotationDef_authorized:
+    name: "authorized"
+    category: "EXTENDED"
+    param_role: "String"
+
+TYPE AnnotationDef_mask:
+    name: "mask"
+    category: "EXTENDED"
+    // No parameters. Obfuscates value in logs/UI.
+
+TYPE AnnotationDef_retry:
+    name: "retry"
+    category: "EXTENDED"
+    param_n: "Integer"
+
+TYPE AnnotationDef_timeout:
+    name: "timeout"
+    category: "EXTENDED"
+    param_ms: "Integer"
+
+TYPE AnnotationDef_circuit_breaker:
+    name: "circuit_breaker"
+    category: "EXTENDED"
+    // No parameters. Protects against cascading failures.
+
+TYPE AnnotationDef_metric:
+    name: "metric"
+    category: "EXTENDED"
+    param_name: "String"
+
+TYPE AnnotationDef_trace_id:
+    name: "trace_id"
+    category: "EXTENDED"
+    param_val: "Any"
+
+TYPE AnnotationDef_cacheable:
+    name: "cacheable"
+    category: "EXTENDED"
+    param_ttl: "Integer"
+
+TYPE AnnotationDef_idempotent:
+    name: "idempotent"
+    category: "EXTENDED"
+    // No parameters. Safe to retry without side effects.
+
+TYPE AnnotationDef_index:
+    name: "index"
+    category: "EXTENDED"
+    // No parameters. Adds DB index for performance.
+
+TYPE AnnotationDef_transient:
+    name: "transient"
+    category: "EXTENDED"
+    // No parameters. Field is not persisted.
+
+TYPE AnnotationDef_deprecated:
+    name: "deprecated"
+    category: "EXTENDED"
+    // No parameters. Marks element for removal.
+
+TYPE AnnotationDef_rest:
+    name: "rest"
+    category: "EXTENDED"
+    param_verb: "Enum(GET, POST, PUT, DELETE, PATCH)"
+    param_path: "String"
 
 // --- 5. Structural Building Blocks (Sections 4-11) ---
 
@@ -138,6 +336,7 @@ TYPE DecisionDefinition:
     rationale: String
     alternatives: List<String> @optional
     affects: List<String>
+    annotations: List<Annotation> @optional
 
 /// A data contract field.
 TYPE Field:
@@ -165,10 +364,12 @@ TYPE ResourceItem:
 
 /// An architectural building block.
 /// @compliance V005: MUST have an INTERFACE block with at least one method.
-COMPONENT ComponentDefinition:
-    PATTERN: "Architectural Block"
-    INTERFACE:
-        define_component(name_of_comp: String, pattern_of_comp: String) -> ResultResult
+TYPE ComponentDefinition:
+    name: String
+    pattern: String @optional
+    dependencies: List<String> @optional
+    interface_methods: List<MethodSignature>
+    annotations: List<Annotation> @optional
 
 /// A contract definition for an external dependency boundary.
 TYPE ContractDefinition:
@@ -201,37 +402,48 @@ TYPE AssumptionDefinition:
     consequence: String
 
 /// Defines the semantics of an annotation mapping.
+/// Every annotation in the Standard Annotation Library is defined by a semantic triple. §14.7
 TYPE SemanticTriple:
     annotation_name: String
     structural_predicate: String
     runtime_contract: String
     environmental_dependency: String
 
-/// A discrete step within a FLOW.
 TYPE FlowStep:
     number: Integer
     action: Enum(VALIDATE, ACHIEVE, CREATE, PERSIST, RETURN, LOG, ENSURE, MATCH, IF, UPDATE, APPLY, THROW)
     target: String
     binding: String @optional // AS TYPE.X binding — REQUIRED for VALIDATE steps (GEP-5)
     postcondition: List<String> @optional // REQUIRED for ACHIEVE in 1.2
+    on_error: String @optional // ON_ERROR clause — action to take on failure (e.g., THROW ErrorType). §7
+    timeout: String @optional // TIMEOUT duration (e.g., "3000ms"). §7.1
+    otherwise: String @optional // OTHERWISE clause for ENSURE steps (e.g., THROW ErrorType). §7
     depends_on: List<Integer> @optional // Explicit step dependencies
+    assignments: Map<String, Any> @optional
+    update_set: String @optional
+    apply_to: String @optional
+    match_construct: MatchConstruct @optional
+    if_construct: IfConstruct @optional
     annotations: List<Annotation> @optional
 
 /// A design-level logic flow.
-FLOW DesignFlow:
+TYPE FlowDefinition:
     name: String
     args: List<Parameter>
     return_type: String @optional
     steps: List<FlowStep>
+    annotations: List<Annotation> @optional
 
 /// An algorithmic approach specification.
 /// @compliance V013: MUST define an ALGORITHM as a String (Section 8).
-STRATEGY AlgorithmicStrategy:
-    ALGORITHM: "Specific computational procedure"
-    PRECONDITION: String @optional
-    COMPLEXITY: String @optional
-    INPUT: List<Parameter>
-    OUTPUT: String
+TYPE StrategyDefinition:
+    name: String
+    algorithm: String
+    precondition: String @optional
+    complexity: String @optional
+    input: List<Parameter>
+    output: String
+    annotations: List<Annotation> @optional
 
 // --- 6. Human-in-the-Loop (Section 10) ---
 
@@ -243,10 +455,19 @@ TYPE Question:
 
 /// A human architectural approval.
 TYPE Approval:
+    target: String
     status: Enum(APPROVED, REJECTED)
     by: String
     date: DateTime
     notes: String @optional
+
+/// A design-time TODO marker for deferred work.
+TYPE TodoMarker:
+    text: String
+
+/// A design-time review request marker.
+TYPE ReviewMarker:
+    text: String
 
 // --- 7. Pattern Matching (Section 11) ---
 
@@ -256,7 +477,36 @@ TYPE MatchConstruct:
     cases: Map<String, Any> // Case can be a FlowStep or a literal Outcome (value)
     default_case: Any
 
-// --- 8. Global Constraints & Invariants (Section 9) ---
+/// An IF control flow construct.
+TYPE IfConstruct:
+    condition: String
+    then_steps: List<FlowStep>
+    else_steps: List<FlowStep> @optional
+
+// --- 8. Linting Engine (Section 15) ---
+
+/// A mandatory lint rule enforced by GASD 1.2 analyzers.
+TYPE LintRule:
+    id: String
+    pattern: String
+    recommendation: String
+    severity_v12: Enum(ERROR, WARNING, INFO)
+    severity_v11: Enum(ERROR, WARNING, INFO)
+
+// --- 9. Global Constraints & Invariants (Section 9) ---
+
+/// A global constraint definition.
+TYPE ConstraintDefinition:
+    text: String
+
+/// A global invariant definition.
+TYPE InvariantDefinition:
+    scope: Enum(LOCAL, GLOBAL)
+    text: String
+
+/// A global ensure definition.
+TYPE EnsureDefinition:
+    text: String
 
 CONSTRAINT: "A GASD Transpiler MUST NOT invent new annotations for functional logic."
 CONSTRAINT: "All database operations SHALL be documented via PERSIST or ACHIEVE."
@@ -266,10 +516,20 @@ CONSTRAINT: "In VERSION 1.2, ACHIEVE steps MUST include a POSTCONDITION block."
 CONSTRAINT: "In VERSION 1.2, IMPORT statements MUST have a corresponding CONTRACT definition."
 CONSTRAINT: "In VERSION 1.2, INVARIANT statements MUST specify LOCAL or GLOBAL scope."
 CONSTRAINT: "In VERSION 1.2, all annotations MUST include an AS identifier."
+CONSTRAINT: "AS obligation identifiers MUST be unique within file scope."
+CONSTRAINT: "AS obligation identifiers MUST match the pattern [A-Z][A-Z0-9_]*."
+CONSTRAINT: "In VERSION 1.2, missing AS identifier SHALL produce an error."
+CONSTRAINT: "In VERSION 1.1, missing AS identifiers are auto-generated deterministically from TYPE.field.annotation."
 INVARIANT GLOBAL: "A FLOW MUST NOT contain implementation code."
 ENSURE: "Result<T> MUST force explicit handling of error states."
 
-// --- 9. Core Transpiler Architecture ---
+
+
+// --- 11. Resources (Section 12) ---
+// NOTE: RESOURCES block is defined in GASD spec §12 but parser does not yet support
+// it as a top-level keyword. ResourceItem TYPE is defined above for metamodel coverage.
+
+// --- 12. Core Transpiler Architecture ---
 
 // Infrastructure Dependencies
 COMPONENT Parser:
@@ -289,23 +549,27 @@ COMPONENT CodeGenerator:
         generate(doc: GasdDocument) -> String
 
 /// The official GASD generation engine contract.
-COMPONENT GasdTranspiler @injectable @status("OFFICIAL"):
+COMPONENT GasdTranspiler @injectable AS TRANSPILER_INJECTABLE @status("OFFICIAL") AS TRANSPILER_STATUS:
     PATTERN: "Deterministic Transformer Pipeline"
     DEPENDENCIES: [Parser, SymbolTable, Linter, CodeGenerator]
     
     INTERFACE:
-        transpile(source_code: String, target_platform: String) -> ResultResult @trace("Section 13")
+        transpile(source_code: String, target_platform: String) -> ResultResult @trace("Section 13") AS TRANSPILE_TRACE
         validate_spec(doc_to_val: GasdDocument) -> List<Diagnostic>
 
 /// The normative process for code generation.
 FLOW transpile_process(source: String, target: String) -> String:
-    @error_strategy("Fail-Fast")
+    @error_strategy("Fail-Fast") AS TRANSPILE_ERROR_STRATEGY
     
-    1. VALIDATE source AS TYPE.String @format("UTF-8")
+    1. VALIDATE source AS TYPE.String @format("UTF-8") AS VALIDATE_SOURCE_FORMAT
     2. ACHIEVE "Lexical Analysis"
-    3. ACHIEVE "Syntactic Parsing" @heuristic("Follow EBNF Grammar")
+        POSTCONDITION: result.tokens IS List
+    3. ACHIEVE "Syntactic Parsing" @heuristic("Follow EBNF Grammar") AS PARSING_HEURISTIC
+        POSTCONDITION: result.ast IS Any
     4. ENSURE grammar_match IS TRUE OTHERWISE THROW SyntaxError
     5. ACHIEVE "Semantic Enrichment" // Apply annotations
-    6. ACHIEVE "Platform Optimization" @optimize("target-specific")
-    7. APPLY "Code Generation" TO intermediate_model @algorithm(target)
+        POSTCONDITION: result.enriched == true
+    6. ACHIEVE "Platform Optimization" @optimize("target-specific") AS PLATFORM_OPTIMIZE
+        POSTCONDITION: result.optimized == true
+    7. APPLY "Code Generation" TO intermediate_model @algorithm(target) AS CODEGEN_ALGORITHM
     8. RETURN result_of(step 7)
