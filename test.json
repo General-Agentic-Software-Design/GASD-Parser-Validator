@@ -1,0 +1,515 @@
+{
+  "kind": "SemanticSystem",
+  "id": "08a00bc1-d102-4dce-9604-5c948f999c4d",
+  "sourceMap": {
+    "file": ".",
+    "startLine": 0,
+    "startCol": 0,
+    "endLine": 0,
+    "endCol": 0
+  },
+  "annotations": [],
+  "namespaces": {
+    "global": {
+      "kind": "Namespace",
+      "id": "270dff23-1809-4429-a35d-ed9d758b18c2",
+      "sourceMap": {
+        "file": ".",
+        "startLine": 0,
+        "startCol": 0,
+        "endLine": 0,
+        "endCol": 0
+      },
+      "annotations": [],
+      "name": "global",
+      "types": {
+        "String": {
+          "kind": "ResolvedType",
+          "id": "b00ec400-a480-4bb2-ab55-093ca9ab87cb",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "String",
+          "fields": {},
+          "isEnum": false
+        },
+        "Integer": {
+          "kind": "ResolvedType",
+          "id": "4fd0ad4a-075b-4c64-8b92-612a542e1dc4",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Integer",
+          "fields": {},
+          "isEnum": false
+        },
+        "Int": {
+          "kind": "ResolvedType",
+          "id": "54488db5-dbaf-48ec-96ee-c4e2f7fe7ef3",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Int",
+          "fields": {},
+          "isEnum": false
+        },
+        "Boolean": {
+          "kind": "ResolvedType",
+          "id": "64c76ccb-1de2-4d99-8b00-03875a866b6b",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Boolean",
+          "fields": {},
+          "isEnum": false
+        },
+        "Float": {
+          "kind": "ResolvedType",
+          "id": "347f6046-bc64-40e8-8369-99d41e059328",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Float",
+          "fields": {},
+          "isEnum": false
+        },
+        "Decimal": {
+          "kind": "ResolvedType",
+          "id": "4a5859da-e914-4d08-bdbe-90f9524381a8",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Decimal",
+          "fields": {},
+          "isEnum": false
+        },
+        "Bytes": {
+          "kind": "ResolvedType",
+          "id": "66f8e007-84d7-44e1-b476-0842136aea93",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Bytes",
+          "fields": {},
+          "isEnum": false
+        },
+        "UUID": {
+          "kind": "ResolvedType",
+          "id": "0207ef8d-4519-4804-ab79-a48b80d15aa5",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "UUID",
+          "fields": {},
+          "isEnum": false
+        },
+        "Date": {
+          "kind": "ResolvedType",
+          "id": "48a7993d-9209-4d49-a5f6-d2e0429a5da4",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Date",
+          "fields": {},
+          "isEnum": false
+        },
+        "DateTime": {
+          "kind": "ResolvedType",
+          "id": "6bf52e92-8ed8-4038-b772-62bb32621b0e",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "DateTime",
+          "fields": {},
+          "isEnum": false
+        },
+        "Optional": {
+          "kind": "ResolvedType",
+          "id": "a92fdc93-9073-4f2f-8f59-91602ac9f42a",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Optional",
+          "fields": {},
+          "isEnum": false
+        },
+        "List": {
+          "kind": "ResolvedType",
+          "id": "71b7914b-6d13-4bc7-834c-a9e93b50a7e1",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "List",
+          "fields": {},
+          "isEnum": false
+        },
+        "Map": {
+          "kind": "ResolvedType",
+          "id": "9d1c87d4-a604-4311-8b16-0d75e6483e1e",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Map",
+          "fields": {},
+          "isEnum": false
+        },
+        "Enum": {
+          "kind": "ResolvedType",
+          "id": "6949af80-9525-4148-8d02-c17aa742fbe2",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Enum",
+          "fields": {},
+          "isEnum": false
+        },
+        "Result": {
+          "kind": "ResolvedType",
+          "id": "52d40e14-cbaa-4489-96a6-3c6a0e07f49c",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Result",
+          "fields": {},
+          "isEnum": false
+        },
+        "Any": {
+          "kind": "ResolvedType",
+          "id": "7e36dfa4-3f26-4b8a-98de-2c4d766e9da3",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Any",
+          "fields": {},
+          "isEnum": false
+        },
+        "Void": {
+          "kind": "ResolvedType",
+          "id": "8ee8a509-6311-4089-b001-874775b86650",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Void",
+          "fields": {},
+          "isEnum": false
+        },
+        "Int32": {
+          "kind": "ResolvedType",
+          "id": "556e3203-4e61-472b-bb27-cb6e6c2d06bc",
+          "sourceMap": {
+            "file": "builtin",
+            "startLine": 0,
+            "startCol": 0,
+            "endLine": 0,
+            "endCol": 0
+          },
+          "annotations": [],
+          "name": "Int32",
+          "fields": {},
+          "isEnum": false
+        },
+        "User": {
+          "kind": "ResolvedType",
+          "id": "ea28cae0-46a4-4408-a489-9a605ec10af5",
+          "sourceMap": {
+            "file": "Specs/valid_sample.gasd",
+            "startLine": 4,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "User",
+          "fields": {
+            "id": {
+              "name": "id",
+              "typeRef": {
+                "baseType": "Integer",
+                "args": [],
+                "constraints": []
+              },
+              "isOptional": false
+            },
+            "name": {
+              "name": "name",
+              "typeRef": {
+                "baseType": "String",
+                "args": [],
+                "constraints": []
+              },
+              "isOptional": false
+            }
+          },
+          "isEnum": false
+        }
+      },
+      "components": {
+        "AuthService": {
+          "kind": "ResolvedComponent",
+          "id": "745fa26a-fb23-4e9b-b780-c65da918bd6c",
+          "sourceMap": {
+            "file": "Specs/valid_sample.gasd",
+            "startLine": 8,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "AuthService",
+          "pattern": "",
+          "dependencies": [],
+          "resources": [],
+          "methods": {
+            "login": {
+              "kind": "ResolvedMethod",
+              "id": "675e9e92-b849-4da4-91ed-c0ba244105b8",
+              "sourceMap": {
+                "file": "Specs/valid_sample.gasd",
+                "startLine": 10,
+                "startCol": 8,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "name": "login",
+              "inputs": [
+                {
+                  "name": "u",
+                  "typeRef": {
+                    "baseType": "User",
+                    "args": [],
+                    "constraints": []
+                  }
+                }
+              ],
+              "output": {
+                "baseType": "Boolean",
+                "args": [],
+                "constraints": []
+              }
+            }
+          },
+          "provides": [],
+          "requires": []
+        }
+      },
+      "flows": {
+        "Main": {
+          "kind": "ResolvedFlow",
+          "id": "b6cb6632-8313-436f-9c57-c640ef8454ab",
+          "sourceMap": {
+            "file": "Specs/valid_sample.gasd",
+            "startLine": 12,
+            "startCol": 0,
+            "endLine": null,
+            "endCol": null
+          },
+          "annotations": [],
+          "name": "Main",
+          "inputs": [],
+          "pipeline": [
+            {
+              "kind": "SemanticFlowStep",
+              "id": "891938c3-32a1-4171-b898-6bae82cd2efb",
+              "sourceMap": {
+                "file": "Specs/valid_sample.gasd",
+                "startLine": 13,
+                "startCol": 4,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "operation": "VALIDATE",
+              "targetExpression": {
+                "kind": "String",
+                "type": {
+                  "baseType": "String",
+                  "args": [],
+                  "constraints": []
+                },
+                "dependencies": [],
+                "value": "user"
+              },
+              "bindings": {
+                "AS TYPE": {
+                  "symbolId": "User"
+                }
+              },
+              "postconditions": [],
+              "timeout": null,
+              "dependsOn": [],
+              "stepNumber": 1
+            },
+            {
+              "kind": "SemanticFlowStep",
+              "id": "e3f239d7-de1d-4127-a4da-f8aa57e3e7e4",
+              "sourceMap": {
+                "file": "Specs/valid_sample.gasd",
+                "startLine": 14,
+                "startCol": 4,
+                "endLine": null,
+                "endCol": null
+              },
+              "annotations": [],
+              "operation": "ACHIEVE",
+              "targetExpression": {
+                "kind": "String",
+                "type": {
+                  "baseType": "String",
+                  "args": [],
+                  "constraints": []
+                },
+                "dependencies": [],
+                "value": "Login"
+              },
+              "bindings": {},
+              "postconditions": [],
+              "timeout": null,
+              "dependsOn": [],
+              "stepNumber": 2
+            }
+          ]
+        }
+      },
+      "strategies": {},
+      "decisions": {}
+    }
+  },
+  "globalConstraints": [],
+  "metadata": {
+    "context": "Valid Sample",
+    "target": [
+      "TypeScript"
+    ],
+    "trace": [],
+    "files": [
+      {
+        "kind": "ProjectFileNode",
+        "annotations": [],
+        "filePath": "Specs/valid_sample.gasd",
+        "namespace": "global",
+        "imports": []
+      }
+    ]
+  },
+  "compilationUnit": {
+    "kind": "CompilationUnit",
+    "id": "05d7167e-bdc0-4c50-9208-d73d2b9321bb",
+    "sourceMap": {
+      "file": ".",
+      "startLine": 0,
+      "startCol": 0,
+      "endLine": 0,
+      "endCol": 0
+    },
+    "annotations": [],
+    "fileNodes": {
+      "Specs/valid_sample.gasd": {
+        "kind": "ProjectFileNode",
+        "id": "de41b130-2e7a-4028-8ec2-653d1d5fde9e",
+        "sourceMap": {
+          "file": "Specs/valid_sample.gasd",
+          "startLine": 0,
+          "startCol": 0,
+          "endLine": 0,
+          "endCol": 0
+        },
+        "annotations": [],
+        "filePath": "Specs/valid_sample.gasd",
+        "namespace": "global",
+        "imports": []
+      }
+    },
+    "deterministicOrder": [
+      "Specs/valid_sample.gasd"
+    ]
+  },
+  "contracts": [],
+  "models": [],
+  "assumptions": []
+}
