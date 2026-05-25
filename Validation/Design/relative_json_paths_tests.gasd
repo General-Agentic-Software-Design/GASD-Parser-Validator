@@ -10,9 +10,9 @@ DECISION "Test Coverage for Path Relativization":
     CHOSEN: "Unit-test SemanticASTExporter path conversion recursively"
     RATIONALE: "Ensures Deep-scrub dictionary validations work correctly."
     ALTERNATIVES: ["Integration tests only"]
-    AFFECTS: [DesignValidation]
+    AFFECTS: [RelativeJsonPathsDesignValidation]
 
-COMPONENT DesignValidation:
+COMPONENT RelativeJsonPathsDesignValidation:
     INTERFACE:
         test_deep_scrub_logic() -> Boolean
 

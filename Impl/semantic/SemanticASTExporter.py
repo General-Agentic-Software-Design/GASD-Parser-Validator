@@ -5,21 +5,37 @@ from .SemanticNodes import SemanticSystem
 
 class SemanticASTExporter:
     """Exports Semantic AST objects to JSON format."""
+
+    def _inject_marker_version(self, data: Any, marker: Optional[dict]) -> Any:
+        if not marker or not isinstance(data, dict):
+            return data
+
+        gasd_file_version = marker.get("gasd_file_version")
+        if not gasd_file_version:
+            return data
+
+        metadata = data.setdefault("metadata", {})
+        if isinstance(metadata, dict):
+            metadata["version"] = gasd_file_version
+        return data
     
     def to_json(self, ast: Union[SemanticSystem, List[SemanticSystem]], marker: Optional[dict] = None) -> str:
         cwd = os.getcwd()
         if isinstance(ast, list):
             # Combine multiple systems into one
-            data = [system.to_dict() for system in ast]
+            data = [self._inject_marker_version(system.to_dict(), marker) for system in ast]
             # Relativize all paths in the data structure
             data = self.relativize_dict(data, cwd)
             
             if marker:
                 # If list, we wrap in a dict to allow marker injection at root
-                return json.dumps({"asts": data, "semantic_validate": marker}, indent=2)
+                root = {"asts": data, "semantic_validate": marker}
+                if data and isinstance(data[0], dict) and "metadata" in data[0]:
+                    root["metadata"] = data[0]["metadata"]
+                return json.dumps(root, indent=2)
             return json.dumps(data, indent=2)
         else:
-            data = ast.to_dict()
+            data = self._inject_marker_version(ast.to_dict(), marker)
             # Relativize all paths in the data structure
             data = self.relativize_dict(data, cwd)
             

@@ -30,7 +30,7 @@ FLOW test_design_error_handling_decision():
     2. ENSURE "CHOSEN strategy specifies non-zero exit code and stderr error message"
         OTHERWISE THROW "Design Mismatch: Error handling decision does not mandate fail-fast behavior"
 
-FLOW test_design_constraint_coverage():
+FLOW test_ast_output_design_constraint_coverage():
     @trace #AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-03, #AC-PARSER-013-04, #AC-PARSER-013-05, #AC-PARSER-013-06
     1. ACHIEVE "Examine constraints in Design/ast_output_exclusive_file_design.gasd"
         POSTCONDITION: "Constraint set for US-PARSER-013 is extracted"

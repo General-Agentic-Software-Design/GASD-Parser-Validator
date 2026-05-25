@@ -8,6 +8,7 @@ from .ast.ASTGenerator import ASTGenerator
 from .parser.ParseTreeAPI import ParseTreeAPI
 from .validation.ValidationPipeline import ValidationPipeline, SemanticError
 from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
+from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
@@ -236,14 +237,10 @@ def main():
             elif failure_count > 0:
                 status = "FAILED"
             
-            gasd_file_version = "unknown"
-            if valid_asts:
-                ast_obj = valid_asts[0][1]
-                v = getattr(ast_obj, "version", None)
-                if v and isinstance(v, str) and v.strip() != "":
-                    gasd_file_version = v.strip(' "\'')
-            if gasd_file_version == "unknown" and args.gasd_ver:
-                gasd_file_version = args.gasd_ver
+            gasd_file_version = VersionResolver.resolve_metadata_version(
+                [ast for _, ast in valid_asts],
+                cli_version=args.gasd_ver
+            )
             
             marker = {
                 "status": status,
@@ -254,6 +251,12 @@ def main():
             }
 
     if args.json:
+        semantic_ast_dict = None
+        if args.ast_sem and semantic_system:
+            if marker and hasattr(semantic_system, "metadata") and semantic_system.metadata:
+                semantic_system.metadata.version = marker["gasd_file_version"]
+            semantic_ast_dict = semantic_system.to_dict()
+
         combined = {
             "success": failure_count == 0,
             "successCount": success_count,
@@ -263,8 +266,11 @@ def main():
         if marker:
             combined["semantic_validate"] = marker
         
-        if args.ast_sem and semantic_system and not args.ast_output:
-            combined["asts"] = [semantic_system.to_dict()]
+        if semantic_ast_dict and "metadata" in semantic_ast_dict:
+            combined["metadata"] = semantic_ast_dict["metadata"]
+        
+        if semantic_ast_dict and not args.ast_output:
+            combined["asts"] = [semantic_ast_dict]
         
         # Apply path relativization to the entire combined dictionary
         from .semantic.SemanticASTExporter import SemanticASTExporter
@@ -288,6 +294,8 @@ def main():
         if export_data is not None and exporter:
             from .semantic.SemanticASTExporter import SemanticASTExporter
             if isinstance(exporter, SemanticASTExporter):
+                if marker and hasattr(export_data, "metadata") and export_data.metadata:
+                    export_data.metadata.version = marker["gasd_file_version"]
                 combined_ast_json = exporter.to_json(export_data, marker=marker)
             else:
                 combined_ast_json = exporter.to_json(export_data)

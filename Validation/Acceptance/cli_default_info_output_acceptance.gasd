@@ -10,9 +10,9 @@ DECISION "Acceptance Scenarios":
     CHOSEN: "Validate end-to-end execution of gasd_parser string output"
     RATIONALE: "Ensures end-user perspective shows the correct banner alongside argparse help text."
     ALTERNATIVES: ["Unit test only"]
-    AFFECTS: [AcceptanceValidation]
+    AFFECTS: [CliDefaultInfoOutputAcceptanceValidation]
 
-COMPONENT AcceptanceValidation:
+COMPONENT CliDefaultInfoOutputAcceptanceValidation:
     INTERFACE:
         test_cli_default_output_end_to_end() -> Boolean
 

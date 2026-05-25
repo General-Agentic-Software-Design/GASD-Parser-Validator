@@ -6,7 +6,7 @@
 ### User Story
 
 As a **GASD Tooling Integrator**,
-I want the **Semantic AST JSON output** (generated via `--json --ast-sem`) to include the **GASD file version** explicitly,
+I want the **Semantic AST JSON output** (generated via `--json --ast-sem` or `--ast-sem --ast-output`) to include the **GASD file version** explicitly in both the validation marker and semantic metadata,
 So that downstream tools can conditionally adjust validation and execution logic based on the format version, or flag the format as "unknown" to prompt human inspection.
 
 ---
@@ -19,6 +19,8 @@ So that downstream tools can conditionally adjust validation and execution logic
 | AC-PARSER-009-02 | If the source `.gasd` file specifies a valid GASD version, the `gasd_file_version` MUST evaluate to the specified version string (e.g., `"1.2"`). |
 | AC-PARSER-009-03 | If the source `.gasd` file does NOT specify a GASD version, the `gasd_file_version` MUST evaluate to the literal string `"unknown"`. |
 | AC-PARSER-009-04 | The extraction of the file version MUST conform to the semantic rules for identifying version directives within the GASD file format. |
+| AC-PARSER-009-05 | When `--ast-sem` is used, the Semantic AST JSON document MUST include the same GASD version value as `version` within the root-level `metadata` object. |
+| AC-PARSER-009-06 | The values of `semantic_validate.gasd_file_version` and `metadata.version` MUST be identical whenever both objects are present. |
 
 ---
 
@@ -26,6 +28,9 @@ So that downstream tools can conditionally adjust validation and execution logic
 
 ```json
 {
+  "metadata": {
+    "version": "1.2"
+  },
   "semantic_validate": {
     "status": "PASSED",
     "parser_version": "2.1.3",
@@ -41,6 +46,9 @@ So that downstream tools can conditionally adjust validation and execution logic
 
 ```json
 {
+  "metadata": {
+    "version": "unknown"
+  },
   "semantic_validate": {
     "status": "PASSED",
     "parser_version": "2.1.3",
@@ -61,6 +69,8 @@ So that downstream tools can conditionally adjust validation and execution logic
 | AT-PARSER-009-01 | Parse a GASD file containing an explicit version declaration and verify `gasd_file_version` maps to the correct string representation in the AST JSON output. |
 | AT-PARSER-009-02 | Parse a GASD file that lacks a version declaration and verify `gasd_file_version` evaluates precisely to `"unknown"` in the AST JSON output. |
 | AT-PARSER-009-03 | Execute parser logic against malformed or partially formed `.gasd` files lacking version directives to confirm they still emit `"unknown"` under error-containment modes. |
+| AT-PARSER-009-04 | Run `gasd_parser --ast-sem --json` and verify `metadata.version` is present and equals `semantic_validate.gasd_file_version`. |
+| AT-PARSER-009-05 | Run `gasd_parser --ast-sem --ast-output out.json` and verify the written Semantic AST JSON contains `metadata.version`. |
 
 ---
 
@@ -70,6 +80,7 @@ So that downstream tools can conditionally adjust validation and execution logic
 | ---------------- | -------------------------------------------------------------- |
 | RT-PARSER-009-01 | Verify AST exporter does not crash when encountering legacy `.gasd` files dating back prior to version inclusion specifications. |
 | RT-PARSER-009-02 | Ensure existing AST consumers do not fail deserialization due to the new key being present within the `semantic_validate` object. |
+| RT-PARSER-009-03 | Ensure existing AST consumers do not fail deserialization due to the new key being present within the `metadata` object. |
 
 ---
 
@@ -77,4 +88,4 @@ So that downstream tools can conditionally adjust validation and execution logic
 
 | Requirement | User Story | Acceptance Test | Regression Test |
 | :--- | :--- | :--- | :--- |
-| REQ-009 GASD File Versioning Metadata | US-PARSER-009 | AT-PARSER-009-01, AT-PARSER-009-02, AT-PARSER-009-03 | RT-PARSER-009-01, RT-PARSER-009-02 |
+| REQ-009 GASD File Versioning Metadata | US-PARSER-009 | AT-PARSER-009-01, AT-PARSER-009-02, AT-PARSER-009-03, AT-PARSER-009-04, AT-PARSER-009-05 | RT-PARSER-009-01, RT-PARSER-009-02, RT-PARSER-009-03 |

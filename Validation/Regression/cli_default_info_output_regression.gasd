@@ -10,9 +10,9 @@ DECISION "Regression Scenarios for CLI":
     CHOSEN: "Verify standard --version and --help flags are uncompromised"
     RATIONALE: "Preserves legacy flag functionality."
     ALTERNATIVES: ["Omit regression checking"]
-    AFFECTS: [RegressionValidation]
+    AFFECTS: [CliDefaultInfoOutputRegressionValidation]
 
-COMPONENT RegressionValidation:
+COMPONENT CliDefaultInfoOutputRegressionValidation:
     INTERFACE:
         test_cli_legacy_flags() -> Boolean
 

@@ -1,13 +1,42 @@
 VERSION 1.2
+NAMESPACE: "gasd.validation.regression.file_version"
 /*
    Validation: Regression testing for US-PARSER-009
 */
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "Python3"
-TRACE: "US-PARSER-009"
+TRACE: "#US-PARSER-009", "#RT-PARSER-009-01", "#RT-PARSER-009-02", "#RT-PARSER-009-03"
+
+INVARIANT LOCAL: "Adding version metadata must not break legacy Semantic AST consumers"
+
+DECISION "Regression Scenarios for Version Metadata":
+    CHOSEN: "Validate legacy input tolerance and consumer tolerance for both version projections"
+    RATIONALE: "The new metadata.version projection extends the existing semantic_validate.gasd_file_version behavior without changing consumer compatibility expectations."
+    ALTERNATIVES: ["Only validate semantic_validate compatibility"]
+    AFFECTS: [GasdFileVersionRegressionValidation]
+
+COMPONENT GasdFileVersionRegressionValidation:
+    INTERFACE:
+        regression_version_marker_legacy() -> Void
+        regression_metadata_version_legacy() -> Void
+        regression_legacy_files_without_version() -> Void
 
 FLOW regression_version_marker_legacy() -> Void:
-    1. ACHIEVE "Ensure existing AST consumers do not crash when given JSON with gasd_file_version":
+    1. ACHIEVE "Ensure existing AST consumers do not crash when given JSON with semantic_validate.gasd_file_version" @trace #RT-PARSER-009-02
         POSTCONDITION: "Deserialization continues uninterrupted"
-    @trace(RT-PARSER-009-02) AS FLOW_REGRESSION_DESERIALIZE
+    @trace(RT-PARSER-009-02) AS FLOW_REGRESSION_DESERIALIZE_MARKER
+
+FLOW regression_metadata_version_legacy() -> Void:
+    1. ACHIEVE "Ensure existing AST consumers do not crash when given JSON with metadata.version" @trace #RT-PARSER-009-03
+        POSTCONDITION: "Deserialization continues uninterrupted with metadata.version present"
+    2. ACHIEVE "Ensure consumers that inspect both version projections observe matching values" @trace #RT-PARSER-009-03
+        POSTCONDITION: "metadata.version equals semantic_validate.gasd_file_version"
+    @trace(RT-PARSER-009-03) AS FLOW_REGRESSION_DESERIALIZE_METADATA
+
+FLOW regression_legacy_files_without_version() -> Void:
+    1. ACHIEVE "Parse legacy GASD input that predates VERSION directives" @trace #RT-PARSER-009-01
+        POSTCONDITION: "AST exporter does not crash"
+    2. ACHIEVE "Verify legacy Semantic AST output uses unknown for both version projections" @trace #RT-PARSER-009-01
+        POSTCONDITION: "metadata.version and semantic_validate.gasd_file_version are both unknown"
+    @trace(RT-PARSER-009-01, AC-PARSER-009-03, AC-PARSER-009-06) AS FLOW_REGRESSION_LEGACY_UNKNOWN

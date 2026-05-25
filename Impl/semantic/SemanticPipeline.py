@@ -559,6 +559,8 @@ class SemanticPipeline:
                  effective_version = "1.1"
         else:
              effective_version = global_version
+
+        metadata.version = VersionResolver.resolve_metadata_version(asts, cli_version=global_version)
         
         for ns in ns_nodes.values():
             for flow in ns.flows.values():
