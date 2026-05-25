@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="gasd_parser",
-    version="2.1.5",
+    version="2.1.6",
     packages=["gasd_parser"] + ["gasd_parser." + p for p in find_packages(where="../../Impl")],
     package_dir={"gasd_parser": "../../Impl"},
     install_requires=[

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting packaging for Version 2.1.5..."
+echo "Starting packaging for Version 2.1.6..."
 
 # 1. Run Tests and Update Metadata
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -20,8 +20,8 @@ touch "$PROJECT_ROOT/Impl/parser/generated/grammar/__init__.py"
 python3 setup.py bdist_wheel sdist
 
 # 3. Verify Wheel
-if [ -f "dist/gasd_parser-2.1.5-py3-none-any.whl" ]; then
-    echo "Wheel generated successfully: dist/gasd_parser-2.1.5-py3-none-any.whl"
+if [ -f "dist/gasd_parser-2.1.6-py3-none-any.whl" ]; then
+    echo "Wheel generated successfully: dist/gasd_parser-2.1.6-py3-none-any.whl"
 else
     echo "ERROR: Wheel not found!"
     exit 1

@@ -2,7 +2,7 @@ VERSION 1.2
 NAMESPACE: "gasd.validation.regression.json"
 CONTEXT: "Regression Validation for JSON Paths"
 TARGET: "Python3"
-TRACE: "#US-PARSER-010", "#RT-PARSER-010-01", "#RT-PARSER-010-02"
+TRACE: "#US-PARSER-010", "#RT-PARSER-010-01", "#RT-PARSER-010-02", "#RT-PARSER-010-03"
 
 INVARIANT LOCAL: "Legacy JSON standard output must align with Semantic AST relativization"
 
@@ -21,4 +21,6 @@ FLOW test_legacy_json_output() -> Boolean:
         POSTCONDITION: "result == true"
     2. ACHIEVE "Ensure absolute paths provided as CLI args are correctly relativized in final AST" @trace #RT-PARSER-010-02
         POSTCONDITION: "result == true"
-    3. RETURN true
+    3. ACHIEVE "Ensure --no-validate --ast-output uses relative paths in exported AST" @trace #RT-PARSER-010-03
+        POSTCONDITION: "result == true"
+    4. RETURN true
