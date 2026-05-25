@@ -10,9 +10,9 @@ DECISION "Acceptance Scenarios":
     CHOSEN: "Validate CLI end-to-end execution"
     RATIONALE: "Ensures end-user perspective is valid."
     ALTERNATIVES: ["Unit test only"]
-    AFFECTS: [AcceptanceValidation]
+    AFFECTS: [RelativeJsonPathsAcceptanceValidation]
 
-COMPONENT AcceptanceValidation:
+COMPONENT RelativeJsonPathsAcceptanceValidation:
     INTERFACE:
         test_cli_relativization() -> Boolean
 

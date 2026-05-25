@@ -10,9 +10,9 @@ DECISION "Test Coverage for Default Output":
     CHOSEN: "Unit-test display_default_info flow implementation"
     RATIONALE: "Ensures structural behavior is sound."
     ALTERNATIVES: ["Integration tests only"]
-    AFFECTS: [DesignValidation]
+    AFFECTS: [CliDefaultInfoOutputDesignValidation]
 
-COMPONENT DesignValidation:
+COMPONENT CliDefaultInfoOutputDesignValidation:
     INTERFACE:
         test_cli_default_output() -> Boolean
 

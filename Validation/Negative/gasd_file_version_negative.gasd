@@ -1,13 +1,50 @@
 VERSION 1.2
+NAMESPACE: "gasd.validation.negative.file_version"
 /*
    Validation: Negative testing for US-PARSER-009
 */
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "Python3"
-TRACE: "US-PARSER-009"
+TRACE: "#US-PARSER-009", "#AT-PARSER-009-03", "#AC-PARSER-009-03", "#AC-PARSER-009-06"
+
+INVARIANT LOCAL: "Malformed or inconsistent version metadata must not produce divergent Semantic AST version projections"
+
+DECISION "Negative Scenarios for Version Metadata":
+    CHOSEN: "Validate malformed source fallback and mismatch rejection"
+    RATIONALE: "The design requires robust unknown fallback and equality between metadata.version and semantic_validate.gasd_file_version."
+    ALTERNATIVES: ["Only validate malformed input"]
+    AFFECTS: [GasdFileVersionNegativeValidation]
+
+COMPONENT GasdFileVersionNegativeValidation:
+    INTERFACE:
+        negative_version_marker_malformed() -> Void
+        negative_metadata_version_malformed() -> Void
+        negative_version_projection_mismatch() -> Void
+        negative_root_level_gasd_file_version() -> Void
 
 FLOW negative_version_marker_malformed() -> Void:
-    1. ACHIEVE "Run gasd_parser on a malformed GASD file without version":
-        POSTCONDITION: "gasd_file_version IS 'unknown' even if other errors occur"
-    @trace(AT-PARSER-009-03) AS FLOW_NEG_MALFORMED
+    1. ACHIEVE "Run gasd_parser on a malformed GASD file without version" @trace #AT-PARSER-009-03
+        POSTCONDITION: "semantic_validate.gasd_file_version IS 'unknown' even if other errors occur"
+    @trace(AC-PARSER-009-03, AT-PARSER-009-03) AS FLOW_NEG_MARKER_MALFORMED
+
+FLOW negative_metadata_version_malformed() -> Void:
+    1. ACHIEVE "Run gasd_parser --ast-sem on a malformed GASD file without version" @trace #AT-PARSER-009-03
+        POSTCONDITION: "metadata.version IS 'unknown' even if other errors occur"
+    2. ACHIEVE "Compare malformed-output metadata.version and semantic_validate.gasd_file_version" @trace #AC-PARSER-009-06
+        POSTCONDITION: "Both values are identical"
+    @trace(AC-PARSER-009-03, AC-PARSER-009-05, AC-PARSER-009-06, AT-PARSER-009-03) AS FLOW_NEG_METADATA_MALFORMED
+
+FLOW negative_version_projection_mismatch() -> Void:
+    1. ACHIEVE "Inject a Semantic AST fixture where metadata.version differs from semantic_validate.gasd_file_version" @trace #AC-PARSER-009-06
+        POSTCONDITION: "Fixture contains divergent version projections"
+    2. ENSURE "Exporter validation rejects or flags divergent version projections"
+        OTHERWISE THROW "Version Metadata Mismatch Not Detected"
+    @trace(AC-PARSER-009-06) AS FLOW_NEG_VERSION_MISMATCH
+
+FLOW negative_root_level_gasd_file_version() -> Void:
+    1. ACHIEVE "Inspect Semantic AST JSON for unsupported root-level gasd_file_version field" @trace #AC-PARSER-009-01
+        POSTCONDITION: "Root-level gasd_file_version is absent outside semantic_validate"
+    2. ACHIEVE "Verify root metadata uses version rather than gasd_file_version" @trace #AC-PARSER-009-05
+        POSTCONDITION: "metadata.version is present and metadata.gasd_file_version is absent"
+    @trace(AC-PARSER-009-01, AC-PARSER-009-05) AS FLOW_NEG_ROOT_LEVEL_VERSION

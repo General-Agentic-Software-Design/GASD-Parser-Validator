@@ -10,9 +10,9 @@ DECISION "Regression Scenarios":
     CHOSEN: "Validate legacy paths output"
     RATIONALE: "Ensures regressions don't leak absolute paths."
     ALTERNATIVES: ["No legacy tests"]
-    AFFECTS: [RegressionValidation]
+    AFFECTS: [RelativeJsonPathsRegressionValidation]
 
-COMPONENT RegressionValidation:
+COMPONENT RelativeJsonPathsRegressionValidation:
     INTERFACE:
         test_legacy_json_output() -> Boolean
 

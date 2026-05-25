@@ -1,11 +1,14 @@
 VERSION 1.2
+NAMESPACE: "gasd.validation.design.file_version"
 /*
    Validation: Design level validation for US-PARSER-009
 */
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "Python3"
-TRACE: "US-PARSER-009"
+TRACE: "#US-PARSER-009", "#AC-PARSER-009-01", "#AC-PARSER-009-05", "#AC-PARSER-009-06"
+
+INVARIANT LOCAL: "Semantic AST version metadata must be projected into both semantic_validate.gasd_file_version and metadata.version"
 
 TYPE ValidationMarker:
     _internal: Boolean
@@ -13,7 +16,59 @@ TYPE ValidationMarker:
 TYPE GasdFileVersion:
     _internal: Boolean
 
-FLOW validate_design_version_marker() -> Void:
-    1. ACHIEVE "Test GasdFileVersion structure definition":
-        POSTCONDITION: "Structure evaluated cleanly"
-    @trace(AC-PARSER-009-01) AS FLOW_VERIFY_DESIGN
+TYPE SemanticAstMetadata:
+    _internal: Boolean
+
+TYPE JSON:
+    _internal: Boolean
+
+DECISION "Design Coverage for Version Metadata":
+    CHOSEN: "Validate dual projection, fallback resolution, and export equality"
+    RATIONALE: "US-PARSER-009 requires the Semantic AST to expose the effective GASD version in both validation marker metadata and root semantic metadata."
+    ALTERNATIVES: ["Validate semantic_validate only", "Validate metadata only"]
+    AFFECTS: [GasdFileVersionDesignValidation]
+
+COMPONENT GasdFileVersionDesignValidation:
+    INTERFACE:
+        validate_version_marker_shape() -> Void
+        validate_metadata_version_shape() -> Void
+        validate_version_resolution_flow() -> Void
+        validate_dual_projection_flow() -> Void
+        validate_export_equality_flow() -> Void
+
+FLOW validate_version_marker_shape() -> Void:
+    1. ACHIEVE "Inspect GasdFileVersion design type for gasd_file_version string binding" @trace #AC-PARSER-009-01
+        POSTCONDITION: "GasdFileVersion models semantic_validate.gasd_file_version as the validation marker projection"
+    @trace(AC-PARSER-009-01) AS FLOW_VERIFY_MARKER_SHAPE
+
+FLOW validate_metadata_version_shape() -> Void:
+    1. ACHIEVE "Inspect SemanticAstMetadata design type for version string binding" @trace #AC-PARSER-009-05
+        POSTCONDITION: "SemanticAstMetadata models root metadata.version as the semantic metadata projection"
+    @trace(AC-PARSER-009-05) AS FLOW_VERIFY_METADATA_SHAPE
+
+FLOW validate_version_resolution_flow() -> Void:
+    1. ACHIEVE "Verify explicit source version resolves to the same string" @trace #AC-PARSER-009-02
+        POSTCONDITION: "Resolved version preserves explicit source version"
+    2. ACHIEVE "Verify missing source version resolves to unknown" @trace #AC-PARSER-009-03
+        POSTCONDITION: "Resolved version uses literal unknown when source_version is empty or null"
+    3. ACHIEVE "Verify version directive extraction follows GASD semantic rules" @trace #AC-PARSER-009-04
+        POSTCONDITION: "Resolution depends on semantic version directive identification"
+    @trace(AC-PARSER-009-02, AC-PARSER-009-03, AC-PARSER-009-04) AS FLOW_VERIFY_VERSION_RESOLUTION
+
+FLOW validate_dual_projection_flow() -> Void:
+    1. ACHIEVE "Verify inject_gasd_file_version writes semantic_validate.gasd_file_version" @trace #AC-PARSER-009-01
+        POSTCONDITION: "Validation marker contains gasd_file_version"
+    2. ACHIEVE "Verify inject_gasd_file_version writes metadata.version" @trace #AC-PARSER-009-05
+        POSTCONDITION: "Semantic metadata contains version"
+    3. ACHIEVE "Verify both projections use the same resolved value" @trace #AC-PARSER-009-06
+        POSTCONDITION: "metadata.version equals semantic_validate.gasd_file_version"
+    @trace(AC-PARSER-009-01, AC-PARSER-009-05, AC-PARSER-009-06) AS FLOW_VERIFY_DUAL_PROJECTION
+
+FLOW validate_export_equality_flow() -> Void:
+    1. ACHIEVE "Verify export_ast_sem_version_metadata serializes metadata.version" @trace #AT-PARSER-009-04
+        POSTCONDITION: "Exported Semantic AST JSON metadata object contains version"
+    2. ACHIEVE "Verify export_ast_sem_version_metadata serializes semantic_validate.gasd_file_version" @trace #AT-PARSER-009-04
+        POSTCONDITION: "Exported Semantic AST JSON semantic_validate object contains gasd_file_version"
+    3. ENSURE "metadata.version equals semantic_validate.gasd_file_version whenever both objects are present"
+        OTHERWISE THROW "Version Metadata Mismatch"
+    @trace(AT-PARSER-009-04, AT-PARSER-009-05) AS FLOW_VERIFY_EXPORT_EQUALITY

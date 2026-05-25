@@ -10,9 +10,9 @@ DECISION "Negative Scenarios":
     CHOSEN: "Verify standard error exit behavior when invalid flags are provided instead of empty"
     RATIONALE: "Ensures default info doesn't corrupt error handling paths."
     ALTERNATIVES: ["None"]
-    AFFECTS: [NegativeValidation]
+    AFFECTS: [CliDefaultInfoOutputNegativeValidation]
 
-COMPONENT NegativeValidation:
+COMPONENT CliDefaultInfoOutputNegativeValidation:
     INTERFACE:
         test_invalid_cli_arguments() -> Boolean
 

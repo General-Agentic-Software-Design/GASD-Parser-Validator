@@ -1,20 +1,56 @@
 VERSION 1.2
+NAMESPACE: "gasd.validation.acceptance.file_version"
 /*
    Validation: Acceptance testing for US-PARSER-009
 */
 
 CONTEXT: "Compiler / Language Tooling"
 TARGET: "Python3"
-TRACE: "US-PARSER-009"
+TRACE: "#US-PARSER-009", "#AT-PARSER-009-01", "#AT-PARSER-009-02", "#AT-PARSER-009-04", "#AT-PARSER-009-05"
 
-// No redundant type declarations needed in this file
+INVARIANT LOCAL: "End-user Semantic AST JSON output must include the same GASD version in semantic_validate.gasd_file_version and metadata.version"
+
+DECISION "Acceptance Scenarios for Version Metadata":
+    CHOSEN: "Validate parser JSON stdout and ast-output file modes"
+    RATIONALE: "The user story explicitly requires both --json --ast-sem and --ast-sem --ast-output to expose the same version metadata."
+    ALTERNATIVES: ["Validate stdout only", "Validate ast-output only"]
+    AFFECTS: [GasdFileVersionAcceptanceValidation]
+
+COMPONENT GasdFileVersionAcceptanceValidation:
+    INTERFACE:
+        acceptance_version_marker_with_version() -> Void
+        acceptance_version_marker_unknown() -> Void
+        acceptance_metadata_version_stdout() -> Void
+        acceptance_metadata_version_ast_output() -> Void
 
 FLOW acceptance_version_marker_with_version() -> Void:
-    1. ACHIEVE "Run gasd_parser --json --ast-sem on a 1.2 file":
-        POSTCONDITION: "gasd_file_version IS '1.2'"
-    @trace(AC-PARSER-009-02) AS FLOW_ACC_SPECIFIED
+    1. ACHIEVE "Run gasd_parser --json --ast-sem on a 1.2 file" @trace #AT-PARSER-009-01
+        POSTCONDITION: "semantic_validate.gasd_file_version IS '1.2'"
+    2. ACHIEVE "Read root metadata object from the same Semantic AST JSON" @trace #AT-PARSER-009-04
+        POSTCONDITION: "metadata.version IS '1.2'"
+    3. ENSURE "metadata.version equals semantic_validate.gasd_file_version"
+        OTHERWISE THROW "Version Metadata Mismatch"
+    @trace(AC-PARSER-009-02, AC-PARSER-009-05, AC-PARSER-009-06, AT-PARSER-009-01, AT-PARSER-009-04) AS FLOW_ACC_SPECIFIED
 
 FLOW acceptance_version_marker_unknown() -> Void:
-    1. ACHIEVE "Run gasd_parser on a legacy file with no version directive":
-        POSTCONDITION: "gasd_file_version IS 'unknown'"
-    @trace(AC-PARSER-009-03) AS FLOW_ACC_UNKNOWN
+    1. ACHIEVE "Run gasd_parser --json --ast-sem on a legacy file with no version directive" @trace #AT-PARSER-009-02
+        POSTCONDITION: "semantic_validate.gasd_file_version IS 'unknown'"
+    2. ACHIEVE "Read root metadata object from the same legacy Semantic AST JSON" @trace #AT-PARSER-009-04
+        POSTCONDITION: "metadata.version IS 'unknown'"
+    3. ENSURE "metadata.version equals semantic_validate.gasd_file_version"
+        OTHERWISE THROW "Version Metadata Mismatch"
+    @trace(AC-PARSER-009-03, AC-PARSER-009-05, AC-PARSER-009-06, AT-PARSER-009-02, AT-PARSER-009-04) AS FLOW_ACC_UNKNOWN
+
+FLOW acceptance_metadata_version_stdout() -> Void:
+    1. ACHIEVE "Run gasd_parser --ast-sem --json on a file with explicit VERSION 1.2" @trace #AT-PARSER-009-04
+        POSTCONDITION: "Semantic AST JSON stdout contains metadata.version"
+    2. ACHIEVE "Compare metadata.version to semantic_validate.gasd_file_version in stdout JSON" @trace #AT-PARSER-009-04
+        POSTCONDITION: "Both values are identical"
+    @trace(AC-PARSER-009-05, AC-PARSER-009-06, AT-PARSER-009-04) AS FLOW_ACC_METADATA_STDOUT
+
+FLOW acceptance_metadata_version_ast_output() -> Void:
+    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json on a file with explicit VERSION 1.2" @trace #AT-PARSER-009-05
+        POSTCONDITION: "Written Semantic AST JSON contains metadata.version"
+    2. ACHIEVE "Compare written metadata.version to written semantic_validate.gasd_file_version" @trace #AT-PARSER-009-05
+        POSTCONDITION: "Both written values are identical"
+    @trace(AC-PARSER-009-05, AC-PARSER-009-06, AT-PARSER-009-05) AS FLOW_ACC_METADATA_AST_OUTPUT

@@ -2,8 +2,9 @@ VERSION 1.2
 /*
    Design: GASD File Version in Semantic AST
    =========================================
-   Defines the structure and injection logic for the gasd file 
-   version metadata within the semantic validation marker.
+   Defines the structure and injection logic for the GASD file
+   version metadata within the semantic validation marker and
+   root semantic metadata.
 */
 
 CONTEXT: "Compiler / Language Tooling — GASD File Versioning"
@@ -13,15 +14,18 @@ TRACE: "US-PARSER-009"
 TYPE ValidationMarker:
     _internal: Boolean
 
+TYPE JSON:
+    _internal: Boolean
+
 // ===================================================================
 // Decisions
 // ===================================================================
 
-DECISION "Version Field Placement" @trace(#AC-PARSER-009-01):
-    CHOSEN: "Nested key 'gasd_file_version' within 'semantic_validate' object"
-    RATIONALE: "Keeps all validation and parser metadata logically grouped in a single object for downstream consumers."
-    ALTERNATIVES: ["Root-level key 'gasd_file_version'", "Nested key in 'semantic_validate'"]
-    AFFECTS: [ValidationMarker]
+DECISION "Version Field Placement" @trace(#AC-PARSER-009-01, #AC-PARSER-009-05, #AC-PARSER-009-06):
+    CHOSEN: "Dual projection: semantic_validate.gasd_file_version and metadata.version"
+    RATIONALE: "The validation marker exposes parser certificate metadata, while semantic metadata exposes the effective GASD file version beside context, target, and trace for downstream semantic consumers."
+    ALTERNATIVES: ["Only semantic_validate.gasd_file_version", "Only metadata.version", "Root-level key 'gasd_file_version'"]
+    AFFECTS: [ValidationMarker, SemanticAstMetadata]
 
 DECISION "Missing Version Fallback" @trace(#AC-PARSER-009-03):
     CHOSEN: "Literal string 'unknown'"
@@ -37,21 +41,45 @@ DECISION "Missing Version Fallback" @trace(#AC-PARSER-009-03):
 TYPE GasdFileVersion @trace(AC-PARSER-009-02, AC-PARSER-009-03) AS TYPE_VERSION_BINDING:
     gasd_file_version: String // Contains explicit version e.g. "1.2", or "unknown"
 
+/// Extension of root Semantic AST metadata to include the same GASD version value.
+TYPE SemanticAstMetadata @trace(AC-PARSER-009-05, AC-PARSER-009-06) AS TYPE_METADATA_VERSION:
+    version: String // Same value as semantic_validate.gasd_file_version
+
 // ===================================================================
 // Logic & Constraints
 // ===================================================================
 
-FLOW inject_gasd_file_version(marker: ValidationMarker, source_version: String) -> ValidationMarker:
+FLOW resolve_gasd_file_version(source_version: String) -> String:
     1. ACHIEVE "Evaluate source_version":
-        POSTCONDITION: "If source_version is empty or null, set gasd_file_version to 'unknown', else set to source_version"
-    2. ACHIEVE "Inject gasd_file_version into marker":
+        POSTCONDITION: "If source_version is empty or null, resolved version is 'unknown', else resolved version is source_version"
+    2. ACHIEVE "Return resolved GASD version":
+        POSTCONDITION: "Resolved version returned as String"
+    @trace(AC-PARSER-009-02, AC-PARSER-009-03, AC-PARSER-009-04) AS FLOW_VERSION_RESOLVE
+
+FLOW inject_gasd_file_version(marker: ValidationMarker, metadata: SemanticAstMetadata, source_version: String) -> ValidationMarker:
+    1. ACHIEVE "Resolve GASD file version from source_version":
+        POSTCONDITION: "Resolved version is explicit source version or 'unknown'"
+    2. ACHIEVE "Inject gasd_file_version into semantic_validate marker":
         POSTCONDITION: "gasd_file_version securely injected"
-    3. ACHIEVE "Return updated ValidationMarker":
+    3. ACHIEVE "Inject same version value into metadata.version":
+        POSTCONDITION: "metadata.version equals semantic_validate.gasd_file_version"
+    4. ACHIEVE "Return updated ValidationMarker":
         POSTCONDITION: "Marker returned successfully"
-    @trace(AC-PARSER-009-04) AS FLOW_VERSION_INJECT
+    @trace(AC-PARSER-009-01, AC-PARSER-009-04, AC-PARSER-009-05, AC-PARSER-009-06) AS FLOW_VERSION_INJECT
+
+FLOW export_ast_sem_version_metadata(metadata: SemanticAstMetadata, marker: ValidationMarker) -> JSON:
+    1. ACHIEVE "Serialize semantic metadata with version":
+        POSTCONDITION: "JSON metadata object contains version"
+    2. ACHIEVE "Serialize semantic validation marker with gasd_file_version when marker is present":
+        POSTCONDITION: "JSON semantic_validate object contains gasd_file_version"
+    3. ENSURE "metadata.version equals semantic_validate.gasd_file_version whenever both objects are present"
+        OTHERWISE THROW "Version Metadata Mismatch"
+    @trace(AT-PARSER-009-04, AT-PARSER-009-05) AS FLOW_VERSION_EXPORT
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
 CONSTRAINT: "The 'gasd_file_version' MUST always be correctly populated as long as 'semantic_validate' is emitted, even in cases of partial semantic failure." @trace(#AC-PARSER-009-03) AS CONST_VERSION_ROBUSTNESS
+CONSTRAINT: "The root metadata object MUST contain 'version' whenever --ast-sem emits Semantic AST JSON." @trace(#AC-PARSER-009-05) AS CONST_METADATA_VERSION_PRESENT
+CONSTRAINT: "The metadata.version value MUST match semantic_validate.gasd_file_version whenever semantic_validate is present." @trace(#AC-PARSER-009-06) AS CONST_VERSION_VALUES_MATCH

@@ -35,7 +35,7 @@ FLOW phase1_generate_design():
         POSTCONDITION: "Design/semantic_validation_marker_design.gasd exists and defines ValidationMarker structure"
     ### Design: GASD File Version in Semantic AST (US-PARSER-009)
     6. ACHIEVE "Generate Design/gasd_file_version_design.gasd" @trace #US-PARSER-009
-        POSTCONDITION: "Design/gasd_file_version_design.gasd exists and defines GasdFileVersion extraction logic"
+        POSTCONDITION: "Design/gasd_file_version_design.gasd exists and defines GasdFileVersion extraction, semantic_validate.gasd_file_version injection, metadata.version injection, and equality constraints"
     ### Design: Universal Relative JSON Paths (US-PARSER-010)
     7. ACHIEVE "Generate Design/relative_json_paths_design.gasd" @trace #US-PARSER-010
         POSTCONDITION: "Design/relative_json_paths_design.gasd exists and defines relativization logic for generated JSON output"
@@ -202,8 +202,8 @@ FLOW phase4_generate_implementation():
         POSTCONDITION: "--ast flag removed"
     9. ACHIEVE "Implement 'semantic_validate' marker injection in Impl/cli.py and Impl/semantic/SemanticASTExporter.py" @trace #US-PARSER-008
         POSTCONDITION: "JSON output includes validation certificate with status and metadata"
-    10. ACHIEVE "Implement 'gasd_file_version' injection into the semantic_validate marker in Impl/semantic/SemanticASTExporter.py" @trace #US-PARSER-009
-        POSTCONDITION: "JSON output explicit file version or 'unknown'"
+    10. ACHIEVE "Implement 'gasd_file_version' injection into the semantic_validate marker and 'version' injection into semantic metadata in Impl/semantic/SemanticASTExporter.py" @trace #US-PARSER-009
+        POSTCONDITION: "JSON output contains explicit file version or 'unknown' in both semantic_validate.gasd_file_version and metadata.version"
     11. ACHIEVE "Implement Universal Relative JSON Paths ('Zero-Leak' relativization) in JSON serialization in Impl/semantic/SemanticASTExporter.py and associated formatters" @trace #US-PARSER-010
         POSTCONDITION: "All absolute paths in generated JSON are relativized to the CWD"
     12. ACHIEVE "Implement CLI default info output to display version and build info when no arguments are provided in Impl/cli.py" @trace #US-PARSER-011

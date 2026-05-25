@@ -419,11 +419,12 @@ class ResolvedConstraintNode(SemanticNodeBase):
 
 
 class SystemMetadata:
-    def __init__(self, context: str, target: List[str], trace: List[str], files: Optional[List[Any]] = None):
+    def __init__(self, context: str, target: List[str], trace: List[str], files: Optional[List[Any]] = None, version: Optional[str] = None):
         self.context = context
         self.target = target
         self.trace = trace
         self.files = files or []
+        self.version = version
 
     def to_dict(self):
         d = {
@@ -431,6 +432,8 @@ class SystemMetadata:
             "target": self.target,
             "trace": self.trace
         }
+        if self.version is not None:
+            d["version"] = self.version
         if self.files:
             sorted_files = sorted(self.files, key=lambda f: getattr(f, 'filePath', '') if hasattr(f, 'filePath') else str(f))
             file_dicts = []

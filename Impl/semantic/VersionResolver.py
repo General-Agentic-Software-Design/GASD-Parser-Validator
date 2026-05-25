@@ -7,6 +7,37 @@ class VersionResolver:
     """
 
     @staticmethod
+    def resolve_declared_version(ast: Any) -> Optional[str]:
+        """Return the version declared by the source file, if one exists."""
+        ast_version = getattr(ast, 'version', None)
+        if ast_version:
+            return str(ast_version).strip('"\' ')
+
+        version_directive = next((d for d in getattr(ast, 'directives', []) if d.directiveType == "VERSION"), None)
+        if version_directive and version_directive.values:
+            return version_directive.values[0].strip('"\' ')
+
+        return None
+
+    @staticmethod
+    def resolve_metadata_version(ast: Any, cli_version: Optional[str] = None) -> str:
+        """
+        Resolve the version value projected into Semantic AST metadata.
+        Explicit CLI version overrides the source; otherwise missing source
+        version is represented as the literal string "unknown".
+        """
+        if cli_version:
+            return str(cli_version).strip('"\' ')
+
+        asts = ast if isinstance(ast, list) else [ast]
+        if asts:
+            declared = VersionResolver.resolve_declared_version(asts[0])
+            if declared:
+                return declared
+
+        return "unknown"
+
+    @staticmethod
     def resolve_version(ast: Any, cli_version: Optional[str] = None) -> str:
         """
         GEP-6 §10.1 / US-V2-009:
@@ -17,15 +48,9 @@ class VersionResolver:
         if cli_version:
             return cli_version
         
-        # Check for VERSION attribute first (populated by ASTGenerator)
-        ast_version = getattr(ast, 'version', None)
-        if ast_version:
-            return ast_version.strip('"\' ')
-        
-        # Fallback: Check for VERSION directive in directives list (backward compatibility / robust check)
-        version_directive = next((d for d in getattr(ast, 'directives', []) if d.directiveType == "VERSION"), None)
-        if version_directive and version_directive.values:
-            return version_directive.values[0].strip('"\' ')
+        declared = VersionResolver.resolve_declared_version(ast)
+        if declared:
+            return declared
         
         return "1.2"
 
@@ -43,14 +68,7 @@ class VersionResolver:
         if not cli_version:
              return errors
              
-        # Check for VERSION attribute first (populated by ASTGenerator)
-        file_version = getattr(ast, 'version', None)
-        
-        # Fallback: Check for VERSION directive in directives list
-        if not file_version:
-            version_directive = next((d for d in getattr(ast, 'directives', []) if d.directiveType == "VERSION"), None)
-            if version_directive and version_directive.values:
-                file_version = version_directive.values[0].strip('"\' ')
+        file_version = VersionResolver.resolve_declared_version(ast)
         
         if file_version and file_version != cli_version:
                 # We return a structured error to be handled by the reporter

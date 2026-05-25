@@ -10,9 +10,9 @@ DECISION "Negative Scenarios":
     CHOSEN: "Validate un-relativizable paths"
     RATIONALE: "Ensures boundary paths don't leak."
     ALTERNATIVES: ["No negative path tests"]
-    AFFECTS: [NegativeValidation]
+    AFFECTS: [RelativeJsonPathsNegativeValidation]
 
-COMPONENT NegativeValidation:
+COMPONENT RelativeJsonPathsNegativeValidation:
     INTERFACE:
         test_unrelativizable_paths() -> Boolean
 
