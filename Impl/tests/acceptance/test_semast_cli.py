@@ -33,10 +33,8 @@ def test_semast_cli_activation():
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        assert "asts" in data
-        assert data["asts"][0]["kind"] == "SemanticSystem"
-        # No status message on stderr when using --json
-        assert result.stderr == ""
+        assert data["kind"] == "SemanticSystem"
+        assert json.loads(result.stderr)["success"] is True
     finally:
         os.unlink(fp)
 
@@ -58,9 +56,8 @@ def test_semast_cli_dual_output():
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        output = data["asts"][0]
         # Semantic AST has namespaces, regular AST does not
-        assert "namespaces" in output
+        assert "namespaces" in data
     finally:
         os.unlink(fp)
 
@@ -84,7 +81,7 @@ def test_semast_cli_output_dir():
 
 
 def test_semast_cli_combine():
-    """ENSURE '--ast-combine produces a combined JSON array for multiple files'"""
+    """ENSURE '--ast-combine produces one SemanticSystem for multiple files'"""
     tmp1 = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
     tmp1.write('CONTEXT: "C1"\nTARGET: "P"\nTYPE T1:\n  f: String\n')
     tmp1.close()
@@ -101,11 +98,8 @@ def test_semast_cli_combine():
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        output = data["asts"]
-        assert isinstance(output, list)
-        # In Ph4, --ast-sem with multiple files produces 1 unified SemanticSystem
-        assert len(output) == 1
-        assert output[0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert len(data["compilationUnit"]["fileNodes"]) == 2
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
@@ -134,11 +128,11 @@ def test_semast_cli_default_behavior():
 
 
 def test_semast_cli_combined_opts():
-    """ENSURE '--ast-sem --json produces a JSON wrapper with success field'"""
+    """ENSURE '--json puts the validation result on stderr'"""
     result, fp = run_cli("--json")
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        data = json.loads(result.stdout)
+        data = json.loads(result.stderr)
         assert data["success"] is True
     finally:
         os.unlink(fp)
@@ -177,10 +171,9 @@ def test_semast_cli_multi_file():
             cwd=PROJECT_ROOT
         )
         assert result.returncode == 0
-        data = json.loads(result.stdout)
-        # In unified mode (without --ast-combine), it should return 1 SemanticSystem
-        assert len(data["asts"]) == 1
-        system = data["asts"][0]
+        system = json.loads(result.stdout)
+        assert system["kind"] == "SemanticSystem"
+        assert len(system["compilationUnit"]["fileNodes"]) == 2
         assert "global" in system["namespaces"]
     finally:
         os.unlink(tmp1.name)

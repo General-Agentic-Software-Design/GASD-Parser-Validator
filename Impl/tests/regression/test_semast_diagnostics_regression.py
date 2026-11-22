@@ -26,7 +26,7 @@ def test_semast_error_location_reporting():
         result = subprocess.run(cmd, capture_output=True, text=True, env=env)
         
         # Parse JSON output
-        output = json.loads(result.stdout)
+        output = json.loads(result.stderr)
         
         # Check if we have a semantic error with correct location
         reports = output.get("reports", [])

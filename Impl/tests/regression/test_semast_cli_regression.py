@@ -61,28 +61,24 @@ def test_cli_human_readable_failure():
         os.unlink(fp)
 
 def test_cli_json_ast():
-    """Verify --json --ast-sem combines AST into the response"""
+    """Verify --json --ast-sem emits an AST and a validation report."""
     result, fp = run_cli("--ast-sem", "--json")
     try:
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        assert data["success"] is True
-        assert "asts" in data
-        assert isinstance(data["asts"], list)
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert json.loads(result.stderr)["success"] is True
     finally:
         os.unlink(fp)
 
 def test_cli_json_sem_ast():
-    """Verify --json --ast-sem combines Semantic AST into the response"""
+    """Verify --json --ast-sem emits the semantic AST at the top level."""
     result, fp = run_cli("--ast-sem", "--json")
     try:
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        assert data["success"] is True
-        assert "asts" in data
-        assert isinstance(data["asts"], list)
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert "namespaces" in data
     finally:
         os.unlink(fp)
 
@@ -104,7 +100,7 @@ def test_semast_cli_activation():
     try:
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
     finally:
         os.unlink(fp)
 
@@ -140,10 +136,8 @@ def test_semast_cli_combine():
         )
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        # In combined mode, --ast-combine produces 1 unified SemanticSystem
-        assert "asts" in data
-        assert len(data["asts"]) == 1
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert len(data["compilationUnit"]["fileNodes"]) == 2
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
@@ -152,7 +146,8 @@ def test_semast_cli_errors():
     result, fp = run_cli("--json", input_content=INVALID_GASD)
     try:
         assert result.returncode == 1
-        data = json.loads(result.stdout)
+        assert result.stdout == ""
+        data = json.loads(result.stderr)
         assert data["success"] is False
         assert data["failureCount"] == 1
     finally:
@@ -190,8 +185,8 @@ def test_semast_cli_regression_multi_file():
         )
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        # Should have a single SemanticSystem if --ast-combine (default or implied)
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert len(data["compilationUnit"]["fileNodes"]) == 2
     finally:
         os.unlink(fp1)
         os.unlink(fp2)

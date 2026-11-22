@@ -11,11 +11,11 @@ CONTEXT: "Verification of Path Relativization Design"
 TARGET: "Python3"
 TRACE: "US-PARSER-010"
 
-IMPORT "../../Design/relative_source_map_paths_design.gasd"
+IMPORT "../../Design/relative_source_map_paths_design.gasd" AS Paths
 
-CONTRACT PathRelativizer.relativize:
-    INPUT: absolute_path: String, cwd: String
-    OUTPUT: String
+CONTRACT Paths.PathRelativizer.relativize:
+    INPUT: obj: Any, cwd: String
+    OUTPUT: Any
     BEHAVIORS:
         CASE success:
             POSTCONDITION: result != null

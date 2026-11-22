@@ -39,7 +39,7 @@ def test_cli_version_mismatch_11_vs_12():
     result, paths = run_cli("--gasd-ver", "1.1", input_content=content)
     try:
         assert result.returncode == 1
-        assert "LINT-013" in result.stderr
+        assert result.stderr.count("LINT-013") == 1
         assert "Version mismatch" in result.stderr
     finally:
         cleanup(paths)
@@ -50,7 +50,7 @@ def test_cli_version_mismatch_12_vs_11():
     result, paths = run_cli("--gasd-ver", "1.2", input_content=content)
     try:
         assert result.returncode == 1
-        assert "LINT-013" in result.stderr
+        assert result.stderr.count("LINT-013") == 1
         assert "Version mismatch" in result.stderr
     finally:
         cleanup(paths)
@@ -66,6 +66,19 @@ def test_cli_version_defaulting_to_12():
         assert "POSTCONDITION" in result.stderr
     finally:
         cleanup(paths)
+
+
+def test_version_mismatch_report_is_attached_to_its_file(tmp_path):
+    good = tmp_path / "first.gasd"
+    bad = tmp_path / "second.gasd"
+    directives = 'CONTEXT: "Test"\nTARGET: "Py"\n'
+    good.write_text(f"VERSION 1.2\n{directives}TYPE Current: value: String\n", encoding="utf-8")
+    bad.write_text(f"VERSION 1.1\n{directives}TYPE Legacy: value: String\n", encoding="utf-8")
+    result, _ = run_cli("--gasd-ver", "1.2", "--json", file_paths=[str(good), str(bad)])
+    assert result.returncode == 1
+    reports = json.loads(result.stderr)["reports"]
+    assert [(report["success"], [error["code"] for error in report["errors"]])
+            for report in reports] == [(True, []), (False, ["LINT-013"])]
 
 def test_cli_version_batch_11():
     """AT-V2-121: --gasd-ver 1.1 processes multiple files with legacy semantics."""
@@ -127,7 +140,7 @@ def test_gep6_enforcement_lint_011():
 # --- Flag Consolidation (US-PARSER-007) ---
 
 def test_cli_ast_flag_removal():
-    """AT-PARSER-007-01: Running with --ast returns an error (unknown argument)."""
+    """AT-PARSER-007-01. The CLI rejects the removed AST flag."""
     result, paths = run_cli("--ast", input_content='VERSION 1.2\n')
     try:
         assert result.returncode == 1

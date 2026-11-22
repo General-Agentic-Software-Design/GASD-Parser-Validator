@@ -19,7 +19,7 @@ TYPE StrategyDefinition: _internal: Boolean
 // Strategy Model
 // ===================================================================
 
-TYPE ResolvedStrategyNode @trace #AC-SEMAST-007-01:
+TYPE ResolvedStrategyNode @trace("AC-SEMAST-007-01"):
     kind: "ResolvedStrategy"
     name: String
     algorithm: String
@@ -36,12 +36,12 @@ TYPE AlgorithmComplexity:
 // Components
 // ===================================================================
 
-COMPONENT StrategyResolver @trace #AC-SEMAST-007-05:
+COMPONENT StrategyResolver @trace("AC-SEMAST-007-05"):
     INTERFACE:
         /// Resolve algorithm name and complexity.
-        resolve(strategy: StrategyDefinition) -> ResolvedStrategyNode @trace #AC-SEMAST-007-02, #AC-X-SEMAST-008-05
+        resolve(strategy: StrategyDefinition) -> ResolvedStrategyNode @trace("AC-SEMAST-007-02", "AC-X-SEMAST-008-05")
         /// Verify inputs/outputs against strategy contract.
-        verifyContract(strategy: ResolvedStrategyNode) -> Void @trace #AC-SEMAST-007-03
+        verifyContract(strategy: ResolvedStrategyNode) -> Void @trace("AC-SEMAST-007-03")
         /// Rank strategies based on complexity classification.
         rank(strategies: List<ResolvedStrategyNode>) -> List<ResolvedStrategyNode>
 

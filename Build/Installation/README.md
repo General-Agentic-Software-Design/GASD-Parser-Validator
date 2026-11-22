@@ -1,15 +1,16 @@
 # GASD Parser-Validator Installation
 
-Version: 2.1.5
+Version 2.1.8
 
 ## Prerequisites
-- Python 3.10+
+
+- Python 3.9+
 - `antlr4-python3-runtime==4.13.1`
 
 ## Installation
 From this directory, run:
 ```bash
-pip install dist/gasd_parser-2.1.5-py3-none-any.whl
+python3 -m pip install dist/gasd_parser-2.1.8-py3-none-any.whl
 ```
 
 ## Running the Parser
@@ -17,7 +18,12 @@ Once installed, use:
 ```bash
 gasd_parser --ast-sem <file.gasd>
 ```
-Or for JSON output:
+To write the AST as JSON on stdout:
 ```bash
-gasd_parser --ast-sem --json <file.gasd>
+gasd_parser --json file.gasd > ast.json
+```
+
+To write the same AST format directly to a file and capture the JSON validation report on stderr:
+```bash
+gasd_parser --json --ast-output ast.json file.gasd 2> validation.json
 ```

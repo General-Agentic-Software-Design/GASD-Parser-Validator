@@ -16,7 +16,7 @@ TRACE: "US-SEMAST-012", "US-X-SEMAST-010"
 // Error Model
 // ===================================================================
 /// Base type for all semantic validation and syntax errors.
-TYPE SemanticError @trace #AC-SEMAST-012-01, #AC-X-SEMAST-010-01:
+TYPE SemanticError @trace("AC-SEMAST-012-01", "AC-X-SEMAST-010-01"):
     kind: "SemanticError"
     code: String // e.g., "S001", "V005"
     message: String
@@ -32,14 +32,14 @@ TYPE ErrorSummary: _internal: Boolean
 // Components
 // ===================================================================
 
-COMPONENT SemanticErrorReporter @trace #AC-SEMAST-012-03, #AC-X-SEMAST-010-03:
+COMPONENT SemanticErrorReporter @trace("AC-SEMAST-012-03", "AC-X-SEMAST-010-03"):
     INTERFACE:
         /// Report a new semantic error with context.
-        report(error: SemanticError) -> Void @trace #AC-SEMAST-012-02
+        report(error: SemanticError) -> Void @trace("AC-SEMAST-012-02")
         /// Aggregate errors from all analysis passes across all files.
-        getSummary() -> ErrorSummary @trace #AC-X-SEMAST-010-03
+        getSummary() -> ErrorSummary @trace("AC-X-SEMAST-010-03")
         /// Return sorted list of errors for deterministic output.
-        getSortedErrors() -> List<SemanticError> @trace #AC-X-SEMAST-010-05
+        getSortedErrors() -> List<SemanticError> @trace("AC-X-SEMAST-010-05")
         /// Clear reporter for next analysis run.
         reset() -> Void
 

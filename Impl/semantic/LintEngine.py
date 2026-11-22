@@ -3,7 +3,6 @@ import re
 from typing import List, Dict, Any, Optional, Set
 from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, SemanticSystem, ScopeEnum, ResolvedFlowNode
 from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticError, ErrorLevel
-from .VersionResolver import VersionResolver
 
 class LintEngine:
     """
@@ -15,7 +14,6 @@ class LintEngine:
         self.version = version
         self.file_versions: Dict[str, str] = {}
         self.system: Optional[SemanticSystem] = None
-        self.cli_version_override: bool = False
 
     def _get_version(self, node: Optional[SemanticNodeBase]) -> str:
         """Returns the version for a specific node's source file, or the system default."""
@@ -44,10 +42,6 @@ class LintEngine:
                 severity = ErrorLevel.ERROR if file_ver == "1.2" else ErrorLevel.WARNING
                 self._report_at("V2-001", "SyntaxError: VERSION directive MUST be the first directive in the file.", 1, 1, fnode.filePath, level=severity)
             
-            # LINT-013: Version Mismatch between CLI and file
-            target_ver = fnode.syntacticRoot.version if hasattr(fnode.syntacticRoot, "version") else None
-            if target_ver and self.cli_version_override and target_ver != self.version:
-                self._report_at("LINT-013", f"Version mismatch: File specifies GASD {target_ver} but CLI enforces {self.version}.", 1, 1, fnode.filePath, level=ErrorLevel.ERROR)
         
         # Pass 1: Cross-File & Namespace Linting
         file_to_node = {f.filePath: f for f in system.metadata.files}
@@ -78,18 +72,20 @@ class LintEngine:
 
         for contract in system.contracts:
             self.lint_node(contract)
-            # LINT-007: CONTRACT CASE without Outcome (1.2 ERROR, 1.1 Error)
-            for case in getattr(contract, "cases", []):
-                has_outcome = False
-                clauses = getattr(case, "clauses", [])
-                if clauses:
-                    has_outcome = any(c.get("type") in ["POSTCONDITION", "THROWS", "AFTER"] for c in clauses if isinstance(c, dict))
-                
-                if not has_outcome:
-                    ver = self._get_version(contract)
-                    severity = self._get_severity(ver, ErrorLevel.ERROR, ErrorLevel.ERROR)
-                    case_name = getattr(case, "name", "unnamed")
-                    self._report("LINT-007", f"CONTRACT CASE '{case_name}' in '{contract.name}' must have at least one outcome (POSTCONDITION, THROWS, or AFTER).", contract, level=severity)
+            strict_contract = self._get_version(contract) == "1.2"
+            cases = getattr(contract, "cases", [])
+            if strict_contract and (not cases or not getattr(contract, "hasBehaviors", True)):
+                self._report("LINT-007", f"CONTRACT '{contract.name}' must declare BEHAVIORS with at least one CASE.", contract)
+            outcome_types = {"POSTCONDITION", "THROWS"}
+            if not strict_contract:
+                outcome_types.add("AFTER")
+            for case in cases:
+                if not any(clause["type"] in outcome_types for clause in case.clauses):
+                    self._report_at(
+                        "LINT-007",
+                        f"CONTRACT CASE '{case.name}' in '{contract.name}' must declare POSTCONDITION or THROWS.",
+                        case.line, case.column, contract.sourceMap.file,
+                    )
 
         for ass in system.assumptions:
             self.lint_node(ass)

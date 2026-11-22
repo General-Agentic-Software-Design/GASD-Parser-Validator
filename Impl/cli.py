@@ -5,24 +5,26 @@ import sys
 import datetime
 
 from .ast.ASTGenerator import ASTGenerator
+from .ast.ASTExporter import ASTExporter
 from .parser.ParseTreeAPI import ParseTreeAPI
-from .validation.ValidationPipeline import ValidationPipeline, SemanticError
-from .errors.ErrorReporter import ErrorReporter, IOErrorData, SyntaxErrorData
+from .validation.ValidationPipeline import ValidationPipeline
+from .errors.ErrorReporter import ErrorReporter, IOErrorData
+from .semantic.SemanticASTExporter import SemanticASTExporter
 from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.5"
+    __version__ = "2.1.8"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
     # === Phase 1: Setup and Versioning ===
     parser = argparse.ArgumentParser(prog="gasd_parser", description="GASD-Parser: Validation for Agentic Software Design.")
     parser.add_argument("path", nargs='*', help="Path to .gasd file and/or directory for recursive traversal.")
-    parser.add_argument("--json", action="store_true", help="Output validation results in JSON format.")
+    parser.add_argument("--json", action="store_true", help="Write AST JSON to stdout and the JSON validation report to stderr.")
     parser.add_argument("--ast-sem", action="store_true", default=True, help="Full semantic AST validation (Default).")
     parser.add_argument("--ast-combine", action="store_true", help="Combine multiple files into a single SemanticSystem.")
-    parser.add_argument("--ast-output", help="Optional path to export generated AST (JSON format).")
+    parser.add_argument("--ast-output", help="Write AST JSON exclusively to this file.")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
     parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
     parser.add_argument("-v", "--version", action="version", version="gasd_parser " + __version__ + " (built: "+__build_time__+")")
@@ -33,16 +35,13 @@ def main():
         sys.exit(1)
 
     args = parser.parse_args()
+    has_ast_output = args.ast_output is not None
 
-    if not args.path:
-        # Check stdin
-        if not sys.stdin.isatty():
-             # Handle stdin...
-             pass
-        else:
-             print(f"GASD-Parser Version: {__version__} (Build: {__build_time__})\n")
-             parser.print_help()
-             return
+    if not args.path and sys.stdin.isatty():
+        stream = sys.stderr if args.json or has_ast_output else sys.stdout
+        print(f"GASD-Parser Version: {__version__} (Build: {__build_time__})\n", file=stream)
+        parser.print_help(file=stream)
+        return
 
     target_files = []
     use_stdin = False
@@ -169,8 +168,9 @@ def main():
         except (STSemanticError, AnnotationSemanticError) as e:
             # Report the error to the first available reporter
             err_msg = str(e)
-            print(f"ERROR: Semantic validation failed", file=sys.stderr)
-            print(f"error[SEMANTIC]: {err_msg}", file=sys.stderr)
+            if not args.json:
+                print("ERROR: Semantic validation failed", file=sys.stderr)
+                print(f"error[SEMANTIC]: {err_msg}", file=sys.stderr)
             loc = getattr(e, 'location', None)
             first_rep = list(reporters.values())[0] if reporters else None
             if first_rep:
@@ -185,7 +185,6 @@ def main():
     success_count = 0
     warning_total = 0
     all_reports = []
-    exit_code = 0
 
     for file_path in target_files:
         reporter = reporters[file_path]
@@ -196,7 +195,6 @@ def main():
         is_failure = reporter.has_errors() or (file_ver == "1.2" and has_warnings)
         
         if is_failure:
-            exit_code = 1
             failure_count += 1
         else:
             success_count += 1
@@ -205,18 +203,14 @@ def main():
 
         if args.json:
             all_reports.append(reporter.to_dict())
-        else:
-            if reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
-                if is_failure:
-                    print(f"ERROR: {file_path} failed validation", file=sys.stderr)
-                else:
-                    print(f"OK Passed (with warnings): {file_path}", file=sys.stderr)
-                print(reporter.to_console(), file=sys.stderr)
+        elif reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
+            if is_failure:
+                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
             else:
-                if not args.json and not args.ast_output:
-                    print(f"OK Passed: {file_path}", file=sys.stderr)
-                elif args.ast_output and not args.ast_combine and not args.ast_sem:
-                    print(f"OK Passed: {file_path} (Exported to {args.ast_output})", file=sys.stderr)
+                print(f"OK Passed (with warnings): {file_path}", file=sys.stderr)
+            print(reporter.to_console(), file=sys.stderr)
+        elif not has_ast_output:
+            print(f"OK Passed: {file_path}", file=sys.stderr)
 
     # === Phase 4.5: Validation Marker Construction ===
     marker = None
@@ -250,76 +244,59 @@ def main():
                 "gasd_file_version": gasd_file_version
             }
 
-    if args.json:
-        semantic_ast_dict = None
-        if args.ast_sem and semantic_system:
-            if marker and hasattr(semantic_system, "metadata") and semantic_system.metadata:
-                semantic_system.metadata.version = marker["gasd_file_version"]
-            semantic_ast_dict = semantic_system.to_dict()
+    # === AST Export ===
+    ast_json = None
+    if args.json or has_ast_output or args.ast_combine:
+        if semantic_system is not None:
+            ast_json = SemanticASTExporter().to_json(semantic_system, marker=marker)
+        elif collected_asts and (args.ast_combine or args.no_validate):
+            ast = collected_asts if args.ast_combine or len(collected_asts) > 1 else collected_asts[0]
+            ast_json = ASTExporter().to_json(ast)
 
-        combined = {
+    output_error = None
+    if ast_json is not None:
+        ast_bytes = ast_json.encode("utf-8")
+        if has_ast_output:
+            try:
+                with open(args.ast_output, "wb") as out_f:
+                    out_f.write(ast_bytes)
+                if not args.json:
+                    print(f"Exported combined AST to {args.ast_output}", file=sys.stderr)
+            except OSError as exc:
+                output_error = exc.strerror or type(exc).__name__
+        else:
+            stdout_buffer = getattr(sys.stdout, "buffer", None)
+            if stdout_buffer is None:
+                sys.stdout.write(ast_json)
+            else:
+                stdout_buffer.write(ast_bytes)
+
+    if args.json:
+        report = {
             "success": failure_count == 0,
             "successCount": success_count,
             "failureCount": failure_count,
-            "reports": all_reports
+            "reports": all_reports,
         }
         if marker:
-            combined["semantic_validate"] = marker
-        
-        if semantic_ast_dict and "metadata" in semantic_ast_dict:
-            combined["metadata"] = semantic_ast_dict["metadata"]
-        
-        if semantic_ast_dict and not args.ast_output:
-            combined["asts"] = [semantic_ast_dict]
-        
-        # Apply path relativization to the entire combined dictionary
-        from .semantic.SemanticASTExporter import SemanticASTExporter
-        combined = SemanticASTExporter().relativize_dict(combined, os.getcwd())
-        
-        print(json.dumps(combined, indent=2))
-    
-    # === AST Export ===
-    export_data = None
-    exporter = None
-    if args.ast_sem and semantic_system:
-         export_data = semantic_system
-         from .semantic.SemanticASTExporter import SemanticASTExporter
-         exporter = SemanticASTExporter()
-    elif collected_asts and (args.ast_combine or args.no_validate):
-         export_data = collected_asts if args.ast_combine or len(collected_asts) > 1 else collected_asts[0]
-         from .ast.ASTExporter import ASTExporter
-         exporter = ASTExporter()
-
-    if args.ast_output:
-        if export_data is not None and exporter:
-            from .semantic.SemanticASTExporter import SemanticASTExporter
-            if isinstance(exporter, SemanticASTExporter):
-                if marker and hasattr(export_data, "metadata") and export_data.metadata:
-                    export_data.metadata.version = marker["gasd_file_version"]
-                combined_ast_json = exporter.to_json(export_data, marker=marker)
-            else:
-                combined_ast_json = exporter.to_json(export_data)
-            try:
-                with open(args.ast_output, "w") as out_f:
-                    out_f.write(combined_ast_json)
-                if not args.json:
-                    print(f"Exported combined AST to {args.ast_output}", file=sys.stderr)
-            except Exception as e:
-                print(f"Error: Could not write AST to {args.ast_output}: {str(e)}", file=sys.stderr)
-                failure_count += 1
-                exit_code = 1
-    elif not args.json and export_data is not None and args.ast_combine:
-        combined_ast_json = exporter.to_json(export_data)
-        print(combined_ast_json)
-
-    if not args.json:
+            report["semantic_validate"] = marker
+        if output_error:
+            report["outputError"] = {
+                "path": args.ast_output or None,
+                "message": f"Could not write AST: {output_error}",
+            }
+        report = SemanticASTExporter().relativize_dict(report, os.getcwd())
+        print(json.dumps(report, indent=2), file=sys.stderr)
+    else:
+        if output_error:
+            print(f"Error: Could not write AST to {args.ast_output!r}: {output_error}", file=sys.stderr)
         print("\n--- Summary ---", file=sys.stderr)
         print(f"Files Validated: {len(target_files)}", file=sys.stderr)
         print(f"Pass:            {success_count}", file=sys.stderr)
         print(f"Failed:          {failure_count}", file=sys.stderr)
         print(f"Warnings:        {warning_total}", file=sys.stderr)
 
-    sys.exit(1 if failure_count > 0 else 0)
+    sys.exit(1 if failure_count or output_error else 0)
 
 if __name__ == "__main__":
     main()

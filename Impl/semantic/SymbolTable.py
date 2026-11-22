@@ -57,6 +57,12 @@ class BuiltinTypeRegistry:
     Responsible for registering and validating built-in standard types.
     """
     
+    TYPE_NAMES = (
+        "String", "Integer", "Int", "Boolean", "Float", "Decimal", "Bytes", "UUID",
+        "Date", "DateTime", "Optional", "List", "Map", "Enum", "Result", "Any", "Void",
+        "Int32",
+    )
+
     # Mapping of structural types to expected generic argument counts
     GENERIC_ARG_COUNTS = {
         "List": 1,
@@ -68,16 +74,10 @@ class BuiltinTypeRegistry:
     @staticmethod
     def initializeBuiltins(symbol_table: 'SymbolTable') -> None:
         """@trace #AC-SEMAST-019-01"""
-        builtins = [
-            "String", "Integer", "Int", "Boolean", "Float", "Decimal", "Bytes", "UUID", 
-            "Date", "DateTime", "Optional", "List", "Map", "Enum", "Result", "Any", "Void",
-            "Int32"
-        ]
-        
         # SourceRange for built-ins is internal
         dummy_range = SourceRange("builtin", 0, 0, 0, 0)
         
-        for b in builtins:
+        for b in BuiltinTypeRegistry.TYPE_NAMES:
             # Register as ResolvedTypeNodes with no fields (template markers)
             node = ResolvedTypeNode(dummy_range, b, {}, False)
             entry = SymbolEntry(b, SymbolKind.Type, symbol_table.global_scope, node)

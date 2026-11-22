@@ -107,6 +107,7 @@ DEPENDS_ON_KW   : 'DEPENDS_ON' ;
 STEP_KW         : 'STEP' ;
 POSTCONDITION_KW: 'POSTCONDITION' ;
 BEHAVIORS_KW    : 'BEHAVIORS' ;
+WHEN_KW         : 'WHEN' ;
 
 MS_UNIT         : 'ms' ;
 S_UNIT          : 's' ;

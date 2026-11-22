@@ -32,4 +32,11 @@ CONTRACT InventoryService.reserve_stock:
 CONTRACT InventoryService.release_stock:
     INPUT: items: List<Common.OrderItem>
     OUTPUT: Result<Void>
+    BEHAVIORS:
+        CASE released:
+            POSTCONDITION: result == void
+            POSTCONDITION: "Stock is restored for the reservation on first release and unchanged on repeat release"
+        CASE failed:
+            POSTCONDITION: error != null
+            POSTCONDITION: "Inventory is unchanged"
     IDEMPOTENT: true

@@ -383,6 +383,7 @@ TYPE ContractDefinition:
 /// A specific outcome case within a CONTRACT.
 TYPE CaseDefinition:
     name: String
+    when: List<String> @optional
     postcondition: List<String> @optional
     throws: String @optional
     after: String @optional

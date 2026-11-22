@@ -34,7 +34,7 @@ def test_negative_no_absolute_leakage():
         
         # 1. Structural Check (Compilation Unit)
         data = json.loads(stdout)
-        file_nodes = data["asts"][0]["compilationUnit"]["fileNodes"]
+        file_nodes = data["compilationUnit"]["fileNodes"]
         for k in file_nodes.keys():
             assert not os.path.isabs(k), f"Absolute key found: {k}"
             assert k == "test.gasd"
@@ -79,10 +79,9 @@ def test_negative_multiple_file_relativity():
         # We need to verify that each node has a relative path
         data = json.loads(result.stdout)
         files_found = set()
-        for ast in data["asts"]:
-            for ns in ast["namespaces"].values():
-                for t in ns["types"].values():
-                    files_found.add(t["sourceMap"]["file"])
+        for ns in data["namespaces"].values():
+            for t in ns["types"].values():
+                files_found.add(t["sourceMap"]["file"])
         
         assert "f1.gasd" in files_found
         assert "subdir/f2.gasd" in files_found

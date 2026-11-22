@@ -32,7 +32,7 @@ DECISION "Shadowing Policy":
 // ===================================================================
 
 /// Represents a single entry in the symbol table.
-TYPE SymbolEntry @trace #AC-SEMAST-002-01:
+TYPE SymbolEntry @trace("AC-SEMAST-002-01"):
     name: String
     kind: Enum(Type, Component, Flow, Parameter, Variable, Namespace, Resource)
     scope: SymbolScope
@@ -41,7 +41,7 @@ TYPE SymbolEntry @trace #AC-SEMAST-002-01:
     isResolved: Boolean
 
 /// A nested scope for symbol lookups.
-TYPE SymbolScope @trace #AC-SEMAST-002-02, #AC-X-SEMAST-003-02:
+TYPE SymbolScope @trace("AC-SEMAST-002-02", "AC-X-SEMAST-003-02"):
     id: String
     namespace: String @optional // Fully qualified namespace
     parent: SymbolScope @optional
@@ -53,26 +53,26 @@ TYPE SymbolScope @trace #AC-SEMAST-002-02, #AC-X-SEMAST-003-02:
 // ===================================================================
 
 /// Global symbol table containing all resolved symbols across the system.
-COMPONENT SymbolTable @trace #AC-SEMAST-002-05, #AC-X-SEMAST-003-01:
+COMPONENT SymbolTable @trace("AC-SEMAST-002-05", "AC-X-SEMAST-003-01"):
     INTERFACE:
         /// Enter a new child scope.
         enterScope(name: String, namespace: String @optional) -> SymbolScope
         /// Exit current scope and return to parent.
         exitScope() -> SymbolScope
         /// Define a new symbol in current scope.
-        define(symbol: SymbolEntry) -> Void @trace #AC-SEMAST-002-03, #AC-X-SEMAST-003-03
+        define(symbol: SymbolEntry) -> Void @trace("AC-SEMAST-002-03", "AC-X-SEMAST-003-03")
         /// Resolve a name starting from current scope.
-        resolve(name: String) -> SymbolEntry @trace #AC-SEMAST-002-04, #AC-X-SEMAST-003-05
+        resolve(name: String) -> SymbolEntry @trace("AC-SEMAST-002-04", "AC-X-SEMAST-003-05")
         /// Check for circular references in current resolution path.
         checkRecursion(symbol: SymbolEntry) -> Boolean
         /// Register standard built-in types.
-        registerBuiltIns(types: List<String>) -> Void @trace #AC-X-SEMAST-003-04
+        registerBuiltIns(types: List<String>) -> Void @trace("AC-X-SEMAST-003-04")
 
 // ===================================================================
 // Analysis Passes
 // ===================================================================
 
-COMPONENT CollisionDetector @trace #AC-SEMAST-002-06:
+COMPONENT CollisionDetector @trace("AC-SEMAST-002-06"):
     INTERFACE:
         /// Detect name collisions within the same scope.
         detectCollisions(scope: SymbolScope) -> List<SemanticError>

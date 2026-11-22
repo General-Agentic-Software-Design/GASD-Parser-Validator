@@ -23,7 +23,7 @@ FLOW test_negative_directory_as_output():
     @trace #AC-PARSER-013-06
     1. ACHIEVE "Run gasd_parser --ast-sem --ast-output /tmp/ valid.gasd"
         POSTCONDITION: "Command execution completes"
-    2. ENSURE "Exit code is non-zero or file is created inside directory"
+    2. ENSURE "Exit code is non-zero and stdout stays empty"
         OTHERWISE THROW "Negative Failure: Directory path not handled correctly"
 
 FLOW test_negative_empty_output_path():
@@ -39,5 +39,12 @@ FLOW test_negative_no_json_on_stdout_any_flag_combination():
     @trace #AC-PARSER-013-02
     1. ACHIEVE "Run gasd_parser --ast-sem --json --ast-output out.json valid.gasd and capture stdout"
         POSTCONDITION: "stdout is captured"
-    2. ENSURE "stdout does not contain any JSON braces or AST node data"
+    2. ENSURE "stdout is empty and the validation report is available on stderr"
         OTHERWISE THROW "Negative Failure: JSON content leaked to stdout under combined flags"
+
+FLOW test_negative_ast_unavailable():
+    @trace #AC-PARSER-013-03, #AC-PARSER-013-04
+    1. ACHIEVE "Run --json on a syntax error with and without --ast-output"
+        POSTCONDITION: "Both invocations complete with non-zero exit codes"
+    2. ENSURE "Both stdout streams are empty, the destination file stays untouched, and stderr has a JSON failure report"
+        OTHERWISE THROW "Negative Failure: A run without an AST wrote to an AST destination or dropped diagnostics"

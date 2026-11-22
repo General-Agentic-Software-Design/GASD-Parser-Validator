@@ -30,6 +30,7 @@ from .NamespaceResolver import DependencyError
 from .ConstraintValidator import ConstraintValidator
 from .LintEngine import LintEngine
 from .VersionResolver import VersionResolver
+from .ContractValidator import ContractValidator
 
 class SemanticPipeline:
     def __init__(self, validate_built_in_types: bool = True):
@@ -458,11 +459,18 @@ class SemanticPipeline:
         all_contracts = []
         all_models = []
         all_assumptions = []
+        contract_validator = ContractValidator(file_nodes, self.reporter)
         
         for fpath, fnode in file_nodes.items():
             ast = fnode.syntacticRoot
             for c in ast.contracts:
-                res_c = ResolvedContractNode(self._get_range(c, fpath), c.name, list(c.behaviors.values()) if isinstance(c.behaviors, dict) else c.behaviors)
+                cases = list(c.behaviors.values()) if isinstance(c.behaviors, dict) else c.behaviors
+                if VersionResolver.is_version_12(ast, global_version):
+                    contract_validator.validate(c, fnode, cases)
+                res_c = ResolvedContractNode(
+                    self._get_range(c, fpath), c.name, cases, c.inputs, c.output,
+                    c.idempotent, c.version, c.hasBehaviors,
+                )
                 res_c.annotations = self.annotation_resolver.resolve(getattr(c, "annotations", []), ScopeEnum.COMPONENT)
                 all_contracts.append(res_c)
             for m in ast.models:
@@ -590,7 +598,6 @@ class SemanticPipeline:
         # Pass 4: Linting Engine (GEP-6)
         linter = LintEngine(self.reporter, version=effective_version)
         linter.file_versions = self.file_versions
-        linter.cli_version_override = (global_version is not None)
         linter.lint_system(system)
         
         constraint_errors = self.constraint_validator.validate_system(system)

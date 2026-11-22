@@ -356,13 +356,14 @@ A `CONTRACT` block defines formal behavioral specifications for component interf
 
 ```gasd
 CONTRACT [QualifiedName]:
-    INPUT: [ParamList]
+    [INPUT: [ParamList]]
     OUTPUT: [Type]
     BEHAVIORS:
         CASE [CaseName]:
-            POSTCONDITION: [Expression]
-            THROWS: [ErrorType]
-            AFTER: [Duration | RetrySpec]
+            {WHEN: [InputPredicate]}
+            {POSTCONDITION: [Expression | QuotedOutcome]}
+            [THROWS: [ErrorType]]
+            [AFTER: [Duration | RetrySpec]]
     [IDEMPOTENT: true|false]
     [VERSION: "[SemVer]"]
 ```
@@ -373,27 +374,43 @@ CONTRACT PaymentService.createCustomer:
     OUTPUT: PaymentCustomer
     BEHAVIORS:
         CASE success:
+            WHEN: email != null
             POSTCONDITION: result.status == "ACTIVE"
             POSTCONDITION: result.customerId IS UUID
         CASE service_failure:
+            WHEN: email != null
             THROWS: PaymentGatewayException
             AFTER: retry(2)
         CASE timeout:
+            WHEN: email != null
             THROWS: PaymentGatewayException
             AFTER: 3000ms
         CASE null_input:
+            WHEN: email == null
             THROWS: IllegalArgumentException
     IDEMPOTENT: true
     VERSION: "1.0.0"
 ```
 
-**Rules:**
-- CONTRACT **MUST** define at least one `CASE` under `BEHAVIORS`
-- Each `CASE` **MUST** specify either `POSTCONDITION` or `THROWS` (or both for partial outcomes)
-- CONTRACTs **SHALL** be linkable to `IMPORT` aliases: `CONTRACT Pay.createCustomer` references `IMPORT "payment.gasd" AS Pay`
-- CONTRACTs **MUST** cover all observable behaviors including error cases, timeout behavior, and null handling
-- Each CONTRACT **SHALL** have a deterministic hash computed from its content
-- Both provider and consumer **MUST** compile against the same CONTRACT hash
+#### Static validation
+
+- `INPUT` **MUST** list comma-separated `name: Type` parameters with unique names. Omit `INPUT` for a method with no parameters. `INPUT` and `OUTPUT` **MUST** match the types and parameter order of the referenced interface method.
+- `BEHAVIORS` **MUST** contain at least one `CASE`, and case names **MUST** be unique within the contract. Each case **MUST** specify `POSTCONDITION`, `THROWS`, or both. A case **MAY** specify at most one `THROWS` and one `AFTER` clause.
+- A case **MAY** begin with one or more `WHEN` clauses. Each clause **MUST** compare input values or literals, or test an input value's type with `IS`. Value references in a guard **MUST** resolve to `INPUT` parameters or their fields. Comparisons use the declared operand types and strict type semantics in §5.1. Ordering operators require numeric operands. `null` is available for equality comparisons and is equal only to itself.
+- `CONTRACT` names **SHALL** resolve through `IMPORT` aliases where used. For example, `CONTRACT Pay.createCustomer` references `IMPORT "payment.gasd" AS Pay`.
+- Each contract **SHALL** have a deterministic hash computed from its content. Both provider and consumer **MUST** compile against the same contract hash.
+
+#### Verifying a call
+
+Evaluate each case's `WHEN` clauses against the supplied arguments before argument validation or invocation. Evaluate them in source order and stop at the first false guard. A case is eligible when all its guards are true. A case without a guard is always eligible. An unevaluable guard reached during this process **MUST** produce a verification error. Several cases may be eligible for the same arguments, such as a successful response or a network timeout. Case order has no effect.
+
+The observed outcome **MUST** satisfy at least one eligible case. A `THROWS` clause requires exceptional completion with the declared error type. A case without `THROWS` requires a normal return. Every postcondition in the case **MUST** hold.
+
+On a normal return, `result` denotes the return value. For `Result<T>`, `result` denotes the success payload and `error` denotes the failure payload. Each binding is available only for its corresponding variant. The literal `void` denotes the unit value. On exceptional completion, `error` denotes the exception, and a postcondition that references `result` requires an observed partial result. A predicate that uses an unavailable binding cannot satisfy the case.
+
+`AFTER` adds a timing or retry requirement when present. A duration is the minimum elapsed time from invocation to completion. `retry(n)` requires `n` additional attempts after the first, where `n` is a nonnegative integer. A quoted `POSTCONDITION` describes an observable outcome that requires independent verification. A checker **MUST** report the call as unverified if an eligible case could match but required evidence for that case is missing and no eligible case has been verified. If no eligible case can match the observation, the call violates the contract.
+
+Contracts **MUST** cover all observable behaviors, including applicable errors, timeouts, and null handling. Successful checks on individual calls establish conformance for those observations. Coverage across all possible inputs and outcomes requires separate evidence.
 
 ---
 
@@ -905,7 +922,7 @@ GASD 1.2 analyzers **MUST** implement the following lint rules:
 | `LINT-004` | @retry without @idempotent | Add @idempotent or document compensation | **Error** | Warning |
 | `LINT-005` | @transaction_type without ASSUMPTION | Add ASSUMPTION — REQUIRED in 1.2 | **Error** | Warning |
 | `LINT-006` | GLOBAL INVARIANT with only app-level enforcement | Add DB constraint | **Error** | Warning |
-| `LINT-007` | CONTRACT CASE without THROWS or POSTCONDITION | Each case must specify an outcome | **Error** | Error |
+| `LINT-007` | CONTRACT without a CASE, or CASE without THROWS or POSTCONDITION | Define at least one case and specify an outcome for each case | **Error** | Error |
 | `LINT-008` | DEPENDS_ON references non-existent step | Step must exist in same FLOW | **Error** | Error |
 | `LINT-009` | DEPENDS_ON creates circular dependency | Dependency graph must be acyclic | **Error** | Error |
 | `LINT-010` | Obligation identifier collision | AS identifiers must be unique | **Error** | Error |
@@ -928,13 +945,13 @@ resources_stmt::= "RESOURCES" ":" indent { resource_item } dedent
 resource_item ::= "-" string_literal [ annotations ]
 
 version_stmt  ::= "VERSION" version_number
-version_number ::= number_literal "." number_literal [ "." number_literal ]
+version_number ::= unsigned_integer "." unsigned_integer [ "." unsigned_integer ]
 
 (* --- Context & Directives --- *)
-context_dir   ::= ( "CONTEXT" | "TARGET" | "TRACE" ) ":" value { "," value }
+context_dir   ::= ( "CONTEXT" | "TARGET" | "TRACE" ) ":" directive_value { "," directive_value }
 namespace_stmt::= "NAMESPACE" ":" string_literal
 import_stmt   ::= "IMPORT" string_literal [ "AS" identifier ]
-value         ::= string_literal | number_literal | boolean_literal
+directive_value ::= string_literal | number_literal | boolean_literal
 
 (* --- Decisions --- *)
 decision_blk  ::= "DECISION" string_literal [ annotations ] ":" indent
@@ -950,13 +967,14 @@ type_def      ::= "TYPE" identifier [ annotations ] ":" indent
 
 field_def     ::= identifier ":" type_expr [ annotations ]
 
-type_expr     ::= identifier
+type_expr     ::= qualified_name
                 | string_literal    (* Allows "Todo", "Review", etc. *)
                 | number_literal    (* Allows 200, 404, etc. *)
                 | "List" "<" type_expr ">"
                 | "Map" "<" type_expr "," type_expr ">"
                 | "Enum" "(" (identifier | string_literal) { "," (identifier | string_literal) } ")"
                 | "Optional" "<" type_expr ">"
+                | "Result" "<" type_expr ">"
 
 (* --- Components --- *)
 component_def ::= "COMPONENT" identifier [ annotations ] ":" indent
@@ -967,24 +985,31 @@ component_def ::= "COMPONENT" identifier [ annotations ] ":" indent
                   dedent dedent
 
 method_sig    ::= identifier "(" [ param_list ] ")" "->" type_expr
+param_list    ::= parameter { "," parameter }
+parameter     ::= identifier ":" type_expr
 
 contract_def  ::= "CONTRACT" qualified_name ":" indent
-                  "INPUT" ":" param_list
+                  [ "INPUT" ":" param_list ]
                   "OUTPUT" ":" type_expr
-                  "BEHAVIORS" ":" indent { case_def } dedent
+                  "BEHAVIORS" ":" indent case_def { case_def } dedent
                   [ "IDEMPOTENT" ":" boolean_literal ]
                   [ "VERSION" ":" string_literal ]
                   dedent
 
 case_def      ::= "CASE" identifier ":" indent
-                  { case_clause }
+                  { "WHEN" ":" input_predicate }
+                  case_clause { case_clause }
                   dedent
 
-case_clause   ::= "POSTCONDITION" ":" postcondition_expr
-                | "THROWS" ":" identifier
+case_clause   ::= "POSTCONDITION" ":" ( postcondition_expr | string_literal )
+                | "THROWS" ":" qualified_name
                 | "AFTER" ":" ( duration_literal | identifier "(" value_list ")" )
 
-qualified_name ::= identifier { "." identifier }
+input_predicate ::= input_operand ( comparison_op input_operand | "IS" type_expr )
+input_operand   ::= qualified_name | string_literal | number_literal | boolean_literal | "null"
+comparison_op   ::= "==" | "!=" | ">" | "<" | ">=" | "<="
+
+qualified_name ::= name_segment { "." name_segment }
 
 (* --- Flows --- *)
 flow_def      ::= "FLOW" identifier "(" [ param_list ] ")" [ "->" type_expr ] ":" indent
@@ -1012,8 +1037,8 @@ achieve_body  ::= indent
                   [ "TIMEOUT" ":" duration_literal ]
                   dedent
 
-postcondition_expr ::= expr ( "IS" | "==" | "!=" | ">" | "<" | ">=" | "<=" ) expr
-duration_literal   ::= number_literal ( "ms" | "s" | "m" )
+postcondition_expr ::= arithmetic_expr ( comparison_op arithmetic_expr | "IS" type_expr )
+duration_literal   ::= unsigned_integer ( "ms" | "s" | "m" )
 
 asBinding     ::= "AS" typePath
 typePath      ::= "TYPE" "." typeIdentifier { "." fieldIdentifier }
@@ -1058,18 +1083,25 @@ assumption_def ::= "ASSUMPTION" string_literal ":" indent
 on_error_clause ::= "ON_ERROR" ":" action
 property      ::= identifier ":" value
 
-value         ::= string_literal | number_literal | boolean_literal | identifier | expr
-
-expr          ::= term { bin_op term }
+value         ::= expr
+expr          ::= arithmetic_expr { comparison_op arithmetic_expr }
+arithmetic_expr ::= product { ( "+" | "-" ) product }
+product       ::= power { ( "*" | "/" ) power }
+power         ::= term [ "^" power ]
 term          ::= "TRANSFORM" "(" value "," annotations ")"
-                | value
-                | identifier { "." identifier } [ "(" [ arg_list ] ")" ]
-bin_op        ::= "+" | "-" | "*" | "/" | "^" | "==" | "!=" | ">" | "<" | ">=" | "<="
+                | string_literal | number_literal | boolean_literal | "null" | "void"
+                | qualified_name [ "(" [ arg_list ] ")" ]
+                | "(" expr ")"
 arg_list      ::= value { "," value }
 
 (* --- Lexical Tokens --- *)
 identifier    ::= [a-zA-Z_#] { [a-zA-Z0-9_.-] }
+name_segment  ::= [a-zA-Z_#] { [a-zA-Z0-9_-] }
 string_literal::= '"' { character } '"'
+character     ::= (* Unicode scalar value other than an unescaped double quote or line break *)
+boolean_literal ::= "true" | "false"
+number_literal  ::= [ "-" ] unsigned_integer [ "." unsigned_integer ]
+unsigned_integer ::= [0-9] { [0-9] }
 indent        ::= (* implied indentation increase *)
 dedent        ::= (* implied indentation decrease *)
 annotations   ::= annotation { annotation }

@@ -10,7 +10,14 @@ CONTEXT: "Compiler / Language Tooling — Semantic Validation Marker"
 TARGET: "Python3"
 TRACE: "US-PARSER-008"
 
-IMPORT "semantic_ast_model_design.gasd"
+IMPORT "semantic_ast_model_design.gasd" AS Model
+
+CONTRACT Model.SemanticModelBuilder.build:
+    INPUT: asts: List<Model.GASDFile>
+    OUTPUT: Model.SemanticSystem
+    BEHAVIORS:
+        CASE built:
+            POSTCONDITION: "The returned semantic system represents the supplied syntax trees"
 
 // ===================================================================
 // Decisions
@@ -33,7 +40,7 @@ DECISION "Time Format" @trace(#AC-PARSER-008-04, #AC-PARSER-008-05):
 // ===================================================================
 
 /// Validation certificate for the Semantic AST.
-TYPE ValidationMarker @trace(#AC-PARSER-008-02, #AC-PARSER-008-03, #AC-PARSER-008-04, #AC-PARSER-008-05):
+TYPE ValidationMarker @trace("AC-PARSER-008-02", "AC-PARSER-008-03", "AC-PARSER-008-04", "AC-PARSER-008-05") AS TRACE_SEMANTIC_VALIDATION_MARKER_DESIGN_36:
     status: Enum("PASSED", "FAILED", "NOT_PERFORMED")
     parser_version: String
     build_time: String // ISO-8601
@@ -44,12 +51,16 @@ TYPE ValidationMarker @trace(#AC-PARSER-008-02, #AC-PARSER-008-03, #AC-PARSER-00
 // ===================================================================
 
 FLOW inject_validation_marker(system: SemanticSystem, passed: Boolean) -> SemanticSystem:
-    1. ACHIEVE "Create ValidationMarker instance"
+    1. ACHIEVE "Create ValidationMarker instance":
+        POSTCONDITION: "A marker with the required fields is available"
     2. ACHIEVE "Set status based on validation result":
         POSTCONDITION: "status is PASSED if passed is true, FAILED otherwise"
-    3. ACHIEVE "Inject parser version and build timestamp"
-    4. ACHIEVE "Inject current ISO-8601 validation timestamp"
-    5. ACHIEVE "Attach marker to result root"
+    3. ACHIEVE "Inject parser version and build timestamp":
+        POSTCONDITION: "The marker records the current parser version and build time"
+    4. ACHIEVE "Inject current ISO-8601 validation timestamp":
+        POSTCONDITION: "The marker records the current validation time in ISO-8601 format"
+    5. ACHIEVE "Attach marker to result root":
+        POSTCONDITION: "The SemanticSystem root contains semantic_validate"
     @trace(#AC-PARSER-008-06) AS FLOW_MARKER_INJECT
 
 // ===================================================================

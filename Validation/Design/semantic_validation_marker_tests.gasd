@@ -20,25 +20,29 @@ IMPORT "../../Design/semantic_validation_marker_design.gasd"
 
 FLOW test_marker_root_presence():
     @trace #AT-PARSER-008-01, #AC-PARSER-008-01
-    1. ACHIEVE "Run gasd_parser with --json and --ast-sem on a valid file"
+    1. ACHIEVE "Run gasd_parser with --json and --ast-sem on a valid file":
+        POSTCONDITION: "The parser produces a JSON document for a valid file"
     2. ENSURE "The resulting JSON root contains the key 'semantic_validate'"
         OTHERWISE THROW "Validation Failed: Marker missing at root level"
 
 FLOW test_marker_passed_status():
     @trace #AT-PARSER-008-01, #AC-PARSER-008-02
-    1. ACHIEVE "Successfully validate a GASD specification"
+    1. ACHIEVE "Successfully validate a GASD specification":
+        POSTCONDITION: "The semantic validation succeeds"
     2. ENSURE "semantic_validate.status is exactly 'PASSED'"
         OTHERWISE THROW "Validation Failed: Expected status 'PASSED'"
 
 FLOW test_marker_version_metadata():
     @trace #AT-PARSER-008-02, #AC-PARSER-008-03
-    1. ACHIEVE "Extract semantic_validate from JSON output"
+    1. ACHIEVE "Extract semantic_validate from JSON output":
+        POSTCONDITION: "The validation marker is read from the JSON root"
     2. ENSURE "parser_version is a non-empty string matching the current project version"
         OTHERWISE THROW "Validation Failed: parser_version mismatch"
 
 FLOW test_marker_timestamps():
     @trace #AT-PARSER-008-03, #AC-PARSER-008-04, #AC-PARSER-008-05
-    1. ACHIEVE "Extract build_time and validation_time from semantic_validate"
+    1. ACHIEVE "Extract build_time and validation_time from semantic_validate":
+        POSTCONDITION: "The two timestamp fields are available for comparison"
     2. ENSURE "build_time is a valid ISO-8601 timestamp"
         OTHERWISE THROW "Validation Failed: Invalid build_time format"
     3. ENSURE "validation_time is a valid ISO-8601 timestamp"
@@ -46,7 +50,8 @@ FLOW test_marker_timestamps():
 
 FLOW test_marker_integrity_on_failure():
     @trace #AT-PARSER-008-04, #AC-PARSER-008-06
-    1. ACHIEVE "Run gasd_parser on a semantically invalid file"
+    1. ACHIEVE "Run gasd_parser on a semantically invalid file":
+        POSTCONDITION: "The parser reports a semantic validation failure"
     2. ENSURE "The 'semantic_validate' marker is either absent or status is NOT 'PASSED'"
         OTHERWISE THROW "Validation Failed: Marker incorrectly indicates 'PASSED' on failure"
 

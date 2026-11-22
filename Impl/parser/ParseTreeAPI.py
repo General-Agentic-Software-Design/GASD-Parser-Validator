@@ -16,16 +16,17 @@ class ParseTreeAPI:
         """
         Parses a GASD source string and returns (tree, reporter).
         """
+        self.reporter = ErrorReporter(source_file=source_file)
+        error_listener = GASDErrorListener(self.reporter)
+
         stream = InputStream(source)
         lexer = GASDIndentationLexer(stream)
+        lexer.removeErrorListeners()
+        lexer.addErrorListener(error_listener)
         tokens = CommonTokenStream(lexer)
         tokens.fill()
         
         parser = GASDParser(tokens)
-
-        self.reporter = ErrorReporter(source_file=source_file)
-        error_listener = GASDErrorListener(self.reporter)
-        
         parser.removeErrorListeners()
         parser.addErrorListener(error_listener)
         

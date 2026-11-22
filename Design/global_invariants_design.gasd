@@ -15,7 +15,7 @@ TRACE: "US-X-SEMAST-009"
 // Invariant Model
 // ===================================================================
 
-TYPE ResolvedConstraintNode @trace #AC-X-SEMAST-009-01:
+TYPE ResolvedConstraintNode @trace("AC-X-SEMAST-009-01") AS TRACE_GLOBAL_INVARIANTS_DESIGN_18:
     kind: "ResolvedConstraint"
     name: String @optional
     expression: ResolvedExpression @trace #AC-X-SEMAST-009-02
@@ -26,19 +26,19 @@ TYPE ResolvedConstraintNode @trace #AC-X-SEMAST-009-01:
 // Components
 // ===================================================================
 
-COMPONENT GlobalConstraintRegistry @trace #AC-X-SEMAST-009-01:
+COMPONENT GlobalConstraintRegistry @trace("AC-X-SEMAST-009-01") AS TRACE_GLOBAL_INVARIANTS_DESIGN_29:
     INTERFACE:
         /// Register a constraint from a specific file.
         register(constraint: ResolvedConstraintNode) -> Void
         /// Resolve all cross-file symbol references in expressions.
-        resolveReferences(unit: CompilationUnit) -> Void @trace #AC-X-SEMAST-009-02
+        resolveReferences(unit: CompilationUnit) -> Void @trace("AC-X-SEMAST-009-02") AS TRACE_GLOBAL_INVARIANTS_DESIGN_34
         /// Detect conflicting invariants (e.g., mutually exclusive ranges).
-        detectConflicts() -> List<SemanticError> @trace #AC-X-SEMAST-009-04
+        detectConflicts() -> List<SemanticError> @trace("AC-X-SEMAST-009-04") AS TRACE_GLOBAL_INVARIANTS_DESIGN_36
 
-COMPONENT ConstraintValidator @trace #AC-X-SEMAST-009-03:
+COMPONENT ConstraintValidator @trace("AC-X-SEMAST-009-03") AS TRACE_GLOBAL_INVARIANTS_DESIGN_38:
     INTERFACE:
         /// Validate the entire system against the global registry.
-        validateSystem(system: SemanticSystem) -> List<SemanticError> @trace #AC-X-SEMAST-009-03
+        validateSystem(system: SemanticSystem) -> List<SemanticError> @trace("AC-X-SEMAST-009-03") AS TRACE_GLOBAL_INVARIANTS_DESIGN_41
 
 // ===================================================================
 // Constraints

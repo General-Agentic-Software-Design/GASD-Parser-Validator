@@ -39,7 +39,7 @@ def test_at_parser_010_01_current_dir():
         data = json.loads(result.stdout)
         
         # Check sourceMap in at least one node (e.g., the TYPE node)
-        type_node = data["asts"][0]["namespaces"]["global"]["types"]["T"]
+        type_node = data["namespaces"]["global"]["types"]["T"]
         assert type_node["sourceMap"]["file"] == "test.gasd"
 
 def test_at_parser_010_02_subdir():
@@ -55,7 +55,7 @@ def test_at_parser_010_02_subdir():
         assert result.returncode == 0
         data = json.loads(result.stdout)
         
-        type_node = data["asts"][0]["namespaces"]["global"]["types"]["T"]
+        type_node = data["namespaces"]["global"]["types"]["T"]
         assert type_node["sourceMap"]["file"] == "subdir/test.gasd"
 
 def test_at_parser_010_03_parent_dir():
@@ -71,7 +71,7 @@ def test_at_parser_010_03_parent_dir():
         assert result.returncode == 0
         data = json.loads(result.stdout)
         
-        type_node = data["asts"][0]["namespaces"]["global"]["types"]["T"]
+        type_node = data["namespaces"]["global"]["types"]["T"]
         assert type_node["sourceMap"]["file"] == "../test.gasd"
 
 def test_at_parser_010_04_slash_normalization():
@@ -92,12 +92,11 @@ def test_at_parser_010_04_slash_normalization():
         
         # Verify no backslashes in any path string
         # We check the compilation unit files and one type node as a sample
-        asts = data["asts"][0]
-        for f in asts["compilationUnit"]["fileNodes"].keys():
+        for f in data["compilationUnit"]["fileNodes"].keys():
              assert "\\" not in f
              assert "/" in f
         
-        type_node = asts["namespaces"]["global"]["types"]["T"]
+        type_node = data["namespaces"]["global"]["types"]["T"]
         assert "\\" not in type_node["sourceMap"]["file"]
 
 def test_ac_parser_010_05_stdin():
@@ -113,7 +112,7 @@ def test_ac_parser_010_05_stdin():
     )
     assert result.returncode == 0
     data = json.loads(result.stdout)
-    type_node = data["asts"][0]["namespaces"]["global"]["types"]["T"]
+    type_node = data["namespaces"]["global"]["types"]["T"]
     assert type_node["sourceMap"]["file"] == "stdin"
 
 def test_ac_parser_010_06_structural_neutrality():
@@ -137,7 +136,7 @@ def test_ac_parser_010_06_structural_neutrality():
         
         # 1. Structural Check
         data = json.loads(raw_output)
-        comp_unit = data["asts"][0]["compilationUnit"]
+        comp_unit = data["compilationUnit"]
         
         # Keys in fileNodes MUST be relative
         for filename in comp_unit["fileNodes"].keys():

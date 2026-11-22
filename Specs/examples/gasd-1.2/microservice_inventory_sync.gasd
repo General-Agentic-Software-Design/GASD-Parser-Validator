@@ -20,7 +20,7 @@ CONTRACT Pay.execute_payment:
     OUTPUT: Result<String>
     BEHAVIORS:
         CASE success:
-            POSTCONDITION: result.status == "SUCCESS"
+            POSTCONDITION: result == "SUCCESS"
         CASE failure:
             THROWS: PaymentError
     IDEMPOTENT: true
@@ -32,11 +32,11 @@ ASSUMPTION "Payment gateway is available 99.9% of the time" @monitor("External: 
 
 /// Contract for payment processing within this synchronization flow
 CONTRACT Pay.process_payment:
-    INPUT: data: Any
+    INPUT: data: Pay.TransactionData
     OUTPUT: Result<String>
     BEHAVIORS:
         CASE success:
-            POSTCONDITION: result.status == "OK"
+            POSTCONDITION: result == "OK"
     IDEMPOTENT: true
 
 TYPE OrderEvent:

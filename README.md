@@ -2,11 +2,11 @@
 
 The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.2**).
 
-This parser is built using **ANTLR4** with a **Python 3** target, designed to be the single source of truth for validating GASD specifications.
+Version **2.1.8** makes `--json` stdout use the same AST format as `--ast-output`. The parser includes GEP-7 contract signature validation, ordered case guards in both AST exports, and a Python API for verifying observed calls.
 
 ## Project Structure
 
-- **[Build/](Build/)**: Contains the master [Build_plan.gasd](Build/Build_plan.gasd) and the standalone [Installation/](Build/Installation/) package.
+- **[Build/](Build/)**: Contains the [build plan](Build/ver-2.1/build_plan.gasd) and the standalone [installation package](Build/Installation/).
 - **[Design/](Design/)**: GASD-level specifications for each parser component (100% compliant).
 - **[Impl/](Impl/)**: Core implementation including grammar, AST generation, and semantic validation.
 - [Impl/tests/](Impl/tests/)**: Comprehensive suite of 643+ acceptance and regression tests.
@@ -41,8 +41,7 @@ By enforcing strict, language-level compliance through standard compiler design,
 The easiest way to use the parser is to install it as a standalone tool:
 
 ```bash
-pip3 install -r requirements.txt
-pip3 install Build/Installation
+python3 -m pip install Build/Installation/dist/gasd_parser-2.1.8-py3-none-any.whl
 ```
 
 To uninstall the standalone CLI:
@@ -69,7 +68,7 @@ source .venv/bin/activate       # macOS/Linux
 pip3 install -r requirements.txt
 
 # 3. Run the parser from the project root
-PYTHONPATH=Build/Installation python3 -m gasd_parser path/to/spec.gasd
+python3 -m Impl.cli path/to/spec.gasd
 
 # 4. Run the full feature demo
 python3 demo.py
@@ -83,21 +82,23 @@ Once installed, use the `gasd_parser` command:
 # Validate a specification
 gasd_parser my_spec.gasd
 
-# Output results in JSON (for tooling integration)
-gasd_parser my_spec.gasd --json
+# Write the Semantic AST from stdout to a file
+gasd_parser my_spec.gasd --json > ast.json
 
-# Extract and output the Semantic AST in JSON format
-gasd_parser my_spec.gasd --ast-sem --json
+# Write the same AST format directly to a file and capture the validation report
+gasd_parser my_spec.gasd --json --ast-output ast.json 2> validation.json
 
-# Save the extracted Semantic AST to a specific file
-gasd_parser my_spec.gasd --ast-sem --ast-output sem.json
-
-# Process multiple files and combine their Semantic ASTs into a single JSON
-gasd_parser spec1.gasd spec2.gasd --ast-sem --ast-combine --json
-
-# Process multiple files into individual Semantic AST JSON files (out.spec1.json, out.spec2.json)
-gasd_parser spec1.gasd spec2.gasd --ast-sem --ast-output out.json
+# Combine the Semantic ASTs for multiple input files
+gasd_parser spec1.gasd spec2.gasd --ast-combine --ast-output combined.json
 ```
+
+`--json` writes the AST to stdout and the JSON validation report to stderr. `--ast-output` directs the AST exclusively to the specified file. The AST has a top-level `SemanticSystem` when semantic validation runs. Separate invocations can have different generated node IDs and validation timestamps.
+
+### Verifying an observed call
+
+Pass a contract from the AST export to `gasd_parser.semantic.ContractVerifier`. Call `select_eligible_cases(contract, arguments)` with the raw arguments before argument validation or invocation, then call `verify_outcome(cases, arguments, observation)`. For recorded calls, `verify_call(contract, arguments, observation)` performs both checks.
+
+Create a `CallObservation` with completion mode `normal`, `success`, `failure`, or `exception`. Use `success` and `failure` for the two `Result<T>` variants and `VOID` for the unit value. Quoted evidence is keyed by case name and zero-based postcondition index. The report status is `verified`, `unverified`, `violation`, or `verification_error`.
 
 ## Development
 
@@ -121,12 +122,12 @@ python3 -m pytest Impl/tests -v
 
 The project follows a 6-phase build plan defined in [Build_plan.gasd](Build/ver-2.1/build_plan.gasd):
 
-1. **Design**: User stories mapped to formal designs.
-2. **Implementation**: Code generated from designs.
-3. **Testing**: Acceptance and regression verification (643+ tests).
-4. **Validation**: Full suite validation on all content directories (142+ files).
-5. **Quality Gate**: Final sign-off on GASD 1.2 compliance (Failed: 0).
-6. **Packaging**: Standalone distributable creation (v2.1.5).
+1. **Design** maps requirements to GASD design files.
+2. **Validation** defines the scenarios for acceptance, regression, and rejection.
+3. **Testing** turns the scenarios into executable tests.
+4. **Implementation** delivers the parser and validator changes.
+5. **Quality gate** runs the full test suite and bundled examples.
+6. **Packaging** builds and verifies the wheel and source distribution.
 
 ## License
 

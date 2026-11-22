@@ -30,7 +30,7 @@ def test_rt_parser_010_01_json_consistency():
         # Run WITHOUT --ast-sem, just --json
         result = run_cli("--json", file_path="test.gasd", cwd=tmpdir)
         assert result.returncode == 0
-        data = json.loads(result.stdout)
+        data = json.loads(result.stderr)
         
         # Standard JSON output has 'reports' list containing report objects
         report = data["reports"][0]
@@ -48,7 +48,7 @@ def test_rt_parser_010_02_absolute_cli_relativization():
         assert result.returncode == 0
         data = json.loads(result.stdout)
         
-        type_node = data["asts"][0]["namespaces"]["global"]["types"]["T"]
+        type_node = data["namespaces"]["global"]["types"]["T"]
         assert type_node["sourceMap"]["file"] == "test.gasd"
 
 def test_rt_parser_010_03_structural_consistency():
@@ -65,6 +65,6 @@ def test_rt_parser_010_03_structural_consistency():
         data = json.loads(result.stdout)
         
         # Check that the absolute path is NOT used as a key in fileNodes
-        file_nodes = data["asts"][0]["compilationUnit"]["fileNodes"]
+        file_nodes = data["compilationUnit"]["fileNodes"]
         assert abs_path not in file_nodes
         assert "test.gasd" in file_nodes

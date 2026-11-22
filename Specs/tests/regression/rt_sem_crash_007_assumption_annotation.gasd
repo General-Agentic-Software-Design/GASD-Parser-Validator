@@ -2,15 +2,15 @@ VERSION 1.2
 CONTEXT: "RT-SEM-CRASH-007: Assumption annotation placement"
 TARGET: "Python"
 
-IMPORT "payment_service_interface.gasd" AS Pay
+IMPORT "../../examples/gasd-1.2/payment_service_interface.gasd" AS Pay
 
 /// Contract for the external payment provider
 CONTRACT Pay.execute_payment:
-    INPUT: amount: Integer, currency: String
+    INPUT: amount: Decimal, currency: String
     OUTPUT: Result<String>
     BEHAVIORS:
         CASE success:
-            POSTCONDITION: result.status == "SUCCESS"
+            POSTCONDITION: result == "SUCCESS"
     IDEMPOTENT: true
 
 ASSUMPTION "Payment gateway available" @monitor("gateway_uptime") AS GATEWAY_AVAILABILITY:

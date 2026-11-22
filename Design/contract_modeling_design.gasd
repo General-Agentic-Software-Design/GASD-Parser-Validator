@@ -1,82 +1,124 @@
-/*
-   Design: CONTRACT Modeling at IMPORT Boundaries
-   ================================================
-   Defines the grammar and semantic rules for the CONTRACT block,
-   behavioral CASE definitions, and provider/consumer hash agreement.
-
-   Output: Impl/grammar/ and Impl/semantic/
-*/
-
-CONTEXT: "Compiler / Language Tooling — Contract Modeling Design"
+VERSION 1.2
+CONTEXT: "Compiler / Language Tooling"
 TARGET: "ANTLR4", "Python3"
-TRACE: "US-V2-004"
+TRACE: "GEP-7", "US-V2-004", "AC-V2-004-01", "AC-V2-004-02", "AC-V2-004-03", "AC-V2-004-04", "AC-V2-004-05", "AT-GEP7-001", "AT-GEP7-002", "AT-GEP7-003", "AT-GEP7-004", "RT-GEP7-001", "RT-GEP7-002", "NT-GEP7-001", "NT-GEP7-002", "NT-GEP7-003"
 
-// ===================================================================
-// Decisions
-// ===================================================================
+DECISION "Contract grammar and AST":
+    CHOSEN: "Reuse the interface parameter and type grammar. Store each case's leading WHEN predicates in an ordered when array in the syntactic and semantic ASTs."
+    RATIONALE: "Typed signatures use one representation. Guard order determines short-circuit evaluation and must survive export."
+    ALTERNATIVES: ["Store guards as unparsed text"]
+    AFFECTS: [ContractCase]
 
-DECISION "Contract Hash Algorithm":
-    CHOSEN: "Deterministic content-based SHA-256 hash"
-    RATIONALE: "Per GEP-6 §3.2, each CONTRACT SHALL have a deterministic hash. SHA-256 ensures stability and uniqueness."
-    ALTERNATIVES: ["SHA-256", "SHA-1", "CRC-32", "MD5"]
+DECISION "Observed call verification":
+    CHOSEN: "Expose a Python API in semantic/ContractVerifier.py with select_eligible_cases, verify_outcome, and verify_call. Read raw arguments and explicit outcome evidence."
+    RATIONALE: "A caller can select cases before validating arguments or invoking a method. Recorded calls can be verified with the same rules."
+    ALTERNATIVES: ["A single check that runs after invocation", "A CLI that invokes the referenced method"]
+    AFFECTS: [ContractVerifier]
+
+DECISION "Contract hash algorithm":
+    CHOSEN: "Use deterministic content-based SHA-256, including ordered guards when present."
+    RATIONALE: "Provider and consumer must agree on the same behavioral contract. Source locations do not change contract content."
+    ALTERNATIVES: ["Hash the source text directly"]
     AFFECTS: [ContractHasher]
 
-DECISION "Contract-Import Binding":
-    CHOSEN: "Contracts linkable to IMPORT aliases via qualified_name"
-    RATIONALE: "Per GEP-6 §3.1, CONTRACT Pay.createCustomer references IMPORT 'payment.gasd' AS Pay."
-    ALTERNATIVES: ["Qualified name binding", "Explicit IMPORT attribute"]
-    AFFECTS: [TypeContract]
+TYPE ContractParameter:
+    name: String
+    declared_type: String
 
-// ===================================================================
-// Grammar Additions
-// ===================================================================
+/// A guard retains both operands and its source location. For IS, the right operand is a type.
+TYPE GuardPredicate:
+    operator: String
+    left_operand: Any
+    right_operand: Any
+    source_location: Any
 
-/// CASE definition grammar rule.
-TYPE CaseDefRule @trace #AC-V2-004-02:
-    syntax: "CASE IDENTIFIER ':' INDENT case_clause+ DEDENT"
-    case_clause: "POSTCONDITION ':' postcondition_expr | THROWS ':' IDENTIFIER | AFTER ':' (duration_literal | retry_spec)"
+TYPE ContractCase:
+    name: String
+    when: List<GuardPredicate>
+    postconditions: List<Any>
+    throws: Optional<String>
+    after: Optional<Any>
 
-// ===================================================================
-// Semantic Validation
-// ===================================================================
+TYPE BehaviorContract:
+    target: String
+    inputs: List<ContractParameter>
+    output: String
+    cases: List<ContractCase>
+    idempotent: Optional<Boolean>
+    version: Optional<String>
 
-/// Validates that every IMPORT has a corresponding CONTRACT in VERSION 1.2.
-FLOW validate_import_contract_binding(ast: GASDFile, version: String) -> List<SemanticError>:
-    @trace #AC-V2-004-03
-    1. ACHIEVE "Collect all IMPORT statements from AST"
-    2. ACHIEVE "Collect all CONTRACT definitions from AST"
-    3. ACHIEVE "For each IMPORT, check if a matching CONTRACT exists"
-    4. ACHIEVE "For VERSION 1.2: emit LINT-002 ERROR for IMPORT without CONTRACT"
-    5. ACHIEVE "For VERSION 1.1: emit WARNING for IMPORT without CONTRACT"
-    6. RETURN "List of errors or warnings"
+/// Completion modes are normal return, Result success, Result failure, and exception.
+/// A binding may be absent, present with null, or present with the void unit value.
+TYPE CallObservation:
+    completion_mode: String
+    payload: Any
+    exception_type: Optional<String>
+    partial_result: Any
+    elapsed_ms: Optional<Float>
+    additional_attempts: Optional<Integer>
+    quoted_evidence: Map<String, Map<Integer, Boolean>>
 
-/// Validates that each CASE in a CONTRACT has either POSTCONDITION or THROWS.
-FLOW validate_contract_cases(ast: GASDFile) -> List<SemanticError>:
-    @trace #AC-V2-004-04
-    1. ACHIEVE "Collect all CONTRACT definitions from AST"
-    2. ACHIEVE "For each CASE, check if POSTCONDITION or THROWS is specified"
-    3. ENSURE "Every CASE has at least POSTCONDITION or THROWS"
-        OTHERWISE THROW "LINT-007: CASE missing POSTCONDITION or THROWS"
-    4. RETURN "List of errors"
+/// A guard evaluation error takes precedence over any outcome status.
+TYPE VerificationReport:
+    status: Enum("verified", "unverified", "violation", "verification_error")
+    case_names: List<String>
+    diagnostics: List<String>
 
-// ===================================================================
-// Contract Hasher Component
-// ===================================================================
-
-/// Generates a deterministic hash for each CONTRACT definition.
-COMPONENT ContractHasher @trace #AC-V2-004-05:
-    PATTERN: "Utility"
-    DEPENDENCIES: []
+COMPONENT ContractValidator:
     INTERFACE:
-        computeHash(contract: TypeContract) -> String
+        validate_contract(contract: BehaviorContract, symbol_scope: Any) -> List<String>
+
+COMPONENT ContractVerifier:
+    INTERFACE:
+        select_eligible_cases(contract: BehaviorContract, arguments: Map<String, Any>) -> List<ContractCase>
+        verify_outcome(cases: List<ContractCase>, arguments: Map<String, Any>, observation: CallObservation) -> VerificationReport
+        verify_call(contract: BehaviorContract, arguments: Map<String, Any>, observation: CallObservation) -> VerificationReport
+
+COMPONENT ContractHasher:
+    PATTERN: "Utility"
+    INTERFACE:
+        computeHash(contract: BehaviorContract) -> String
         verifyAgreement(providerHash: String, consumerHash: String) -> Boolean
 
-// ===================================================================
-// Constraints
-// ===================================================================
+FLOW validate_contract(contract: BehaviorContract, symbol_scope: Any) -> List<String>:
+    1. ACHIEVE "Find the interface method through the contract's source file, namespace, or import alias":
+        POSTCONDITION: "Resolve Component.method, Namespace.Component.method, Alias.Component.method, and Alias.method when that method is unique in the imported file. Report missing or ambiguous methods with the contract location."
+    2. ACHIEVE "Validate the ordered signature against the resolved interface method":
+        POSTCONDITION: "Parameter names are unique within the contract. INPUT is omitted for a zero-parameter method. Compare arity, parameter types in order, and output type using their resolved identities, including nested type arguments and qualified names."
+    3. ACHIEVE "Validate case structure":
+        POSTCONDITION: "Emit LINT-007 for a missing or empty BEHAVIORS block or a case with no POSTCONDITION or THROWS. Report duplicate case names and multiple THROWS or AFTER clauses without overwriting earlier declarations."
+    4. ACHIEVE "Bind and type-check every guard and validate retry syntax":
+        POSTCONDITION: "Resolve value references from declared inputs through their fields. Reject unbound references, misplaced WHEN clauses, and ordering on nonnumeric operands. Recognize retry with exactly one nonnegative integer argument."
+    5. RETURN "Diagnostics carrying the source locations of invalid declarations"
 
-CONSTRAINT: "CONTRACT MUST define at least one CASE under BEHAVIORS" @trace #AC-V2-004-01
-CONSTRAINT: "LINT-002: Every IMPORT in VERSION 1.2 MUST have a corresponding CONTRACT" @trace #AC-V2-004-03
-CONSTRAINT: "LINT-007: Every CASE MUST specify either THROWS or POSTCONDITION" @trace #AC-V2-004-04
-CONSTRAINT: "Contract hash MUST be stable: identical content always produces identical hash" @trace #AC-V2-004-05
-CONSTRAINT: "Provider and consumer MUST compile against the same CONTRACT hash" @trace #AC-V2-004-05
+FLOW select_eligible_cases(contract: BehaviorContract, arguments: Map<String, Any>) -> List<ContractCase>:
+    1. ACHIEVE "Evaluate each case against the supplied arguments before validation or invocation":
+        POSTCONDITION: "Evaluate guards in source order. Stop evaluating a case at the first false guard. Include each case whose guards are all true, including an unguarded case."
+    2. ENSURE "Every reached guard can be evaluated"
+        OTHERWISE THROW "Verification error identifying the case and guard"
+    3. RETURN "All eligible cases"
+
+FLOW verify_outcome(cases: List<ContractCase>, arguments: Map<String, Any>, observation: CallObservation) -> VerificationReport:
+    1. ACHIEVE "Check completion mode and expose its outcome bindings":
+        POSTCONDITION: "THROWS matches exceptional completion with the declared error type. Other cases require a normal completion. A normal value or Result success payload binds result. A Result failure payload binds error. An exception binds error and may also expose a partial result. Void denotes unit."
+    2. ACHIEVE "Check every formal and quoted postcondition and any AFTER requirement":
+        POSTCONDITION: "A false predicate, unavailable binding, failed evidence, or failed timing requirement rules out the case regardless of other missing evidence. Missing independent quoted evidence, elapsed time, or retry count leaves an otherwise matching case unverified."
+    3. ACHIEVE "Combine the results for all eligible cases":
+        POSTCONDITION: "Return verified if any case matches. Otherwise return unverified if any case could match with additional evidence. Return violation when no eligible case could match. Report case names in deterministic order."
+    4. RETURN "Verification report"
+
+FLOW verify_call(contract: BehaviorContract, arguments: Map<String, Any>, observation: CallObservation) -> VerificationReport:
+    1. ACHIEVE "Select cases from raw arguments before checking the observation":
+        POSTCONDITION: "An unevaluable reached guard yields verification_error even if another case could verify. Otherwise pass the eligible cases to verify_outcome."
+    2. RETURN "Verification report"
+
+CONSTRAINT: "The grammar shares typed parameter parsing with the interface grammar. It preserves qualified and generic types, and distinguishes reference, string, number, boolean, and null guard operands." @trace(#AT-GEP7-001, #NT-GEP7-003) AS CONTRACT_GRAMMAR
+CONSTRAINT: "Reject duplicate parameter names, duplicate case names, and a mismatch with the referenced interface signature." @trace(#AC-V2-004-01, #NT-GEP7-002) AS CONTRACT_SIGNATURE
+CONSTRAINT: "Parse only leading WHEN clauses with a comparison or IS predicate. Reject a WHEN after any POSTCONDITION, THROWS, or AFTER clause. Retain enough malformed contract structure to provide LINT-007 and duplicate-clause diagnostics." @trace(#AT-GEP7-002, #NT-GEP7-001, #NT-GEP7-003) AS CONTRACT_CASE_GRAMMAR
+CONSTRAINT: "Export when in source order in both AST modes, with an empty array for an unguarded case. Preserve outcome expressions, including quoted versus formal postconditions, qualified exception names, timing, and existing case fields." @trace(#AT-GEP7-002, #RT-GEP7-002) AS CONTRACT_EXPORT
+CONSTRAINT: "LINT-007 is an error for zero cases in GASD 1.2 and for a case containing neither THROWS nor POSTCONDITION. WHEN and AFTER do not count as outcomes. Apply the new static rules to effective GASD 1.2 contracts while preserving legacy behavior." @trace(#AC-V2-004-04, #NT-GEP7-001, #RT-GEP7-001) AS CONTRACT_LINT
+CONSTRAINT: "Use strict GASD comparisons. Equality treats null as equal only to itself and never coerces booleans, strings, or numbers to one another. Ordering requires numeric operands and excludes Boolean. IS uses the GASD type rules, including resolved and generic types." @trace(#AT-GEP7-003, #NT-GEP7-003) AS CONTRACT_COMPARISON
+CONSTRAINT: "An AFTER duration is the minimum elapsed time from invocation to completion. AFTER retry(n) matches n attempts after the initial attempt. Supply quoted evidence by case name and zero-based postcondition position." @trace(#AT-GEP7-003, #AT-GEP7-004) AS CONTRACT_TIMING
+CONSTRAINT: "Checking one call establishes conformance for that observation. Input and outcome coverage requires separate evidence. The released case checks result == void and stock restoration without duplicating a previous release. The failed case checks error != null and unchanged inventory." @trace(#AT-GEP7-004, #RT-GEP7-002) AS CONTRACT_COVERAGE
+CONSTRAINT: "Preserve LINT-002 import binding. Correct bundled GASD 1.2 example signatures to agree with their interface declarations and restore release_stock cases named released and failed. Validate each bundled file individually and as a suite with no warnings." @trace(#AC-V2-004-03, #RT-GEP7-001, #RT-GEP7-002) AS CONTRACT_EXAMPLE_SUITE
+CONSTRAINT: "Provider and consumer use the same deterministic hash for the same contract content." @trace(#AC-V2-004-05) AS CONTRACT_HASH

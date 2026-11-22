@@ -10,11 +10,7 @@ CONTEXT: "Verification of Invariant Scope Ordering Design"
 TARGET: "GASD Agent", "Python3"
 TRACE: "US-PARSER-012"
 
-IMPORT "../../Design/enforce_invariant_order_design.gasd"
-
-CONTRACT InvariantOrderVerification:
-    INPUT: None
-    OUTPUT: None
+// See Design/enforce_invariant_order_design.gasd for InvariantStmtRule.
 
 FLOW test_design_rule_consistency():
     @trace #AC-PARSER-012-01, #AC-PARSER-012-02

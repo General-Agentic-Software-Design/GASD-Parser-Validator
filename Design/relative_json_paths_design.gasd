@@ -10,11 +10,23 @@ DECISION "Path Relativization Approach":
     CHOSEN: "Deep-scrub structural relativization during JSON export"
     RATIONALE: "Aggressively applies CWD-relative, POSIX-style standard paths across all dictionary keys, list elements, and sourceMap objects, guaranteeing Zero-Leak portability."
     ALTERNATIVES: ["Relativize only sourceMap fields"]
-    AFFECTS: [SemanticASTExporter]
+    AFFECTS: [SemanticASTExporter, ASTExporter]
+
+DECISION "Apply Relativization to Both Exporters":
+    CHOSEN: "Implement relativize_dict in both ASTExporter and SemanticASTExporter"
+    RATIONALE: "Both --no-validate mode (using ASTExporter) and semantic mode (using SemanticASTExporter) must produce portable JSON with relative paths. Duplicating the logic ensures consistency across all export paths."
+    ALTERNATIVES: ["Only relativize in SemanticASTExporter", "Create shared base class"]
+    AFFECTS: [ASTExporter, SemanticASTExporter]
+
+COMPONENT ASTExporter:
+    INTERFACE:
+        to_json(ast_node: Any, pretty_print: Boolean) -> String
+        relativize_dict(obj: Any, cwd: String) -> Any
 
 COMPONENT SemanticASTExporter:
     INTERFACE:
         export_json(data: Any, cwd_path: String) -> String
+        relativize_dict(obj: Any, cwd: String) -> Any
 
 STRATEGY relativize_path:
     ALGORITHM: "Compute relative path from cwd_path. Convert to forward slashes. Preserve 'stdin'."

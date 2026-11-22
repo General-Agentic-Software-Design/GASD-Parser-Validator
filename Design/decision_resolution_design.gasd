@@ -19,7 +19,7 @@ TYPE Decision: _internal: Boolean
 // Decision Model
 // ===================================================================
 
-TYPE ResolvedDecisionNode @trace #AC-SEMAST-008-01, #AC-X-SEMAST-008-01:
+TYPE ResolvedDecisionNode @trace("AC-SEMAST-008-01", "AC-X-SEMAST-008-01"):
     kind: "ResolvedDecision"
     name: String
     chosen: String
@@ -32,16 +32,16 @@ TYPE ResolvedDecisionNode @trace #AC-SEMAST-008-01, #AC-X-SEMAST-008-01:
 // Components
 // ===================================================================
 
-COMPONENT DecisionResolver @trace #AC-SEMAST-008-05:
+COMPONENT DecisionResolver @trace("AC-SEMAST-008-05"):
     INTERFACE:
         /// Resolve decision path and trace effects.
-        resolve(decision: Decision) -> ResolvedDecisionNode @trace #AC-SEMAST-008-02, #AC-X-SEMAST-008-05
+        resolve(decision: Decision) -> ResolvedDecisionNode @trace("AC-SEMAST-008-02", "AC-X-SEMAST-008-05")
         /// Verify the chosen alternative exists.
-        verifyChoice(decision: ResolvedDecisionNode) -> Void @trace #AC-SEMAST-008-03
+        verifyChoice(decision: ResolvedDecisionNode) -> Void @trace("AC-SEMAST-008-03")
         /// Generate impact matrix for all decisions across the unit.
-        generateImpactMatrix(unit: CompilationUnit) -> Map<String, List<SymbolLink>> @trace #AC-X-SEMAST-008-01
+        generateImpactMatrix(unit: CompilationUnit) -> Map<String, List<SymbolLink>> @trace("AC-X-SEMAST-008-01")
         /// Detect conflicting decisions affecting the same symbol.
-        detectConflicts(unit: CompilationUnit) -> Void @trace #AC-X-SEMAST-008-04
+        detectConflicts(unit: CompilationUnit) -> Void @trace("AC-X-SEMAST-008-04")
 
 // ===================================================================
 // Constraints

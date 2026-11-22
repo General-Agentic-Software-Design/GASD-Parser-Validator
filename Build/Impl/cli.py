@@ -12,7 +12,7 @@ from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.5"
+    __version__ = "2.1.6"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():

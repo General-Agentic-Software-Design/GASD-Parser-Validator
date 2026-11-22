@@ -1,0 +1,40 @@
+VERSION 1.2
+CONTEXT: "GEP-7 contract acceptance validation"
+TARGET: "Python3"
+TRACE: "GEP-7", "AT-GEP7-001", "AT-GEP7-002", "AT-GEP7-003", "AT-GEP7-004"
+
+FLOW test_typed_contract_signatures():
+    @trace(#AT-GEP7-001) AS AT_GEP7_TYPED_SIGNATURES
+    1. ACHIEVE "Build a GASD 1.2 component with submit(items: List<Common.OrderItem>, limit: Integer) -> Result<Void> and reset() -> Void":
+        POSTCONDITION: "Common is an import alias resolving OrderItem. Both contracts match their methods. The submit contract declares both inputs and the reset contract omits INPUT. Each has one outcome case."
+    2. ACHIEVE "Run the validator and inspect the two contract ASTs":
+        POSTCONDITION: "Validation passes. The AST preserves the input names, their order, the full qualified generic type, and the Result<Void> output. The reset contract has zero inputs."
+
+FLOW test_ordered_contract_guards():
+    @trace(#AT-GEP7-002) AS AT_GEP7_GUARD_ORDER
+    1. ACHIEVE "Export a GASD 1.2 contract with input request bound to an OrderRequest type declaring quantity as Integer":
+        POSTCONDITION: "Its guarded case starts with request != null, then request.quantity > 0. The contract also has an unguarded case. Both cases specify outcomes."
+    2. ACHIEVE "Compare the contract cases in the syntactic and semantic AST exports":
+        POSTCONDITION: "Both exports contain the same two guards, their operators and operands in source order, and an empty when array for the unguarded case."
+    3. ACHIEVE "Evaluate the same cases against null, a positive quantity, and zero":
+        POSTCONDITION: "Null short-circuits the field access. Positive quantity makes both cases eligible. Zero makes only the unguarded case eligible."
+
+FLOW test_overlapping_payment_cases():
+    @trace(#AT-GEP7-003) AS AT_GEP7_PAYMENT_CASES
+    1. ACHIEVE "Build the payment contract with success, service_failure, timeout, and null_input cases":
+        POSTCONDITION: "The first three guard on non-null email. Success requires ACTIVE status and a UUID customerId. Service failure requires PaymentGatewayException and two additional attempts. Timeout requires the same exception and at least 3000ms. The null_input case guards on null and requires IllegalArgumentException."
+    2. ACHIEVE "Check null email before argument validation and check the resulting IllegalArgumentException":
+        POSTCONDITION: "Only null_input is eligible and the exception verifies. A normal return for the same input violates the contract."
+    3. ACHIEVE "Check three non-null observations with distinct matching requirements":
+        POSTCONDITION: "An ACTIVE customer with a valid UUID verifies success. PaymentGatewayException with two additional attempts and less than 3000ms verifies service_failure. The same exception at 3000ms with zero retries verifies timeout."
+    4. ACHIEVE "Repeat the observations with reversed case declarations":
+        POSTCONDITION: "Each verification status and set of matching case names is unchanged."
+
+FLOW test_quoted_postcondition_evidence():
+    @trace(#AT-GEP7-004) AS AT_GEP7_QUOTED_EVIDENCE
+    1. ACHIEVE "Verify a normal return against an eligible case with a formal predicate and a quoted postcondition":
+        POSTCONDITION: "A true formal predicate with missing quoted evidence is unverified. Evidence confirming the quoted condition verifies the call. Evidence disproving it yields a violation."
+    2. ACHIEVE "Check an observed return that fails the formal predicate and supply no quoted evidence":
+        POSTCONDITION: "The call violates the contract because the case cannot match."
+    3. ACHIEVE "Check a call with no eligible cases and a call with both a verified and an unverified case":
+        POSTCONDITION: "The first call violates the contract. The second is verified regardless of case declaration order."
