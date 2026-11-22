@@ -75,8 +75,12 @@ class VersionResolver:
                 from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
                 from .SemanticNodes import SourceRange
                 
-                # Use a dummy source range if location is missing, but preferably use what's in the AST
-                loc = getattr(ast, 'sourceMap', SourceRange("unknown", 1, 0, 1, 0))
+                loc = getattr(ast, "sourceMap", None)
+                if loc is None:
+                    file = getattr(ast, "sourceFile", "unknown")
+                    line = getattr(ast, "line", 1)
+                    column = getattr(ast, "column", 0)
+                    loc = SourceRange(file, line, column, line, column)
                 severity = ErrorLevel.ERROR
                 
                 errors.append(StructuredSemanticError(

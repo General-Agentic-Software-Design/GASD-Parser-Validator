@@ -1,5 +1,6 @@
 import hashlib
 import json
+from dataclasses import asdict
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -534,17 +535,49 @@ class ResolvedReviewNode(SemanticNodeBase):
         return d
 
 class ResolvedContractNode(SemanticNodeBase):
-    def __init__(self, source_map: SourceRange, name: str, cases: List[Any]):
+    def __init__(self, source_map: SourceRange, name: str, cases: List[Any],
+                 inputs=None, output=None, idempotent=False, version=None, has_behaviors=True):
         super().__init__("ResolvedContract", source_map)
         self.name = name
-        self.cases = cases # List of cases with conditions and outcomes
+        self.cases = cases
+        self.inputs = inputs or []
+        self.output = output
+        self.idempotent = idempotent
+        self.version = version
+        self.hasBehaviors = has_behaviors
+
+    def _content(self):
+        return {
+            "name": self.name,
+            "inputs": [asdict(parameter) for parameter in self.inputs],
+            "output": asdict(self.output) if self.output is not None else None,
+            "cases": [asdict(case) for case in self.cases],
+            "idempotent": self.idempotent,
+            "version": self.version,
+        }
+
+    @staticmethod
+    def _without_locations(value):
+        if isinstance(value, dict):
+            return {
+                key: ResolvedContractNode._without_locations(item)
+                for key, item in value.items()
+                if key not in {"line", "column", "endLine", "endColumn", "sourceFile"}
+            }
+        if isinstance(value, list):
+            return [ResolvedContractNode._without_locations(item) for item in value]
+        return value
+
+    @property
+    def hash(self):
+        content = self._without_locations(self._content())
+        content["annotations"] = [annotation.to_dict() for annotation in self.annotations]
+        return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
 
     def to_dict(self):
         d = super().to_dict()
-        d.update({
-            "name": self.name,
-            "cases": [c.to_dict() if hasattr(c, "to_dict") else str(c) for c in self.cases]
-        })
+        d.update(self._content())
+        d["hash"] = self.hash
         return d
 
 

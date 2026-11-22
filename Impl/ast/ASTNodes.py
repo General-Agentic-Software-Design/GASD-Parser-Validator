@@ -3,7 +3,7 @@ AST Node Definitions based on Design/ast_design.gasd for Python 3.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict
+from typing import Any, List, Optional, Dict
 
 @dataclass
 class AnnotationArg:
@@ -69,6 +69,7 @@ class Parameter(ASTNodeBase):
     name: str = ""
     type: TypeExpression = field(default_factory=TypeExpression)
     kind: str = "Parameter"
+    typeDeclared: bool = True
 
 @dataclass
 class MethodSignature(ASTNodeBase):
@@ -118,9 +119,18 @@ class StrategyDefinition(ASTNodeBase):
     complexity: Optional[str] = None
 
 @dataclass
+class GuardPredicate(ASTNodeBase):
+    operator: str = ""
+    left_operand: Dict[str, Any] = field(default_factory=dict)
+    right_operand: Dict[str, Any] = field(default_factory=dict)
+    kind: str = "GuardPredicate"
+
+@dataclass
 class ContractCase(ASTNodeBase):
     name: str = ""
-    clauses: List[Dict[str, str]] = field(default_factory=list) # [{type: "POSTCONDITION"|"THROWS"|"AFTER", value: "..."}]
+    clauses: List[Dict[str, Any]] = field(default_factory=list)
+    when: List[GuardPredicate] = field(default_factory=list)
+    hasLegacySteps: bool = False
     kind: str = "ContractCase"
 
 @dataclass
@@ -128,10 +138,12 @@ class ContractDefinition(ASTNodeBase):
     name: str = ""
     inputs: List[Parameter] = field(default_factory=list)
     output: TypeExpression = field(default_factory=TypeExpression)
-    behaviors: List[ContractCase] = field(default_factory=list)
+    behaviors: Dict[str, ContractCase] = field(default_factory=dict)
     idempotent: bool = False
     version: Optional[str] = None
     kind: str = "Contract"
+    hasBehaviors: bool = True
+    duplicateCases: List[ContractCase] = field(default_factory=list)
 
 @dataclass
 class ModelDefinition(ASTNodeBase):

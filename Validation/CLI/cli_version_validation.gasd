@@ -11,18 +11,7 @@ CONTEXT: "Validation of CLI Versioning and Multi-Version Enforcement"
 TARGET: "GASD Agent"
 TRACE: "US-V2-009", "US-PARSER-007"
 
-IMPORT "Design/cli_design.gasd" AS CLI
-IMPORT "Design/version_directive_design.gasd" AS SVV
-
-CONTRACT CLI.GASDCLI:
-    CASE "Default":
-        /// Behavioral requirement: CLI MUST support version-aware parsing and flag consolidation.
-        ENSURE "main interfaces are present"
-
-CONTRACT SVV.VersionResolver:
-    CASE "Default":
-        /// Behavioral requirement: VersionResolver MUST correctly resolve defaults and CLI overrides.
-        ENSURE "resolveVersion() is present"
+// The test scenarios exercise the CLI and version resolver through gasd_parser.
 
 FLOW validate_cli_versioning():
     /// Test Case: CLI Override (AT-V2-118)

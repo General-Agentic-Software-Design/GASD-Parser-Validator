@@ -322,7 +322,7 @@ contract_def
       INDENT
       (input_blk)?
       (output_blk)?
-      (BEHAVIORS_KW COLON NEWLINE INDENT (case_blk)+ DEDENT)?
+      behaviors_blk?
       (case_blk)*
       (idempotent_blk)?
       (version_dir)?
@@ -333,17 +333,48 @@ input_blk : INPUT_KW COLON (NEWLINE INDENT (param NEWLINE)+ DEDENT | param_list 
 output_blk : OUTPUT_KW COLON type_expr NEWLINE ;
 idempotent_blk : IDEMPOTENT_KW COLON BOOLEAN_LITERAL NEWLINE ;
 
+behaviors_blk : BEHAVIORS_KW COLON NEWLINE (INDENT case_blk+ DEDENT)? ;
+
 case_blk
     : CASE_KW (soft_id | STRING_LITERAL) COLON NEWLINE
-      INDENT
-      (case_clause NEWLINE | flow_step | action NEWLINE | ensure_stmt NEWLINE | NEWLINE)+
-      DEDENT
+      (INDENT (case_guard NEWLINE | NEWLINE)*
+       (case_clause NEWLINE | legacy_case_step | NEWLINE)*
+       DEDENT)?
+    ;
+
+legacy_case_step
+    : {self._input.LA(1) != self.WHEN_KW}? (flow_step | action NEWLINE | ensure_stmt NEWLINE)
+    ;
+
+case_guard
+    : WHEN_KW COLON guard_operand (contract_comparison guard_operand | IS_KW type_expr)
+    ;
+
+guard_operand
+    : STRING_LITERAL | INTEGER | FLOAT_LITERAL | BOOLEAN_LITERAL | qualified_name
+    ;
+
+contract_comparison
+    : EQ_OP | NE_OP | LE_OP | GE_OP | LANGLE | RANGLE
     ;
 
 case_clause
-    : POSTCONDITION_KW COLON postcondition_expr
-    | THROWS_KW COLON soft_id
-    | AFTER_KW COLON (duration_literal | soft_id (LPAREN value_list RPAREN)?)
+    : POSTCONDITION_KW COLON (contract_predicate | STRING_LITERAL | postcondition_expr)
+    | THROWS_KW COLON qualified_name
+    | AFTER_KW COLON (duration_literal | soft_id (LPAREN value_list? RPAREN)?)
+    ;
+
+contract_predicate
+    : contract_arithmetic (contract_comparison contract_arithmetic | IS_KW type_expr)
+    ;
+
+contract_arithmetic
+    : guard_operand
+    | LPAREN contract_arithmetic RPAREN
+    | qualified_name LPAREN (contract_arithmetic (COMMA contract_arithmetic)*)? RPAREN
+    | <assoc=right> contract_arithmetic op=CARET contract_arithmetic
+    | contract_arithmetic op=(ASTERISK | SLASH) contract_arithmetic
+    | contract_arithmetic op=(PLUS | MINUS) contract_arithmetic
     ;
 
 model_def
@@ -583,6 +614,7 @@ soft_id
     | STEP_KW
     | POSTCONDITION_KW
     | BEHAVIORS_KW
+    | WHEN_KW
     | MS_UNIT
     | S_UNIT
     | M_UNIT

@@ -38,14 +38,12 @@ def test_semast_cli_activation():
         )
         assert result1.returncode == 0, f"stderr: {result1.stderr}"
         assert result2.returncode == 0, f"stderr: {result2.stderr}"
-        data1 = json.loads(result1.stdout)
-        data2 = json.loads(result2.stdout)
-        out1 = data1["asts"][0]
-        out2 = data2["asts"][0]
-        # Remove non-deterministic fields (id, hash) and temporary paths for comparison
+        out1 = json.loads(result1.stdout)
+        out2 = json.loads(result2.stdout)
+        # Generated IDs and validation times vary between runs.
         def strip_ids(obj):
             if isinstance(obj, dict):
-                return {k: strip_ids(v) for k, v in obj.items() if k not in ("id", "hash", "sourceMap", "filePath", "path")}
+                return {k: strip_ids(v) for k, v in obj.items() if k not in ("id", "validation_time")}
             elif isinstance(obj, list):
                 return [strip_ids(x) for x in obj]
             return obj
@@ -66,8 +64,7 @@ def test_semast_cli_dual_output():
         assert result_file.returncode == 0, f"stderr: {result_file.stderr}"
         with open(out_path) as f:
             file_data = json.load(f)
-        stdout_full = json.loads(result_stdout.stdout)
-        stdout_data = stdout_full["asts"][0]
+        stdout_data = json.loads(result_stdout.stdout)
         
         # Same kind structure
         assert file_data["kind"] == stdout_data["kind"]
@@ -106,7 +103,7 @@ def test_semast_cli_output_dir():
 
 
 def test_semast_cli_combine():
-    """ENSURE 'Combined output array is consistent'"""
+    """ENSURE 'Combined output includes both files in one SemanticSystem'"""
     gasd1 = 'CONTEXT: "R1"\nTARGET: "P"\nTYPE A:\n  f: String\n'
     gasd2 = 'CONTEXT: "R2"\nTARGET: "P"\nTYPE B:\n  g: Integer\n'
     
@@ -124,11 +121,8 @@ def test_semast_cli_combine():
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        output = data["asts"]
-        assert isinstance(output, list)
-        # In Ph4, --ast-sem with multiple files produces 1 unified SemanticSystem
-        assert len(output) == 1
-        assert output[0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
+        assert len(data["compilationUnit"]["fileNodes"]) == 2
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
@@ -139,8 +133,7 @@ def test_semast_cli_errors():
     result, fp = run_sem_ast(VALID_GASD)
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        full_data = json.loads(result.stdout)
-        data = full_data["asts"][0]
+        data = json.loads(result.stdout)
         required_keys = ["kind", "namespaces", "metadata"]
         for key in required_keys:
             assert key in data, f"Missing required key: {key}"
@@ -153,8 +146,7 @@ def test_semast_cli_default_behavior():
     result, fp = run_sem_ast(VALID_GASD)
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        full_data = json.loads(result.stdout)
-        data = full_data["asts"][0]
+        data = json.loads(result.stdout)
         reserialized = json.dumps(data, sort_keys=True)
         reparsed = json.loads(reserialized)
         assert reparsed["kind"] == "SemanticSystem"
@@ -163,7 +155,7 @@ def test_semast_cli_default_behavior():
 
 
 def test_semast_cli_combined_opts():
-    """ENSURE '--json wrapper retains correct report structure'"""
+    """ENSURE '--json retains the validation report on stderr'"""
     tmp = tempfile.NamedTemporaryFile(suffix=".gasd", delete=False, mode="w")
     tmp.write(VALID_GASD)
     tmp.close()
@@ -175,7 +167,7 @@ def test_semast_cli_combined_opts():
             cwd=PROJECT_ROOT
         )
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        data = json.loads(result.stdout)
+        data = json.loads(result.stderr)
         assert "success" in data
         assert data["success"] is True
     finally:

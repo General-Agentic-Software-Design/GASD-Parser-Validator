@@ -20,7 +20,7 @@ CONTRACT Pay.execute_payment:
     OUTPUT: Result<String>
     BEHAVIORS:
         CASE success:
-            POSTCONDITION: result.status == "SUCCESS"
+            POSTCONDITION: result == "SUCCESS"
     IDEMPOTENT: true
 
 /// Environmental dependency for the payment gateway

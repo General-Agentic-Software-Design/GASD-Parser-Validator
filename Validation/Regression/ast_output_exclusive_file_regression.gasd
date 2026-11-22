@@ -12,25 +12,23 @@ TRACE: "US-PARSER-013"
 
 FLOW test_regression_ast_combine_with_ast_output():
     @trace #RT-PARSER-013-01
-    1. ACHIEVE "Run gasd_parser --ast-sem --ast-combine --ast-output out.json file1.gasd file2.gasd"
-        POSTCONDITION: "Command execution completes"
-    2. ENSURE "out.json contains the aggregated AST from both files"
+    1. ACHIEVE "Export two files with --ast-combine --json, with and without --ast-output"
+        POSTCONDITION: "Both commands complete and AST documents are captured"
+    2. ENSURE "Both AST documents contain one SemanticSystem with nodes from both files"
         OTHERWISE THROW "Regression Failure: --ast-combine with --ast-output did not produce aggregated output"
-    3. ENSURE "stdout does not contain any AST JSON"
+    3. ENSURE "The explicit file destination leaves stdout empty"
         OTHERWISE THROW "Regression Failure: AST JSON leaked to stdout with --ast-combine and --ast-output"
 
 FLOW test_regression_no_validate_with_ast_output():
     @trace #RT-PARSER-013-02
-    1. ACHIEVE "Run gasd_parser --ast-sem --no-validate --ast-output out.json valid.gasd"
-        POSTCONDITION: "Command execution completes"
-    2. ENSURE "out.json contains the non-validated AST"
-        OTHERWISE THROW "Regression Failure: --no-validate with --ast-output did not produce output file"
-    3. ENSURE "stdout does not contain any AST JSON"
-        OTHERWISE THROW "Regression Failure: AST JSON leaked to stdout with --no-validate and --ast-output"
+    1. ACHIEVE "Export a GASD file with --json --no-validate, with and without --ast-output"
+        POSTCONDITION: "Both commands complete and AST documents are captured"
+    2. ENSURE "Both destinations receive the same syntactic AST bytes"
+        OTHERWISE THROW "Regression Failure: Syntax-only AST differs by destination"
 
 FLOW test_regression_default_stdout_unchanged():
     @trace #RT-PARSER-013-03
-    1. ACHIEVE "Run gasd_parser --ast-sem valid.gasd without --ast-output"
-        POSTCONDITION: "stdout is captured"
-    2. ENSURE "AST JSON is emitted to stdout as before"
-        OTHERWISE THROW "Regression Failure: Default stdout behavior changed without --ast-output"
+    1. ACHIEVE "Send the same specification to stdin with --json and with --json --ast-output"
+        POSTCONDITION: "Both AST documents and streams are captured"
+    2. ENSURE "Both documents describe the same AST and preserve the stdin source identifier"
+        OTHERWISE THROW "Regression Failure: Stdin export differs by destination"

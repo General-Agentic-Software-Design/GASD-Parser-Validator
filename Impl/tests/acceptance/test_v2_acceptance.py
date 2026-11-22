@@ -38,7 +38,7 @@ def create_gasd(path, content):
     
     # 3. IMPORT - Mandatory CONTRACT (AT-V2-104, 105)
     ("AT-V2-104", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nIMPORT 'External'\n", 1, "LINT-002", ["--ast-sem"]),
-    ("AT-V2-105", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nCONTRACT 'C':\n  CASE 'Valid':\n    POSTCONDITION: true\n", 0, "", ["--ast-sem"]),
+    ("AT-V2-105", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nCOMPONENT C:\n  INTERFACE:\n    check() -> Boolean\nCONTRACT C.check:\n  OUTPUT: Boolean\n  BEHAVIORS:\n    CASE valid:\n      POSTCONDITION: result == true\n", 0, "", ["--ast-sem"]),
     
     # 4. CONTRACT CASE - Outcome required (AT-V2-106)
     ("AT-V2-106", "VERSION 1.2\nNAMESPACE: 'Test'\nTARGET: 'Python'\nCONTRACT 'C':\n  CASE 'Invalid':\n    ENSURE 'No Outcome'\n", 1, "LINT-007", ["--ast-sem"]),

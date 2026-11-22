@@ -70,11 +70,40 @@ def test_negative_no_json_leak_under_combined_flags():
 
     result, fp = run_cli("--ast-sem", "--json", "--ast-output", out_path)
     try:
-        stdout = result.stdout.strip()
-        assert "SemanticSystem" not in stdout, f"AST node data leaked to stdout with --json: {stdout[:200]}"
-        assert '"asts":' not in stdout, f"AST array leaked to stdout with --json: {stdout[:200]}"
-        assert "SemanticSystem" not in stdout, f"AST node data leaked to stdout: {stdout[:200]}"
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert json.loads(result.stderr)["success"] is True
     finally:
         os.unlink(fp)
         if os.path.exists(out_path):
             os.unlink(out_path)
+
+
+def test_negative_empty_output_path():
+    result, fp = run_cli("--json", "--ast-output", "")
+    try:
+        assert result.returncode == 1
+        assert result.stdout == ""
+        error = json.loads(result.stderr)["outputError"]
+        assert error["path"] is None
+        assert "Could not write AST" in error["message"]
+    finally:
+        os.unlink(fp)
+
+
+@pytest.mark.parametrize("file_destination", [False, True])
+def test_negative_no_ast_available(tmp_path, file_destination):
+    output = tmp_path / "ast.json"
+    output.write_text("previous contents", encoding="utf-8")
+    flags = ["--ast-output", str(output)] if file_destination else []
+    result, fp = run_cli("--json", *flags, input_content="TYPE ???")
+    try:
+        assert result.returncode == 1
+        assert result.stdout == ""
+        assert output.read_text(encoding="utf-8") == "previous contents"
+        report = json.loads(result.stderr)
+        assert report["failureCount"] == 1
+        errors = report["reports"][0]["errors"]
+        assert any("token recognition error" in error["message"] for error in errors)
+    finally:
+        os.unlink(fp)

@@ -11,48 +11,25 @@ CONTEXT: "Verification of High-Level Design Integrity"
 TARGET: "GASD Agent"
 TRACE: "US-V2-001", "US-PARSER-007"
 
-IMPORT "Design/component_design.gasd" AS CORE
-IMPORT "Design/cli_design.gasd" AS CLI
-
-CONTRACT CORE.GASDParser:
-    CASE "Default":
-        /// Behavioral requirement: Parser MUST support source code to parse tree translation.
-        ENSURE "parse() method exists"
-
-CONTRACT CORE.ASTGenerator:
-    CASE "Default":
-        /// Behavioral requirement: AST generator MUST support tree to AST translation.
-        ENSURE "generate_ast() method exists"
-
-CONTRACT CORE.ValidationPipeline:
-    CASE "Default":
-        /// Behavioral requirement: Validation pipeline MUST perform semantic analysis.
-        ENSURE "validate() method exists"
-
-CONTRACT CLI.GASDCLI:
-    CASE "Default":
-        /// Behavioral requirement: CLI MUST provide the main entry point.
-        ENSURE "main() method exists"
-
 FLOW validate_core_architecture():
     // --- Phase 1: Parsing ---
     1. ACHIEVE "Verify GASDParser Interface":
-        POSTCONDITION: CORE.GASDParser.parse IS Function
+        POSTCONDITION: "Design/ast_design.gasd declares GASDParser.parse as an interface method"
         @trace(#AC-V2-001-01) AS ACHIEVE_DSGN_P_TRACE
     
     // --- Phase 2: AST Generation ---
     2. ACHIEVE "Verify ASTGenerator Interface with version aware logic":
-        POSTCONDITION: CORE.ASTGenerator.generate_ast IS Function
+        POSTCONDITION: "Design/ast_design.gasd declares ASTGenerator.generate as an interface method"
         @trace(#AC-V2-001-03) AS ACHIEVE_DSGN_A_TRACE
 
     // --- Phase 3: Validation ---
     3. ACHIEVE "Verify ValidationPipeline strict compliance":
-        POSTCONDITION: CORE.ValidationPipeline.validate IS Function
+        POSTCONDITION: "Design/semantic_validation_design.gasd declares ValidationPipeline.validate as an interface method"
         @trace(#AC-V2-001-02) AS ACHIEVE_DSGN_V_TRACE
 
     // --- Phase 4: CLI Flag Logic ---
     4. ACHIEVE "Verify GASDCLI flag consolidation compliance":
-        POSTCONDITION: CLI.GASDCLI.main IS Function
+        POSTCONDITION: "Design/cli_design.gasd declares GASDCLI.main as the CLI entry point"
         @trace(#AC-PARSER-007-01) AS ACHIEVE_DSGN_C_TRACE
     
     5. ENSURE "All designed core components are formally validated"

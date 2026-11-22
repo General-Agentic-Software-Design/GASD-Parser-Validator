@@ -30,7 +30,7 @@ So that the CLI interface is simpler and more predictable for cross-file designs
 | **(No Flags)** | | Full semantic validation on all files. Console summary output. |
 | **--ast-sem** | | **[DEFAULT]** Full semantic validation. Outputs cross-file Semantic AST JSON. |
 | **--no-validate** | | Syntax parsing only. Skips all semantic validation checks. |
-| **--json** | | Outputs a machine-readable validation report (JSON). |
+| **--json** | | Outputs the AST JSON to stdout and the machine-readable validation report to stderr. |
 | **--version** | | Displays program version and exits immediately. |
 | **--help (-h)** | | Displays help message and exits immediately. |
 | **--ast** | | **[REMOVED]** Treated as an unknown argument (no legacy support). |

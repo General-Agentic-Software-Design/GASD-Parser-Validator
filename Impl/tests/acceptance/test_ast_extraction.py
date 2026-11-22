@@ -15,12 +15,7 @@ def test_cli_ast_output_console():
         result = subprocess.run(["python3", "-m", "Impl.cli", "ast_test.gasd", "--ast-sem", "--json"], capture_output=True, text=True, env={"PYTHONPATH": "."})
         assert result.returncode == 0
         # Should contain JSON structure
-        full_data = json.loads(result.stdout)
-        ast_data = full_data["asts"][0]
-        if "__semantic_ast__" in ast_data:
-            assert ast_data["__semantic_ast__"]["kind"] == "SemanticSystem"
-        else:
-            assert ast_data["kind"] == "SemanticSystem"
+        assert json.loads(result.stdout)["kind"] == "SemanticSystem"
     finally:
         os.remove("ast_test.gasd")
 

@@ -1,3 +1,6 @@
+from ast import literal_eval
+from dataclasses import asdict, replace
+
 from .ASTNodes import *
 from ..parser.generated.grammar.GASDParser import GASDParser
 from ..parser.generated.grammar.GASDParserVisitor import GASDParserVisitor
@@ -283,12 +286,7 @@ class ASTGenerator(GASDParserVisitor):
         loc = self._get_loc(ctx)
         inner = self.visit(ctx.type_expr())
         if inner:
-            return TypeExpression(
-                baseType=inner.baseType, 
-                genericArgs=inner.genericArgs, 
-                isOptional=True, 
-                **loc
-            )
+            return replace(inner, isOptional=True, **loc)
         return TypeExpression(baseType="Any", isOptional=True, **loc)
 
     def visitSimpleType(self, ctx: GASDParser.SimpleTypeContext):
@@ -376,7 +374,7 @@ class ASTGenerator(GASDParserVisitor):
         name = ctx.soft_id().getText()
         t = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Any")
         anns = self._visit_anns(ctx.annotations())
-        return Parameter(name=name, type=t, annotations=anns, **loc)
+        return Parameter(name=name, type=t, annotations=anns, typeDeclared=ctx.type_expr() is not None, **loc)
 
     def visitFlow_def(self, ctx: GASDParser.Flow_defContext):
         loc = self._get_loc(ctx)
@@ -767,9 +765,15 @@ class ASTGenerator(GASDParserVisitor):
         output = self.visit(ctx.output_blk()) if ctx.output_blk() else None
         
         cases = {}
-        for cblk in ctx.case_blk():
+        duplicates = []
+        behaviors = ctx.behaviors_blk()
+        direct_cases = ctx.case_blk()
+        for cblk in (behaviors.case_blk() if behaviors else []) + direct_cases:
             case_node = self.visit(cblk)
-            cases[case_node.name] = case_node
+            if case_node.name in cases:
+                duplicates.append(case_node)
+            else:
+                cases[case_node.name] = case_node
             
         idem = False
         if ctx.idempotent_blk():
@@ -777,9 +781,15 @@ class ASTGenerator(GASDParserVisitor):
             
         ver = None
         if ctx.version_dir():
-             ver = ctx.version_dir().getChild(1).getText().strip('"\'')
+            version = ctx.version_dir()
+            token = version.STRING_LITERAL() or version.version_number()
+            ver = token.getText().strip('"\'')
 
-        return ContractDefinition(name=name, inputs=inputs, output=output, behaviors=cases, idempotent=idem, version=ver, annotations=anns, **loc)
+        return ContractDefinition(
+            name=name, inputs=inputs, output=output, behaviors=cases, idempotent=idem,
+            version=ver, annotations=anns, hasBehaviors=behaviors is not None and not direct_cases,
+            duplicateCases=duplicates, **loc,
+        )
 
     def visitInput_blk(self, ctx: GASDParser.Input_blkContext):
         if ctx.param_list():
@@ -797,23 +807,80 @@ class ASTGenerator(GASDParserVisitor):
         elif ctx.STRING_LITERAL():
             name = ctx.STRING_LITERAL().getText().strip('"\'')
             
-        clauses = []
-        for c in ctx.case_clause():
-            clauses.append(self.visit(c))
-        return ContractCase(name=name, clauses=clauses, **loc)
+        return ContractCase(
+            name=name, clauses=[self.visit(clause) for clause in ctx.case_clause()],
+            when=[self.visit(guard) for guard in ctx.case_guard()],
+            hasLegacySteps=bool(ctx.legacy_case_step()), **loc,
+        )
 
     def visitCase_clause(self, ctx: GASDParser.Case_clauseContext):
-        res = {}
         if ctx.POSTCONDITION_KW():
-            res["type"] = "POSTCONDITION"
-            res["value"] = ctx.postcondition_expr().getText()
-        elif ctx.THROWS_KW():
-            res["type"] = "THROWS"
-            res["value"] = ctx.soft_id().getText()
-        elif ctx.AFTER_KW():
-            res["type"] = "AFTER"
-            res["value"] = ctx.getChild(2).getText()
-        return res
+            outcome = ctx.contract_predicate() or ctx.STRING_LITERAL() or ctx.postcondition_expr()
+            data = {"type": "POSTCONDITION", "value": outcome.getText()}
+            if ctx.contract_predicate():
+                data["predicate"] = asdict(self.visit(ctx.contract_predicate()))
+            if ctx.STRING_LITERAL():
+                data["quoted"] = True
+            return data
+        if ctx.THROWS_KW():
+            return {"type": "THROWS", "value": ctx.qualified_name().getText()}
+        if ctx.duration_literal():
+            return {"type": "AFTER", "value": ctx.duration_literal().getText()}
+        value = ctx.soft_id().getText()
+        if ctx.LPAREN():
+            args = ctx.value_list()
+            arguments = ",".join(
+                child.getText() for child in args.children
+                if isinstance(child, (GASDParser.ValueContext, GASDParser.Named_argContext))
+            ) if args else ""
+            value = f"{value}({arguments})"
+        return {"type": "AFTER", "value": value}
+
+    def _contract_predicate(self, ctx, operands):
+        comparison = ctx.contract_comparison()
+        right = self.visit(operands[1]) if comparison else {
+            "kind": "type", "value": asdict(self.visit(ctx.type_expr()))
+        }
+        return GuardPredicate(
+            operator=comparison.getText() if comparison else "IS",
+            left_operand=self.visit(operands[0]), right_operand=right, **self._get_loc(ctx),
+        )
+
+    def visitCase_guard(self, ctx: GASDParser.Case_guardContext):
+        return self._contract_predicate(ctx, ctx.guard_operand())
+
+    def visitContract_predicate(self, ctx: GASDParser.Contract_predicateContext):
+        return self._contract_predicate(ctx, ctx.contract_arithmetic())
+
+    def visitGuard_operand(self, ctx: GASDParser.Guard_operandContext):
+        text = ctx.getText()
+        if ctx.STRING_LITERAL():
+            try:
+                value = literal_eval(text)
+            except (SyntaxError, ValueError):
+                value = text[1:-1]
+            return {"kind": "string", "value": value}
+        if ctx.INTEGER():
+            return {"kind": "integer", "value": int(text)}
+        if ctx.FLOAT_LITERAL():
+            return {"kind": "float", "value": text}
+        if ctx.BOOLEAN_LITERAL():
+            return {"kind": "boolean", "value": text.lower() == "true"}
+        if text == "null" or (
+            text == "void" and isinstance(ctx.parentCtx, GASDParser.Contract_arithmeticContext)
+        ):
+            return {"kind": text, "value": None}
+        return {"kind": "reference", "value": text}
+
+    def visitContract_arithmetic(self, ctx: GASDParser.Contract_arithmeticContext):
+        if ctx.guard_operand():
+            return self.visit(ctx.guard_operand())
+        operands = [self.visit(operand) for operand in ctx.contract_arithmetic()]
+        if ctx.op:
+            return {"kind": "arithmetic", "operator": ctx.op.text, "operands": operands}
+        if ctx.qualified_name():
+            return {"kind": "call", "value": ctx.qualified_name().getText(), "operands": operands}
+        return operands[0]
 
     def visitModel_def(self, ctx: GASDParser.Model_defContext):
         loc = self._get_loc(ctx)

@@ -47,21 +47,20 @@ def test_regression_ast_combine_with_ast_output():
         out_path = out_f.name
 
     try:
-        result = subprocess.run(
-            ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-sem", "--ast-combine", "--ast-output", out_path],
-            capture_output=True, text=True,
-            env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
-            cwd=PROJECT_ROOT
-        )
+        command = ["python3", "-m", "Impl.cli", tmp1.name, tmp2.name, "--ast-combine", "--json"]
+        options = {"capture_output": True, "text": True, "cwd": PROJECT_ROOT}
+        result = subprocess.run([*command, "--ast-output", out_path], **options)
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # File must contain aggregated AST
-        assert os.path.exists(out_path), "Output file was not created"
+        assert result.stdout == ""
         with open(out_path) as f:
             data = json.load(f)
         assert data["kind"] == "SemanticSystem"
-        # stdout must not contain JSON
-        stdout = result.stdout.strip()
-        assert "{" not in stdout, f"AST JSON leaked to stdout with --ast-combine: {stdout[:200]}"
+        assert len(data["compilationUnit"]["fileNodes"]) == 2
+
+        redirected = subprocess.run(command, check=True, **options)
+        stdout_data = json.loads(redirected.stdout)
+        assert stdout_data["kind"] == "SemanticSystem"
+        assert stdout_data["compilationUnit"]["fileNodes"].keys() == data["compilationUnit"]["fileNodes"].keys()
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
@@ -74,16 +73,18 @@ def test_regression_no_validate_with_ast_output():
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out_f:
         out_path = out_f.name
 
-    result, fp = run_cli("--ast-sem", "--no-validate", "--ast-output", out_path)
+    result, fp = run_cli("--json", "--no-validate", "--ast-output", out_path, input_content=VALID_GASD.replace("TestCLI", "Café"))
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        assert os.path.exists(out_path), "Output file was not created"
-        with open(out_path) as f:
-            data = json.load(f)
-        assert data["kind"] == "GASDFile"
-        # stdout must not contain JSON
-        stdout = result.stdout.strip()
-        assert "{" not in stdout, f"AST JSON leaked to stdout with --no-validate: {stdout[:200]}"
+        assert result.stdout == ""
+        redirected = subprocess.run(
+            ["python3", "-m", "Impl.cli", "--json", "--no-validate", fp],
+            capture_output=True, check=True, cwd=PROJECT_ROOT,
+        )
+        with open(out_path, "rb") as f:
+            assert redirected.stdout == f.read()
+        assert json.loads(redirected.stdout)["kind"] == "GASDFile"
+        assert "Café".encode("utf-8") in redirected.stdout
     finally:
         os.unlink(fp)
         if os.path.exists(out_path):
@@ -96,7 +97,6 @@ def test_regression_default_stdout_unchanged():
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        assert "asts" in data, "Default stdout behavior changed: no AST JSON on stdout without --ast-output"
-        assert data["asts"][0]["kind"] == "SemanticSystem"
+        assert data["kind"] == "SemanticSystem"
     finally:
         os.unlink(fp)

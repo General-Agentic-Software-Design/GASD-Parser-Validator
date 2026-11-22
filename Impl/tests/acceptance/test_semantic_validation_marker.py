@@ -82,14 +82,13 @@ def test_marker_failure_integrity():
         # CLI returns exit code 1 for semantic errors
         assert result.returncode == 1
         
-        # Even on failure, if it produces JSON, the marker must reflect failure
-        if result.stdout:
-            try:
-                data = json.loads(result.stdout)
-                if "semantic_validate" in data:
-                    assert data["semantic_validate"]["status"] == "FAILED"
-            except json.JSONDecodeError:
-                pass # If it's not JSON on failure, that's also acceptable under some modes
+        report = json.loads(result.stderr)
+        assert report["success"] is False
+        for encoded in (result.stdout, result.stderr):
+            if encoded:
+                marker = json.loads(encoded).get("semantic_validate")
+                if marker:
+                    assert marker["status"] == "FAILED"
     finally:
         os.unlink(fp)
 

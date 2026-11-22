@@ -26,19 +26,21 @@ FLOW test_acceptance_stdout_suppressed():
 
 FLOW test_acceptance_default_stdout_preserved():
     @trace #AT-PARSER-013-03, #AC-PARSER-013-04
-    1. ACHIEVE "Run gasd_parser --ast-sem valid.gasd without --ast-output"
-        POSTCONDITION: "stdout is captured"
-    2. ENSURE "AST JSON is emitted to stdout"
-        OTHERWISE THROW "Acceptance Failure: Default stdout behavior broken without --ast-output"
+    1. ACHIEVE "Run gasd_parser --json valid.gasd without --ast-output"
+        POSTCONDITION: "stdout and stderr are captured"
+    2. ENSURE "stdout contains a top-level SemanticSystem and stderr contains the validation report"
+        OTHERWISE THROW "Acceptance Failure: AST or validation report uses the wrong stream"
 
 FLOW test_acceptance_content_identity():
     @trace #AT-PARSER-013-04, #AC-PARSER-013-05
-    1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd"
+    1. ACHIEVE "Run gasd_parser --json --ast-output out.json valid.gasd"
         POSTCONDITION: "out.json is created"
-    2. ACHIEVE "Run gasd_parser --ast-sem valid.gasd and capture stdout"
+    2. ACHIEVE "Run gasd_parser --json valid.gasd and capture stdout"
         POSTCONDITION: "stdout JSON is captured"
-    3. ENSURE "Content of out.json and stdout JSON are semantically identical"
+    3. ENSURE "Compare the whole JSON document, excluding only generated node IDs and validation timestamps from independent runs"
         OTHERWISE THROW "Acceptance Failure: File content differs from stdout content"
+    4. ENSURE "With fixed node IDs and validation timestamps, compare the raw bytes including whitespace"
+        OTHERWISE THROW "Acceptance Failure: Stdout and file use different serialization"
 
 FLOW test_acceptance_unwritable_path():
     @trace #AT-PARSER-013-05, #AC-PARSER-013-06
@@ -53,7 +55,7 @@ FLOW test_acceptance_json_flag_with_ast_output():
     @trace #AT-PARSER-013-06, #AC-PARSER-013-02
     1. ACHIEVE "Run gasd_parser --ast-sem --json --ast-output out.json valid.gasd"
         POSTCONDITION: "Command execution completes"
-    2. ENSURE "stdout remains free of AST JSON"
-        OTHERWISE THROW "Acceptance Failure: AST JSON leaked to stdout with --json and --ast-output"
+    2. ENSURE "stdout is empty and stderr contains the validation report"
+        OTHERWISE THROW "Acceptance Failure: JSON channels overlap with --ast-output"
     3. ENSURE "out.json contains the full AST output"
         OTHERWISE THROW "Acceptance Failure: Output file missing content with --json flag"

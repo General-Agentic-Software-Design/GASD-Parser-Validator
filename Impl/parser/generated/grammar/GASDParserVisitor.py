@@ -1,4 +1,4 @@
-# Generated from GASDParser.g4 by ANTLR 4.13.2
+# Generated from Impl/grammar/GASDParser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .GASDParser import GASDParser
@@ -299,13 +299,48 @@ class GASDParserVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GASDParser#behaviors_blk.
+    def visitBehaviors_blk(self, ctx:GASDParser.Behaviors_blkContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GASDParser#case_blk.
     def visitCase_blk(self, ctx:GASDParser.Case_blkContext):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GASDParser#legacy_case_step.
+    def visitLegacy_case_step(self, ctx:GASDParser.Legacy_case_stepContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#case_guard.
+    def visitCase_guard(self, ctx:GASDParser.Case_guardContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#guard_operand.
+    def visitGuard_operand(self, ctx:GASDParser.Guard_operandContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#contract_comparison.
+    def visitContract_comparison(self, ctx:GASDParser.Contract_comparisonContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GASDParser#case_clause.
     def visitCase_clause(self, ctx:GASDParser.Case_clauseContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#contract_predicate.
+    def visitContract_predicate(self, ctx:GASDParser.Contract_predicateContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GASDParser#contract_arithmetic.
+    def visitContract_arithmetic(self, ctx:GASDParser.Contract_arithmeticContext):
         return self.visitChildren(ctx)
 
 

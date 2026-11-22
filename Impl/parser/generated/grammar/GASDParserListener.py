@@ -1,4 +1,4 @@
-# Generated from GASDParser.g4 by ANTLR 4.13.2
+# Generated from Impl/grammar/GASDParser.g4 by ANTLR 4.13.2
 from antlr4 import *
 if "." in __name__:
     from .GASDParser import GASDParser
@@ -530,6 +530,15 @@ class GASDParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GASDParser#behaviors_blk.
+    def enterBehaviors_blk(self, ctx:GASDParser.Behaviors_blkContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#behaviors_blk.
+    def exitBehaviors_blk(self, ctx:GASDParser.Behaviors_blkContext):
+        pass
+
+
     # Enter a parse tree produced by GASDParser#case_blk.
     def enterCase_blk(self, ctx:GASDParser.Case_blkContext):
         pass
@@ -539,12 +548,66 @@ class GASDParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GASDParser#legacy_case_step.
+    def enterLegacy_case_step(self, ctx:GASDParser.Legacy_case_stepContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#legacy_case_step.
+    def exitLegacy_case_step(self, ctx:GASDParser.Legacy_case_stepContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#case_guard.
+    def enterCase_guard(self, ctx:GASDParser.Case_guardContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#case_guard.
+    def exitCase_guard(self, ctx:GASDParser.Case_guardContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#guard_operand.
+    def enterGuard_operand(self, ctx:GASDParser.Guard_operandContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#guard_operand.
+    def exitGuard_operand(self, ctx:GASDParser.Guard_operandContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#contract_comparison.
+    def enterContract_comparison(self, ctx:GASDParser.Contract_comparisonContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#contract_comparison.
+    def exitContract_comparison(self, ctx:GASDParser.Contract_comparisonContext):
+        pass
+
+
     # Enter a parse tree produced by GASDParser#case_clause.
     def enterCase_clause(self, ctx:GASDParser.Case_clauseContext):
         pass
 
     # Exit a parse tree produced by GASDParser#case_clause.
     def exitCase_clause(self, ctx:GASDParser.Case_clauseContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#contract_predicate.
+    def enterContract_predicate(self, ctx:GASDParser.Contract_predicateContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#contract_predicate.
+    def exitContract_predicate(self, ctx:GASDParser.Contract_predicateContext):
+        pass
+
+
+    # Enter a parse tree produced by GASDParser#contract_arithmetic.
+    def enterContract_arithmetic(self, ctx:GASDParser.Contract_arithmeticContext):
+        pass
+
+    # Exit a parse tree produced by GASDParser#contract_arithmetic.
+    def exitContract_arithmetic(self, ctx:GASDParser.Contract_arithmeticContext):
         pass
 
 

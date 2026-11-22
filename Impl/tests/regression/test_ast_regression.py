@@ -34,7 +34,7 @@ class TestASTRegression(unittest.TestCase):
         return result
 
     def test_ast_help_listing(self):
-        """RT-PARSER-007-03: --help lists and describes --ast flags but not legacy --ast."""
+        """RT-PARSER-007-03. Help lists the supported AST options."""
         result = self.run_parser(["--help"])
         self.assertEqual(result.returncode, 0)
         self.assertIn("--ast-sem", result.stdout)
@@ -51,9 +51,7 @@ class TestASTRegression(unittest.TestCase):
         
         result = self.run_parser([special_file, "--ast-sem", "--json"])
         self.assertEqual(result.returncode, 0)
-        full_data = json.loads(result.stdout)
-        # Unified Semantic AST structure differs from old flat list
-        system = full_data["asts"][0]
+        system = json.loads(result.stdout)
         ns_key = "global" if "global" in system["namespaces"] else ""
         emoji_type = system["namespaces"][ns_key]["types"]["Emoji"]
         # In Ph4, fields are a dictionary, and we use typeRef

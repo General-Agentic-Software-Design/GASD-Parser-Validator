@@ -34,7 +34,7 @@ DECISION "Bound Property Visibility":
 // ===================================================================
 
 /// A resolved union of constraints and structure.
-TYPE TypeContract @trace #AC-SEMAST-003-01, #AC-X-SEMAST-004-01:
+TYPE TypeContract @trace("AC-SEMAST-003-01", "AC-X-SEMAST-004-01"):
     targetType: String // Name of the target TYPE (can be qualified)
     targetNamespace: String @optional @trace #AC-X-SEMAST-004-02
     genericArgs: List<TypeContract> @optional @trace #AC-X-SEMAST-004-03
@@ -53,14 +53,14 @@ TYPE BoundValue:
 // =================================================)
 // ===================================================================
 
-COMPONENT BinderEngine @trace #AC-SEMAST-003-05, #AC-X-SEMAST-007-01:
+COMPONENT BinderEngine @trace("AC-SEMAST-003-05", "AC-X-SEMAST-007-01"):
     INTERFACE:
         /// Bind a raw expression to a target TYPE.
-        bind(expr: ResolvedExpression, target: String) -> TypeContract @trace #AC-SEMAST-003-02, #AC-X-SEMAST-007-01
+        bind(expr: ResolvedExpression, target: String) -> TypeContract @trace("AC-SEMAST-003-02", "AC-X-SEMAST-007-01")
         /// Verify field-level mapping.
-        verifyFields(source: Map<String, Any>, schema: ResolvedTypeNode) -> TypeContract @trace #AC-SEMAST-003-03, #AC-X-SEMAST-007-02
+        verifyFields(source: Map<String, Any>, schema: ResolvedTypeNode) -> TypeContract @trace("AC-SEMAST-003-03", "AC-X-SEMAST-007-02")
         /// Propagate bound properties into symbol table.
-        propagate(contract: TypeContract, scope: SymbolScope) -> Void @trace #AC-SEMAST-003-04
+        propagate(contract: TypeContract, scope: SymbolScope) -> Void @trace("AC-SEMAST-003-04")
 
 // ===================================================================
 // Constraints

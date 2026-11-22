@@ -6,13 +6,22 @@ content is written exclusively to the file and NOT to stdout.
 Trace: US-PARSER-013
 """
 
-import pytest
+from datetime import datetime
+from itertools import count
 import subprocess
 import os
 import json
+import sys
 import tempfile
+from types import SimpleNamespace
+from uuid import UUID
 
-VALID_GASD = 'CONTEXT: "TestCLI"\nTARGET: "Python3"\nTYPE MyT:\n  f: String\n'
+import pytest
+
+from Impl import cli
+from Impl.semantic import SemanticNodes
+
+VALID_GASD = 'VERSION 1.2\nCONTEXT: "TestCLI"\nTARGET: "Python3"\nTYPE MyT:\n  f: String\n'
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -60,10 +69,7 @@ def test_ast_output_stdout_suppressed():
     result, fp = run_cli("--ast-sem", "--ast-output", out_path)
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # stdout must not contain any JSON content
-        stdout = result.stdout.strip()
-        assert "{" not in stdout, f"AST JSON leaked to stdout: {stdout[:200]}"
-        assert "SemanticSystem" not in stdout, f"AST node data leaked to stdout: {stdout[:200]}"
+        assert result.stdout == ""
     finally:
         os.unlink(fp)
         if os.path.exists(out_path):
@@ -76,39 +82,75 @@ def test_ast_output_default_stdout_preserved():
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
         data = json.loads(result.stdout)
-        assert "asts" in data, "Default stdout behavior broken: no AST JSON on stdout without --ast-output"
+        assert data["kind"] == "SemanticSystem"
+        assert json.loads(result.stderr)["success"] is True
     finally:
         os.unlink(fp)
 
 
-def test_ast_output_content_identity():
+@pytest.mark.parametrize("source", ["file", "stdin"])
+def test_ast_output_content_identity(tmp_path, source):
     """AT-PARSER-013-04 / AC-PARSER-013-05: File content must be identical to what stdout would produce."""
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out_f:
-        out_path = out_f.name
+    output = tmp_path / "ast.json"
+    command = [sys.executable, "-m", "Impl.cli", "--json"]
+    options = {"capture_output": True, "check": True, "cwd": PROJECT_ROOT}
+    if source == "stdin":
+        options["input"] = VALID_GASD.encode("utf-8")
+    else:
+        spec = tmp_path / "input.gasd"
+        spec.write_text(VALID_GASD, encoding="utf-8")
+        command.append(str(spec))
 
-    # Run with --ast-output
-    result_file, fp = run_cli("--ast-sem", "--ast-output", out_path)
-    try:
-        assert result_file.returncode == 0, f"stderr: {result_file.stderr}"
-        with open(out_path) as f:
-            file_data = json.load(f)
+    stdout_result = subprocess.run(command, **options)
+    file_result = subprocess.run([*command, "--ast-output", str(output)], **options)
+    assert file_result.stdout == b""
+    stdout_ast = json.loads(stdout_result.stdout)
+    file_ast = json.loads(output.read_bytes())
+    assert stdout_ast["kind"] == file_ast["kind"] == "SemanticSystem"
+    assert stdout_ast["semantic_validate"]["status"] == "PASSED"
+    if source == "stdin":
+        assert list(stdout_ast["compilationUnit"]["fileNodes"]) == ["stdin"]
+    assert comparable_ast(stdout_ast) == comparable_ast(file_ast)
 
-        # Run without --ast-output to get stdout JSON
-        result_stdout, fp2 = run_cli("--ast-sem", "--json", file_path=fp)
-        stdout_data = json.loads(result_stdout.stdout)
 
-        # The file output is a single SemanticSystem; stdout wraps in {"asts": [...]}
-        # Compare the AST content structurally
-        assert file_data["kind"] == "SemanticSystem"
-        assert stdout_data["asts"][0]["kind"] == "SemanticSystem"
-        # Both should have the same types defined
-        file_types = {t["name"] for t in file_data.get("types", [])}
-        stdout_types = {t["name"] for t in stdout_data["asts"][0].get("types", [])}
-        assert file_types == stdout_types, f"Content mismatch: file={file_types}, stdout={stdout_types}"
-    finally:
-        os.unlink(fp)
-        if os.path.exists(out_path):
-            os.unlink(out_path)
+def comparable_ast(document):
+    """Omit generated UUIDs and the validation time from independent runs."""
+    def strip_node_ids(value):
+        if isinstance(value, list):
+            for item in value:
+                strip_node_ids(item)
+        elif isinstance(value, dict):
+            if "kind" in value and "sourceMap" in value:
+                UUID(value.pop("id"))
+            for item in value.values():
+                strip_node_ids(item)
+
+    strip_node_ids(document)
+    document["semantic_validate"].pop("validation_time")
+    return document
+
+
+def test_ast_output_byte_identity_with_fixed_run_metadata(tmp_path, monkeypatch, capsysbinary):
+    spec = tmp_path / "input.gasd"
+    spec.write_text(VALID_GASD, encoding="utf-8")
+    output = tmp_path / "ast.json"
+    fixed_time = datetime(2026, 1, 1)
+    monkeypatch.setattr(cli, "datetime", SimpleNamespace(datetime=SimpleNamespace(utcnow=lambda: fixed_time)))
+
+    def invoke(*args):
+        ids = count()
+        monkeypatch.setattr(SemanticNodes, "uuid4", lambda: UUID(int=next(ids)))
+        monkeypatch.setattr(sys, "argv", ["gasd_parser", "--json", str(spec), *args])
+        with pytest.raises(SystemExit) as completed:
+            cli.main()
+        assert completed.value.code == 0
+        return capsysbinary.readouterr()
+
+    redirected = invoke()
+    exported = invoke("--ast-output", str(output))
+
+    assert exported.out == b""
+    assert redirected.out == output.read_bytes()
 
 
 def test_ast_output_unwritable_path():
@@ -129,10 +171,8 @@ def test_ast_output_json_flag_no_stdout_leak():
     result, fp = run_cli("--ast-sem", "--json", "--ast-output", out_path)
     try:
         assert result.returncode == 0, f"stderr: {result.stderr}"
-        # stdout must remain free of AST JSON
-        stdout = result.stdout.strip()
-        assert "SemanticSystem" not in stdout, f"AST JSON leaked to stdout with --json: {stdout[:200]}"
-        assert '"asts":' not in stdout, f"AST JSON leaked to stdout with --json: {stdout[:200]}"
+        assert result.stdout == ""
+        assert json.loads(result.stderr)["success"] is True
         # File must contain the full output
         assert os.path.exists(out_path), "Output file was not created"
         with open(out_path) as f:

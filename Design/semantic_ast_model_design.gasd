@@ -34,7 +34,7 @@ DECISION "Symbol Linking Strategy":
 // ===================================================================
 
 /// Base interface for all semantic nodes.
-TYPE SemanticNodeBase @trace #AC-SEMAST-001-01:
+TYPE SemanticNodeBase @trace("AC-SEMAST-001-01"):
     kind: String
     id: String // Unique ID for semantic hashing
     symbolId: String @optional // Link to SymbolTable entry
@@ -75,7 +75,7 @@ TYPE ImportLink:
 // ===================================================================
 
 /// Resolved root node of a GASD system.
-TYPE SemanticSystem @trace #AC-SEMAST-001-02:
+TYPE SemanticSystem @trace("AC-SEMAST-001-02"):
     kind: "SemanticSystem"
     compilationUnit: CompilationUnit
     namespaces: Map<String, NamespaceNode>
@@ -100,7 +100,7 @@ TYPE SystemMetadata:
     context: String @optional
 
 /// Multi-File Compilation Unit representing the entire system scope.
-TYPE CompilationUnit @trace #AC-X-SEMAST-001-03:
+TYPE CompilationUnit @trace("AC-X-SEMAST-001-03"):
     kind: "CompilationUnit"
     files: Map<String, ProjectFileNode> // Canonical path -> File node
     deterministicOrder: List<String> // Sorted canonical paths
@@ -126,7 +126,7 @@ TYPE NamespaceNode:
 // ===================================================================
 
 /// Resolved Type Definition with cross-reference support.
-TYPE ResolvedTypeNode @trace #AC-SEMAST-001-03:
+TYPE ResolvedTypeNode @trace("AC-SEMAST-001-03"):
     kind: "ResolvedType"
     name: String
     fields: Map<String, ResolvedFieldNode>
@@ -149,7 +149,7 @@ TYPE TypeStructure:
 // Flow & Step Semantics
 // ===================================================================
 
-TYPE ResolvedFlowNode @trace #AC-SEMAST-001-04:
+TYPE ResolvedFlowNode @trace("AC-SEMAST-001-04"):
     kind: "ResolvedFlow"
     name: String
     inputs: List<ResolvedParameter>
@@ -160,7 +160,7 @@ TYPE ResolvedParameter:
     name: String
     type: TypeStructure
 
-TYPE SemanticFlowStep @trace #AC-SEMAST-001-10:
+TYPE SemanticFlowStep @trace("AC-SEMAST-001-10"):
     kind: "SemanticFlowStep"
     operation: String
     targetExpression: ResolvedExpression
@@ -179,7 +179,7 @@ TYPE ResolvedExpression:
 // Component & Architecture
 // ===================================================================
 
-TYPE ResolvedComponentNode @trace #AC-SEMAST-001-05:
+TYPE ResolvedComponentNode @trace("AC-SEMAST-001-05"):
     kind: "ResolvedComponent"
     name: String
     pattern: String
@@ -202,7 +202,7 @@ TYPE ResolvedMethodNode:
 // Symbol Table Design
 // ===================================================================
 
-COMPONENT SemanticModelBuilder @trace #AC-SEMAST-001-11:
+COMPONENT SemanticModelBuilder @trace("AC-SEMAST-001-11"):
     INTERFACE:
         /// Build a semantic system from a set of syntactic ASTs.
         build(asts: List<GASDFile>) -> SemanticSystem
