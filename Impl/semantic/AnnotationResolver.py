@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, ScopeEnum
+from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, ScopeEnum, SourceRange
 
 from .SymbolTable import SemanticError
 
@@ -46,7 +46,16 @@ class AnnotationResolver:
 
                     args[key] = val
                     
-            res_ann = ResolvedAnnotation(ann.name, scope, args, alias=getattr(ann, 'alias', None))
+            attachment = getattr(ann, "attachment", None)
+            actual_scope = ScopeEnum.FIELD if attachment == "expression" else scope
+            res_ann = ResolvedAnnotation(ann.name, actual_scope, args, alias=getattr(ann, 'alias', None))
+            if hasattr(ann, "sourceFile"):
+                res_ann.sourceMap = SourceRange(ann.sourceFile, ann.line, ann.column, None, None)
+                res_ann.authoredArguments = [
+                    {"name": arg.key, "value": arg.value} for arg in ann.arguments or ()
+                ]
+                if attachment:
+                    res_ann.attachment = attachment
             self.validate(res_ann)
             resolved.append(res_ann)
             

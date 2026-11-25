@@ -22,6 +22,8 @@ So that all generated data artifacts are fully portable across heterogeneous env
 | AC-PARSER-010-05 | For stdin or virtual files, the file identifier field MUST continue to preserve its designated identifier (e.g., `"stdin"`). |
 | AC-PARSER-010-06 | All JSON structural elements (keys, lists, raw values) MUST systematically clean and relativize any absolute paths encountered during serialization ("Zero-Leak" path relativization). |
 
+In a validated semantic export, `source_inventory[].path` identifies an entry in `provenance.sources` and follows the same logical-path convention as that source's AST locations. [Source inventory schema](../../../README.md#cpc-ast-export)
+
 ---
 
 ### Acceptance Tests

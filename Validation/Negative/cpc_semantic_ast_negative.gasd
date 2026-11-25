@@ -1,0 +1,15 @@
+VERSION 1.2
+CONTEXT: "CPC AST rejection checks"
+TARGET: "Python3"
+NAMESPACE: "validation.cpc_ast.negative"
+TRACE: "AST-AC-001-03", "AST-AC-002-02", "AST-AC-003-01", "AST-AC-003-02", "AST-AT-003"
+
+CONSTRAINT: "Scenarios derive from Design/cpc_semantic_ast_design.gasd and the traced CPC parser AST requirements."
+
+FLOW verify_cpc_ast():
+    1. ACHIEVE "Reject an incomplete source set"
+        POSTCONDITION: "Inject read failures for entry and required import, unresolved direct and transitive imports with and without gasd suffix, and a logical path collision from different bytes. Report the source path and import coordinates where applicable. Return failure and publish no successful AST."
+    2. ACHIEVE "Reject changed semantics after successful conversion"
+        POSTCONDITION: "Separately drop, duplicate or move a semantic occurrence or change its argument, type, literal or scope while keeping the expected syntax fixed. Each reports a source occurrence and fails the export, including changes that preserve the number of records."
+    3. ACHIEVE "Reject publication without validation and reconciliation"
+        POSTCONDITION: "Semantic validation and reconciliation errors each block publication. Syntax-only export can succeed and omits the verified inventory and handoff digest. A destination write failure cannot record a handoff digest."

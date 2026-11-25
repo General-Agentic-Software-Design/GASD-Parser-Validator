@@ -1,38 +1,66 @@
 import argparse
+import errno
 import json
 import os
+import stat
 import sys
 import datetime
+import tempfile
 
 from .ast.ASTGenerator import ASTGenerator
 from .ast.ASTExporter import ASTExporter
 from .parser.ParseTreeAPI import ParseTreeAPI, SourceCapture
-from .validation.ValidationPipeline import ValidationPipeline
+from .parser.CPCSources import CPCSources
+from .validation.ValidationPipeline import SemanticError as ValidationSemanticError, ValidationPipeline
 from .errors.ErrorReporter import ErrorReporter, IOErrorData
 from .semantic.ASTProvenance import (
+    BYTE_HASH_KEY,
     CONTENT_HASH_KEY,
     CONTENT_VERSION_KEY,
-    content_fingerprints,
     report_fingerprints,
 )
+from .semantic.CPCInventory import CPCInventory, CPCReconciliationError
 from .semantic.SemanticASTExporter import SemanticASTExporter
 from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.10"
+    __version__ = "2.1.11"
     __build_time__ = "DEVELOPMENT-BUILD"
+
+
+def _write_ast_file(destination, payload):
+    destination = os.path.realpath(destination)
+    try:
+        mode = os.stat(destination).st_mode
+    except FileNotFoundError:
+        pass
+    else:
+        if not stat.S_ISREG(mode):
+            raise OSError(errno.EINVAL, "AST destination must be a regular file", destination)
+    directory = os.path.dirname(destination)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=directory, delete=False) as stream:
+            temporary = stream.name
+            stream.write(payload)
+        os.replace(temporary, destination)
+        temporary = None
+    finally:
+        if temporary is not None:
+            os.unlink(temporary)
+
 
 def main():
     # === Phase 1: Setup and Versioning ===
     parser = argparse.ArgumentParser(prog="gasd_parser", description="GASD-Parser: Validation for Agentic Software Design.")
     parser.add_argument("path", nargs='*', help="Path to .gasd file and/or directory for recursive traversal.")
-    parser.add_argument("--json", action="store_true", help="Write AST JSON to stdout and the JSON validation report to stderr.")
+    parser.add_argument("--json", action="store_true", help="Write AST JSON to stdout unless --ast-output is set, and report as JSON on stderr.")
     parser.add_argument("--ast-sem", action="store_true", default=True, help="Full semantic AST validation (Default).")
     parser.add_argument("--ast-combine", action="store_true", help="Combine multiple files into a single SemanticSystem.")
     parser.add_argument("--ast-output", help="Write AST JSON exclusively to this file.")
     parser.add_argument("--gasd-ver", help="Force specific GASD version (1.1 or 1.2).")
-    parser.add_argument("--no-validate", action="store_true", help="Skip semantic validation, generate AST only (Not recommended).")
+    parser.add_argument("--no-validate", action="store_true", help="Parse syntax only and produce a syntactic AST if requested.")
     parser.add_argument("-v", "--version", action="version", version="gasd_parser " + __version__ + " (built: "+__build_time__+")")
     
     # Check for removed options (Tombstone)
@@ -63,7 +91,7 @@ def main():
                 for f in files:
                     if f.endswith(".gasd"):
                         target_files.append(os.path.abspath(os.path.join(root, f)))
-        elif args.json and semantic_export_requested:
+        elif semantic_export_requested:
             target_files.append(os.path.abspath(p))
         else:
             print(f"Error: Path not found {p}", file=sys.stderr)
@@ -78,6 +106,7 @@ def main():
 
     # === Phase 2: Syntactic Validation and Local Analysis ===
     parser_api = ParseTreeAPI()
+    cpc_sources = CPCSources() if semantic_export_requested else None
     source_paths = {}
     source_digests = {}
     exporter = SemanticASTExporter(source_paths)
@@ -86,7 +115,7 @@ def main():
     valid_asts = []
     collected_asts = []
     processed_files = set()
-    queue = sorted(target_files)
+    queue = sorted(os.path.realpath(path) for path in target_files) if semantic_export_requested else sorted(target_files)
     if use_stdin:
         queue.append("stdin")
 
@@ -133,7 +162,7 @@ def main():
             continue
 
         # AST Generation
-        generator = ASTGenerator(source_file=file_path)
+        generator = ASTGenerator(source_file=file_path, cpc=semantic_export_requested)
         ast = generator.visit(tree)
 
         # Semantic Validation (syntactic/local)
@@ -159,27 +188,35 @@ def main():
                  collected_asts.append(ast)
             
             # Recursive Discovery of Imports
+            if cpc_sources is not None:
+                queue.extend(path for path in cpc_sources.discover(ast) if path not in processed_files)
+                continue
             for d in ast.directives:
                 if d.directiveType == "IMPORT" and d.values:
                     val_clean = d.values[0].strip('"\'\' ')
                     if val_clean.endswith(".gasd"):
                         abs_import = os.path.abspath(os.path.join(os.path.dirname(file_path), val_clean))
-                        if abs_import not in processed_files and (semantic_export_requested or os.path.exists(abs_import)):
+                        if abs_import not in processed_files and os.path.exists(abs_import):
                             queue.append(abs_import)
     
     target_files = sorted(processed_files)
+    if cpc_sources is not None:
+        cpc_sources.resolve(valid_asts, reporters)
 
     # === Phase 4: Semantic AST Generation (Cross-File) ===
     semantic_system = None
     sem_pipeline = None
-    if args.ast_sem and not args.no_validate and valid_asts:
+    inventory = None
+    if (args.ast_sem and not args.no_validate and valid_asts
+            and (not semantic_export_requested or not any(reporter.has_errors() for reporter in reporters.values()))):
         from .semantic.SemanticPipeline import SemanticPipeline
         from .semantic.SymbolTable import SemanticError as STSemanticError
         from .semantic.AnnotationResolver import SemanticError as AnnotationSemanticError
-        from .validation.ValidationPipeline import SemanticError as ValidationSemanticError
-        
-        sem_pipeline = SemanticPipeline(validate_built_in_types=not args.no_validate)
+
+        sem_pipeline = SemanticPipeline(validate_built_in_types=True, cpc=semantic_export_requested)
         try:
+            if semantic_export_requested:
+                inventory = CPCInventory([ast for _, ast in valid_asts], source_paths, source_digests)
             semantic_system = sem_pipeline.run([ast for _, ast in valid_asts], global_version=args.gasd_ver)
             sem_rep = sem_pipeline.get_reporter()
             for sem_err in sem_rep.errors:
@@ -198,6 +235,13 @@ def main():
                         endLine=sem_err.location.endLine, endColumn=sem_err.location.endCol,
                         sourceFile=file_key
                     ))
+        except CPCReconciliationError as exc:
+            occurrence = exc.occurrence
+            key = next(path for path in target_files if source_paths.get(path) == occurrence.path)
+            reporters[key].add_semantic_error(ValidationSemanticError(
+                code="CPC-RECONCILIATION", severity="ERROR", message=str(exc),
+                line=occurrence.line, column=occurrence.column, sourceFile=key,
+            ))
         except (STSemanticError, AnnotationSemanticError) as e:
             # Report the error to the first available reporter
             err_msg = str(e)
@@ -248,8 +292,7 @@ def main():
     # === Phase 4.5: Validation Marker Construction ===
     marker = None
     if args.ast_sem:
-        # Check if we should include the marker (v1.2+ feature)
-        # AC-PARSER-008-01: Only in strict 1.2+ environments
+        # Successful semantic exports carry a marker for every supported GASD version.
         is_v12 = (args.gasd_ver == "1.2")
         if not args.gasd_ver:
              if sem_pipeline and any(v == "1.2" for v in sem_pipeline.file_versions.values()):
@@ -257,7 +300,7 @@ def main():
              else:
                  is_v12 = False
         
-        if is_v12:
+        if is_v12 or semantic_export_requested:
             status = "PASSED"
             if args.no_validate:
                 status = "NOT_PERFORMED"
@@ -285,17 +328,14 @@ def main():
         content_fields = None
         try:
             if semantic_system is not None:
-                ast_json = exporter.to_json(semantic_system, marker=marker, sources=source_digests)
-                if args.json:
-                    artifact = json.loads(ast_json)
-                    ast_marker = artifact.get("semantic_validate")
-                    if ast_marker is not None:
-                        content_fields = {
-                            CONTENT_HASH_KEY: ast_marker[CONTENT_HASH_KEY],
-                            CONTENT_VERSION_KEY: ast_marker[CONTENT_VERSION_KEY],
-                        }
-                    else:
-                        content_fields = content_fingerprints(artifact)
+                ast_json = exporter.to_json(semantic_system, marker=marker, sources=source_digests, inventory=inventory)
+                artifact = json.loads(ast_json)
+                inventory.check_serialized(artifact, ast_json, marker)
+                ast_marker = artifact["semantic_validate"]
+                content_fields = {
+                    CONTENT_HASH_KEY: ast_marker[CONTENT_HASH_KEY],
+                    CONTENT_VERSION_KEY: ast_marker[CONTENT_VERSION_KEY],
+                }
             elif collected_asts and args.no_validate:
                 ast = collected_asts if args.ast_combine or len(collected_asts) > 1 else collected_asts[0]
                 ast_json = ASTExporter().to_json(ast)
@@ -303,8 +343,11 @@ def main():
             if ast_json is not None:
                 ast_bytes = ast_json.encode("utf-8")
                 if has_ast_output:
-                    with open(args.ast_output, "wb") as out_f:
-                        out_f.write(ast_bytes)
+                    if semantic_export_requested:
+                        _write_ast_file(args.ast_output, ast_bytes)
+                    else:
+                        with open(args.ast_output, "wb") as out_f:
+                            out_f.write(ast_bytes)
                     if not args.json:
                         print(f"Exported combined AST to {args.ast_output}", file=sys.stderr)
                 else:
@@ -317,8 +360,25 @@ def main():
                         stdout_buffer.flush()
                 if content_fields is not None:
                     export_fingerprints = report_fingerprints(ast_bytes, content_fields)
+        except CPCReconciliationError as exc:
+            occurrence = exc.occurrence
+            key = next(path for path in target_files if source_paths.get(path) == occurrence.path)
+            reporter = reporters[key]
+            reporter.add_semantic_error(ValidationSemanticError(
+                code="CPC-RECONCILIATION", severity="ERROR", message=str(exc),
+                line=occurrence.line, column=occurrence.column, sourceFile=key,
+            ))
+            if args.json:
+                all_reports[target_files.index(key)] = reporter.to_dict()
+            else:
+                print(reporter.to_console(), file=sys.stderr)
+            failure_count += 1
+            success_count -= 1
+            marker["status"] = "FAILED"
         except (OSError, ValueError) as exc:
             output_error = getattr(exc, "strerror", None) or str(exc) or type(exc).__name__
+            if semantic_export_requested:
+                marker["status"] = "FAILED"
 
     if args.json:
         report = {
@@ -329,6 +389,7 @@ def main():
         }
         if export_fingerprints is not None:
             report["semantic_validate"] = {**(marker or {}), **export_fingerprints}
+            report["semantic_ast_sha512"] = export_fingerprints[BYTE_HASH_KEY]
         elif marker:
             report["semantic_validate"] = marker
         if output_error:
@@ -339,6 +400,8 @@ def main():
         report = exporter.relativize_dict(report, cwd)
         print(json.dumps(report, indent=2), file=sys.stderr)
     else:
+        if export_fingerprints is not None:
+            print(f"semantic_ast_sha512: {export_fingerprints[BYTE_HASH_KEY]}", file=sys.stderr)
         if output_error:
             print(f"Error: Could not write AST to {args.ast_output!r}: {output_error}", file=sys.stderr)
         print("\n--- Summary ---", file=sys.stderr)

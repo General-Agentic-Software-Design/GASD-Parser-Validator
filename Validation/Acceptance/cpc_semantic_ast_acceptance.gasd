@@ -1,0 +1,17 @@
+VERSION 1.2
+CONTEXT: "CPC AST acceptance checks"
+TARGET: "Python3"
+NAMESPACE: "validation.cpc_ast.acceptance"
+TRACE: "AST-AT-001", "AST-AT-002", "AST-AT-003", "AST-AC-001-01", "AST-AC-001-02", "AST-AC-003-01", "AST-AC-003-02"
+
+CONSTRAINT: "Scenarios derive from Design/cpc_semantic_ast_design.gasd and the traced CPC parser AST requirements."
+
+FLOW verify_cpc_ast():
+    1. ACHIEVE "Export a direct and transitive import chain"
+        POSTCONDITION: "The export includes the exact sorted set of three logical source paths and independent raw SHA-512 digests. Compare the defining source maps, include a CRLF file and an unconsumed neighboring file, and check both absolute and relative entry arguments."
+    2. ACHIEVE "Change the file after capture"
+        POSTCONDITION: "Repeat with separate edits to the entry, direct import and transitive import after capture. Each exported semantic value and digest still identifies the captured revision. An unreadable required import produces an error and no successful export."
+    3. ACHIEVE "Export annotated steps, contracts, and branches"
+        POSTCONDITION: "Use identical trace payloads and distinct AS identifiers on one step, a typed postcondition, and a nested failure action. Verify independent source positions, owner and semantic values, then inject a loss or change and confirm a source-located rejection."
+    4. ACHIEVE "Publish one validated AST"
+        POSTCONDITION: "The AST is a single semantic system with PASSED, full version and build information, source provenance and verified inventory. The external semantic_ast_sha512 matches SHA-512 of all final JSON bytes."

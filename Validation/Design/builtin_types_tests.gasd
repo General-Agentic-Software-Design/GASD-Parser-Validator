@@ -16,7 +16,7 @@ TRACE: "US-SEMAST-019"
 /// AT-SEMAST-019-01: Implicit primitive support
 FLOW test_primitive_implicit_support():
     1. ACHIEVE "Prepare GASD file using String, Integer, Boolean without definition"
-    2. ACHIEVE "Run gasd-parser validation"
+    2. ACHIEVE "Run gasd_parser on the GASD file"
     3. ENSURE "No V008 warnings are produced" @trace #AT-SEMAST-019-01
         OTHERWISE THROW "Validation Failed"
 

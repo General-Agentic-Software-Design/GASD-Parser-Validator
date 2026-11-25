@@ -41,12 +41,18 @@ class ResolvedAnnotation:
         self.alias = alias
  
     def to_dict(self):
-        return {
+        value = {
             "name": self.name,
             "scope": self.scope.value,
             "arguments": self.arguments,
             "alias": self.alias
         }
+        if hasattr(self, "sourceMap"):
+            value.update(kind="ResolvedAnnotation", sourceMap=self.sourceMap.to_dict(),
+                         authoredArguments=self.authoredArguments)
+            if hasattr(self, "attachment"):
+                value["attachment"] = self.attachment
+        return value
 
 
 class SymbolLink:
@@ -94,6 +100,7 @@ class SemanticNodeBase:
             d["symbolId"] = self.symbolId
         if self.documentation:
             d["documentation"] = self.documentation
+        d.update(getattr(self, "cpc_fields", {}))
         return d
 
 
@@ -112,6 +119,7 @@ class TypeContract:
         }
         if self.literalValue is not None:
             d["literalValue"] = self.literalValue
+        d.update(getattr(self, "cpc_fields", {}))
         return d
 
 
@@ -125,7 +133,8 @@ class ResolvedFieldNode:
         return {
             "name": self.name,
             "typeRef": self.typeRef.to_dict(),
-            "isOptional": self.isOptional
+            "isOptional": self.isOptional,
+            **getattr(self, "cpc_fields", {}),
         }
 
 
@@ -137,7 +146,8 @@ class ResolvedParameter:
     def to_dict(self):
         return {
             "name": self.name,
-            "typeRef": self.typeRef.to_dict()
+            "typeRef": self.typeRef.to_dict(),
+            **getattr(self, "cpc_fields", {}),
         }
 
 

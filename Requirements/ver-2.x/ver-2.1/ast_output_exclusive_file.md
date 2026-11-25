@@ -13,7 +13,7 @@ So that downstream tools can consume either destination with the same code.
 
 ### Background & Rationale
 
-Use one AST serializer for stdout and file export. A semantic export is a top-level `SemanticSystem` with its validation marker when applicable. An export with `--no-validate` uses the syntactic AST format. When `--ast-output` is supplied, it takes precedence over the stdout destination. The machine-readable validation report requested by `--json` goes to stderr.
+Use one AST serializer for stdout and file export. A validated semantic export is a top-level `SemanticSystem` with its validation marker, source provenance, and verified occurrence inventory. An export with `--no-validate` uses the syntactic AST format. When `--ast-output` is supplied, it takes precedence over the stdout destination. Both report formats go to stderr and include `semantic_ast_sha512` after a successful semantic delivery. Use `--json` for the machine-readable report. [Source reconciliation requirements](GASD_Parser_AST_Requirements.md)
 
 Destination parity applies to the entire serialized AST for the same input and validation state. Independent runs can produce different generated node UUIDs, validation timestamps, and byte digests that cover them. If parsing produces no AST, stdout stays empty and the destination file is left untouched. [AST provenance requirements](AST-Provenance-Requirements.md#provenance-parity-across-ast-output-destinations)
 

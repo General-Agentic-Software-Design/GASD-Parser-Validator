@@ -10,7 +10,7 @@ BYTE_HASH_KEY = "semantic_ast_bytes_sha512"
 CONTENT_HASH_KEY = "semantic_ast_content_sha512"
 CONTENT_VERSION_KEY = "semantic_ast_content_version"
 
-_ROOT_METADATA = {"provenance", "semantic_validate", "compilationUnit"}
+_ROOT_METADATA = {"provenance", "semantic_validate", "compilationUnit", "source_inventory", "source_inventory_version"}
 _SYNTAX_LOCATIONS = {"sourceFile", "line", "column", "endLine", "endColumn"}
 _UNORDERED_ROOT = {"globalConstraints", "contracts", "models", "assumptions"}
 _UNORDERED_FIELDS = {

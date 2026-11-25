@@ -11,6 +11,7 @@ VERSION 1.2
 CONTEXT: "Compiler / Language Tooling — CLI Design"
 TARGET: "TypeScript", "Python3"
 TRACE: "US-PARSER-006", "US-PARSER-007", "US-SEMAST-016", "US-SEMAST-018", "US-V2-009"
+IMPORT "ast_provenance_design.gasd"
 
 // ===================================================================
 // Decisions
@@ -35,8 +36,8 @@ DECISION "Output Formatting" @id("DEC_OUT_FMT") AS ID_OUT_FMT:
     AFFECTS: []
 
 DECISION "AST Output Strategy" @id("DEC_AST_OUT_TRACE") @trace(#AC-PARSER-007-02, #AC-PARSER-007-04) AS ID_AST_OUT_TRACE:
-    CHOSEN: "Optional enabling with flexible routing (Console/File/Combined)"
-    RATIONALE: "In v2.1, --ast is removed and --ast-sem is the default. Users can still route this output to files or the console."
+    CHOSEN: "Semantic validation by default with explicit artifact routing"
+    RATIONALE: "A validation-only run prints a summary. An export request delivers one source-checked semantic AST to stdout or the selected file."
     ALTERNATIVES: ["Optional AST export", "Implicit AST export"]
     AFFECTS: []
 
@@ -50,9 +51,9 @@ DECISION "CLI Version Flag Selection" @trace(#AC-V2-009-01, #AC-V2-009-03, #AC-V
 // CLI Component Definition
 // ===================================================================
 
-COMPONENT GASDCLI @trace(#AC-PARSER-006-01) AS COMP_CLI_MAIN:
+COMPONENT GASDCLI @trace("AC-PARSER-006-01") AS COMP_CLI_MAIN:
     PATTERN: "Command-Line Interface"
-    DEPENDENCIES: [GASDParser, ASTGenerator, SemanticASTExporter, ValidationPipeline]
+    DEPENDENCIES: [design.ast_provenance.ParseSource, design.ast_provenance.SemanticArtifact]
     INTERFACE:
         main() -> Void
         
@@ -61,7 +62,7 @@ COMPONENT GASDCLI @trace(#AC-PARSER-006-01) AS COMP_CLI_MAIN:
 // ===================================================================
 
 FLOW execute_cli_validation(args: List<String>) -> Integer:
-    1. ACHIEVE "Parse flags (--json, --validate, --no-validate, --ast-sem, --ast-output, --ast-combine, --gasd-ver) and positional path arguments":
+    1. ACHIEVE "Parse flags (--json, --no-validate, --ast-sem, --ast-output, --ast-combine, --gasd-ver) and positional path arguments":
         POSTCONDITION:
             flags.ast == undefined
             flags.ast_sem == true
@@ -97,19 +98,10 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
             4. ACHIEVE "Run ASTGenerator":
                 POSTCONDITION: result IS Any
                 @trace(#AC-PARSER-007-02) AS ACHIEVE_ASTGEN
-            5. IF "flags.validate == true":
+            5. IF "flags.no_validate == false":
                 6. ACHIEVE "Run ValidationPipeline with global_version":
                     POSTCONDITION: result IS Any
                     @trace(#AC-V2-009-02) AS ACHIEVE_VAL_TRACE
-            
-            7. IF "(flags.validate successful OR flags.no_validate) AND flags.ast_sem enabled":
-                8. ACHIEVE "Run SemanticASTExporter":
-                    POSTCONDITION: result IS String
-                    @trace(#AC-PARSER-007-02, #AC-SEMAST-016-04) AS ACHIEVE_EXP_TRACE
-                9. IF "NOT --ast-combine":
-                    10. ACHIEVE "Print JSON to console OR Save to individual file":
-                        POSTCONDITION: "Output succeeded"
-                        @trace(#AC-PARSER-007-04, #AC-PARSER-007-05, #AC-SEMAST-018-01) AS ACHIEVE_OUT_TRACE
         11. ACHIEVE "Print file result (OK/FAIL)":
             POSTCONDITION: "Output printed"
             @trace(#AC-PARSER-006-03) AS ACHIEVE_PRNT_RES
@@ -117,14 +109,14 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
             POSTCONDITION: summary.processed > 0
             @trace(#AC-PARSER-006-03) AS ACHIEVE_UPDT_SUM
         
-    8. IF "--ast-combine AND Semantic AST collection NOT empty":
-        9. ACHIEVE "Merge ASTs and Print to console OR Save to file":
-            POSTCONDITION: "Combined output succeeded"
-            @trace(#AC-PARSER-007-06, #AC-SEMAST-018-03) AS ACHIEVE_COMBINE_TRACE
+    8. IF "--json, --ast-output or --ast-combine requests an export and validation has no errors":
+        9. ACHIEVE "Serialize and deliver the requested artifact":
+            POSTCONDITION: "Validated export reconciles source occurrences and delivers one SemanticSystem. Syntax-only export delivers the syntactic AST. Use the selected file or stdout."
+            @trace(#AC-PARSER-007-02, #AC-SEMAST-016-04, #AC-SEMAST-018-03, #AST-AC-003-01) AS ACHIEVE_COMBINE_TRACE
     10. ACHIEVE "Print final validation summary across all files":
-        POSTCONDITION: "Summary printed"
+        POSTCONDITION: "The report goes to stderr and includes the exact-byte hash after successful semantic delivery. The --json flag selects the structured report."
         @trace(#AC-PARSER-006-03) AS ACHIEVE_SUMMARY_TRACE
-    11. RETURN 1
+    11. RETURN exit_code
 
 // ===================================================================
 // Constraints
@@ -133,6 +125,6 @@ FLOW execute_cli_validation(args: List<String>) -> Integer:
 CONSTRAINT: "CLI MUST exit with code 1 if ANY parsed file contains errors" @trace(#AC-PARSER-006-03) AS CONST_EXIT_ERR
 CONSTRAINT: "Directory traversal MUST only process files ending with .gasd extension" @trace(#AC-PARSER-006-02) AS CONST_DIR_PROW
 CONSTRAINT: "CLI MUST process all discovered files sequentially and not halt on the first file error" @trace(#AC-PARSER-006-03) AS CONST_SEQ_VAL
-CONSTRAINT: "AST Extraction MUST ONLY occur for files that pass semantic validation unless --no-validate is specified" @trace(#AC-PARSER-007-01, #AC-PARSER-007-04) AS CONST_VAL_REQ
+CONSTRAINT: "A semantic AST export requires successful validation and source reconciliation. The --no-validate option selects syntax-only export." @trace(#AC-PARSER-007-01, #AC-PARSER-007-04, #AST-AC-003-01) AS CONST_VAL_REQ
 CONSTRAINT: "CLI MUST provide clear error messages for I/O failures during AST export" @trace(#AC-PARSER-007-09) AS CONST_IO_ERR
 CONSTRAINT: "The --ast flag MUST be treated as an unknown option with no legacy support" @trace(#AC-PARSER-007-01) AS CONST_NO_LEGACY

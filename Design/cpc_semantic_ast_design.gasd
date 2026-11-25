@@ -1,0 +1,53 @@
+VERSION 1.2
+CONTEXT: "Source-checked semantic AST export for CPC"
+TARGET: "Python3", "ANTLR4"
+NAMESPACE: "design.cpc_semantic_ast"
+TRACE: "AST-REQ-001", "AST-REQ-002", "AST-REQ-003", "AST-US-001", "AST-US-002", "AST-US-003"
+TRACE: "AST-AC-001-01", "AST-AC-001-02", "AST-AC-001-03", "AST-AC-002-01", "AST-AC-002-02", "AST-AC-002-03", "AST-AC-003-01", "AST-AC-003-02"
+TRACE: "AST-AT-001", "AST-AT-002", "AST-AT-003"
+
+// Extends ast_provenance_design.gasd and the CLI destination parity design.
+CONSTRAINT: "Every validated semantic export applies source reconciliation. Deliver the AST to stdout or exclusively to --ast-output. The --json flag selects a machine-readable report on stderr. An export using --no-validate produces a syntactic AST without a verified inventory or digest."
+CONSTRAINT: "The parser owns the CPC digest. Report semantic_ast_sha512 only after delivering the final UTF-8 bytes including all whitespace. Place the digest at the root of the JSON report when requested, or show it in the human-readable report. Keep the semantic_validate report fingerprints and embedded digest zeroing contract."
+CONSTRAINT: "Reuse byte capture. Logical source paths follow the AST sourceMap convention. Report read, resolution, and identity failures at the relevant source or import. A captured file is a source regardless of its extension. A namespace import must identify a captured namespace. A missing import fails a validated semantic export."
+CONSTRAINT: "Before semantic conversion, collect the expected occurrences and immutable authored values from syntax. Capture annotation positions and attachment and distinguish separate occurrences on one line. Expected values are independent of the output and must never be filled from the semantic AST."
+CONSTRAINT: "Preserve qualified components, interfaces, operations and signatures, types and fields, numbered steps and operands, branches and ordered guards, annotations and upstream traces, conditions and outcomes, explicit entry-point bindings, assumptions, scoped invariants, and model references in the semantic representation."
+CONSTRAINT: "Generate actual occurrences from semantic nodes and their exported contents. Resolve each occurrence to its concrete export node. Compare kind, logical source, positions, qualified ownership, and normalized values, including occurrence multiplicity and meaningful order. Preserve literal types and authored values. Normalize resolved references to a common identity before comparing."
+CONSTRAINT: "Do not derive a success inventory by copying expected rows. Reconciliation detects loss, extra or duplicate records, incorrect attachment, and changed values. A structured error gives the source path and occurrence coordinates. Check the final serialized model before any write so a faulty export cannot publish PASSED."
+CONSTRAINT: "Version 1 inventory records use kind, path, line, column, owner, identity, and pointer. Lines start at 1 and columns start at 0, counting Unicode characters at the first authored token. Use logical paths from provenance.sources. The pointer is an RFC 6901 JSON Pointer from the root and resolves to the corresponding semantic construct. Stable identities include occurrence coordinates and owner and use the documented format. Inventory metadata is excluded from the semantic content fingerprint."
+
+TYPE SourceOccurrence:
+    kind: String
+    path: String
+    line: Integer
+    column: Integer
+    owner: String
+    identity: String
+    pointer: String
+
+TYPE CheckedInputs:
+    syntax: List<Any>
+    source_digests: Map<String, String>
+    expected: List<Any>
+    errors: List<Any>
+
+FLOW capture_checked_inputs(request: Any) -> CheckedInputs:
+    1. ACHIEVE "Capture the bytes of the entry sources and recursively resolved imports once and compute source SHA-512 before decoding"
+        POSTCONDITION: "The parse trees and hashes are derived from the same captured bytes and all consumed logical paths are known"
+    2. ACHIEVE "Collect source occurrences and their authored semantics from syntax before constructing the semantic AST"
+        POSTCONDITION: "The expected occurrence identity includes coordinates and qualified ownership and retains semantic values and ordering"
+    3. RETURN result
+
+FLOW export_cpc_artifact(inputs: CheckedInputs, request: Any):
+    1. ENSURE inputs.errors.length == 0
+        OTHERWISE THROW SourceCaptureError
+    2. ACHIEVE "Resolve the existing semantic model and validate it with the normal semantic pipeline"
+        POSTCONDITION: "The semantic AST preserves the needed authored constructs and successful semantic validation is established"
+    3. ACHIEVE "Extract and reconcile actual occurrences against the syntax inventory. Confirm their values and owners in the serialized AST"
+        POSTCONDITION: "Every expected occurrence maps to the corresponding semantic construct and the verified inventory has no omissions or changed items"
+    4. ENSURE "Semantic validation and reconciliation succeeded and a complete source-checked AST was prepared"
+        OTHERWISE THROW SourceReconciliationError
+    5. ACHIEVE "Serialize one semantic AST with the full marker, source provenance and verified inventory, and deliver the same UTF-8 bytes to the requested destination"
+        POSTCONDITION: "The successful export includes PASSED, parser and GASD versions, provenance.sources, source_inventory and its supported revision"
+    6. ACHIEVE "Record the SHA-512 of the delivered bytes in the external parse report"
+        POSTCONDITION: "semantic_ast_sha512 matches an independent hash over every delivered byte"

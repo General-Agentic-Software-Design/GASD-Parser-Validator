@@ -92,16 +92,16 @@ def test_marker_failure_integrity():
     finally:
         os.unlink(fp)
 
-def test_marker_version_11_exclusion():
-    """RT-PARSER-008-01: ENSURE marker is NOT present for VERSION 1.1 files.
-    """
+def test_marker_version_11_export():
+    """AST-AC-003-01: Validated GASD 1.1 exports carry the full marker."""
     content_v11 = 'VERSION 1.1\nCONTEXT: "Legacy"\nTARGET: "Py"\nTYPE T:\n  f: String\n'
     result, fp = run_cli("--ast-sem", "--json", input_content=content_v11)
     try:
         assert result.returncode == 0
         data = json.loads(result.stdout)
-        # Validation marker is a v1.2+ feature
-        assert "semantic_validate" not in data
+        assert data["semantic_validate"]["status"] == "PASSED"
+        assert data["semantic_validate"]["gasd_file_version"] == "1.1"
+        assert data["source_inventory"]
     finally:
         os.unlink(fp)
 

@@ -5,6 +5,7 @@ import re
 from typing import List, Union, Optional, Any
 
 from .ASTProvenance import BYTE_HASH_KEY, content_fingerprints
+from .CPCInventory import VERSION as SOURCE_INVENTORY_VERSION
 from .SemanticNodes import SemanticSystem
 
 class SemanticASTExporter:
@@ -36,7 +37,7 @@ class SemanticASTExporter:
         return data
     
     def to_json(self, ast: Union[SemanticSystem, List[SemanticSystem]], marker: Optional[dict] = None,
-                *, sources=None) -> str:
+                *, sources=None, inventory=None) -> str:
         cwd = os.getcwd()
         provenance = self.source_inventory(sources)
         if isinstance(ast, list):
@@ -48,6 +49,10 @@ class SemanticASTExporter:
         else:
             root = self.relativize_dict(self._inject_marker_version(ast.to_dict(), marker), cwd)
             root["provenance"] = provenance
+
+        if inventory is not None:
+            root["source_inventory_version"] = SOURCE_INVENTORY_VERSION
+            root["source_inventory"] = inventory.reconcile(root)
 
         if marker:
             embedded_marker = {**marker, BYTE_HASH_KEY: "0" * 128, **content_fingerprints(root)}

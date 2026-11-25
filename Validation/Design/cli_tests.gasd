@@ -15,7 +15,7 @@ TRACE: "US-PARSER-006", "US-PARSER-007"
 
 FLOW test_cli_multiple_files():
     @trace #AC-PARSER-006-01, #AT-PARSER-006-01
-    1. ACHIEVE "Run gasd-parser file1.gasd file2.gasd"
+    1. ACHIEVE "Run gasd_parser file1.gasd file2.gasd"
     2. ENSURE "Both files are processed sequentially"
         OTHERWISE THROW "Validation Failed"
     3. ENSURE "Aggregate summary correctly counts successes/failures" @trace #AC-PARSER-006-03
@@ -26,7 +26,7 @@ FLOW test_cli_multiple_files():
 
 FLOW test_cli_recursive_traversal():
     @trace #AC-PARSER-006-02, #AT-PARSER-006-02
-    1. ACHIEVE "Run gasd-parser MyProjectFolder/"
+    1. ACHIEVE "Run gasd_parser MyProjectFolder/"
     2. ENSURE "CLI recursively finds and parses all .gasd files"
         OTHERWISE THROW "Validation Failed"
     3. ENSURE "Non-.gasd files are ignored" @trace #RT-PARSER-006-01
@@ -37,11 +37,11 @@ FLOW test_cli_recursive_traversal():
 
 FLOW test_cli_ast_flags():
     @trace #AC-PARSER-007-01, #AT-PARSER-007-02
-    1. ACHIEVE "Run gasd-parser file.gasd --ast"
-    2. ENSURE "CLI generates and prints JSON AST"
+    1. ACHIEVE "Run gasd_parser file.gasd --json"
+    2. ENSURE "The CLI writes a source-checked semantic AST to stdout and a JSON report with the digest to stderr"
         OTHERWISE THROW "Validation Failed"
-    3. ACHIEVE "Run gasd-parser file1.gasd file2.gasd --ast-combine"
-    4. ENSURE "CLI merges ASTs into a single output" @trace #AC-PARSER-007-06
+    3. ACHIEVE "Run gasd_parser file1.gasd file2.gasd --ast-combine --ast-output combined.json"
+    4. ENSURE "The file contains one semantic AST with a verified source inventory and stdout stays empty" @trace #AC-PARSER-007-06
         OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
@@ -60,4 +60,4 @@ FLOW test_cli_exit_codes():
 // Constraints
 
 CONSTRAINT: "CLI MUST NOT halt on the first file error" @trace #AC-PARSER-006-03
-CONSTRAINT: "AST Extraction MUST ONLY occur for files passing validation" @trace #AC-PARSER-007-01
+CONSTRAINT: "The CLI publishes a semantic AST only after validation and source reconciliation pass" @trace #AC-PARSER-007-01

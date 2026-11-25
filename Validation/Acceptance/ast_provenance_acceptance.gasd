@@ -12,7 +12,7 @@ FLOW verify_ast_provenance_acceptance():
     3. ACHIEVE "Export one standalone entry and then two entries sharing a transitive import chain" @trace(#AT-AST-PROVENANCE-014-04) AS PROVENANCE_ACCEPTANCE_3
         POSTCONDITION: "The standalone inventory contains its entry and the combined inventory contains each contributing logical path exactly once."
     4. ACHIEVE "Export to stdout and a file for each supported GASD version and capture each JSON report" @trace(#AT-AST-PROVENANCE-015-01) AS PROVENANCE_ACCEPTANCE_4
-        POSTCONDITION: "Both hexadecimal digests and content rules version 1 are nested under report semantic_validate, including for a GASD 1.1 AST with no validation marker. Independently hashing the actual destination bytes reproduces the byte digest."
+        POSTCONDITION: "Both hexadecimal digests and content rules version 1 are nested under report semantic_validate. Both AST versions carry the full validation marker. Hashing the actual destination bytes reproduces the report's exact-byte digest and its root semantic_ast_sha512."
     5. ACHIEVE "Hand off the original semantic AST bytes to two downstream file consumers" @trace(#AT-AST-PROVENANCE-015-03) AS PROVENANCE_ACCEPTANCE_5
         POSTCONDITION: "The consumers receive byte-identical copies and each copy reproduces the reported SHA-512."
     6. ACHIEVE "Compute the canonical UTF-8 JSON independently for a known model" @trace(#AT-AST-PROVENANCE-017-01) AS PROVENANCE_ACCEPTANCE_6

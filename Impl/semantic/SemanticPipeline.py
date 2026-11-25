@@ -33,8 +33,9 @@ from .VersionResolver import VersionResolver
 from .ContractValidator import ContractValidator
 
 class SemanticPipeline:
-    def __init__(self, validate_built_in_types: bool = True):
+    def __init__(self, validate_built_in_types: bool = True, *, cpc=False):
         self.validate_built_in_types = validate_built_in_types
+        self.cpc = cpc
         self.reporter = None
         self.symbol_table = SymbolTable(validate_built_in_types=validate_built_in_types)
         self.annotation_resolver = AnnotationResolver()
@@ -77,7 +78,7 @@ class SemanticPipeline:
         # @trace #AC-X-SEMAST-004-05
         if expr.baseType in ("literal", "Record", "Enum"):
             lit_val = getattr(expr, "literalValue", None)
-            return TypeContract(expr.baseType, args=args, literal_value=lit_val)
+            return self._type_contract(expr, expr.baseType, args, file, lit_val)
 
         # AC-X-SEMAST-004-04: Resolve type reference
         symbol = self.symbol_table.resolve(expr.baseType)
@@ -96,7 +97,7 @@ class SemanticPipeline:
              self.reporter.report(err)
              if level == ErrorLevel.ERROR:
                  raise SemanticError(err.message, location=err.location)
-             return TypeContract(expr.baseType, args=args) # Non-resolving but preserved
+             return self._type_contract(expr, expr.baseType, args, file) # Non-resolving but preserved
              
         # AC-SEMAST-019-03: Built-in Generic Argument Validation
         from .SymbolTable import BuiltinTypeRegistry
@@ -116,10 +117,44 @@ class SemanticPipeline:
                  raise SemanticError(err.message, location=err.location)
 
         # Use the canonical name (FQN) for the type reference
-        return TypeContract(symbol.name, args=args)
+        return self._type_contract(expr, symbol.name, args, file)
+
+    def _type_contract(self, expr, name, args, file, literal=None):
+        resolved = TypeContract(name, args=args, literal_value=literal)
+        if self.cpc:
+            resolved.cpc_fields = {
+                "declaredType": expr.baseType,
+                "optional": expr.isOptional,
+                "enumValues": list(expr.enumValues or ()),
+            }
+            if hasattr(expr, "recordFields"):
+                resolved.cpc_fields["recordFields"] = [
+                    field.to_dict() for field in self._res_params(expr.recordFields, file)
+                ]
+        return resolved
+
+    def _node_fields(self, node, file, scope):
+        return {
+            "sourceMap": self._get_range(node, file).to_dict(),
+            "annotations": [a.to_dict() for a in self.annotation_resolver.resolve(node.annotations, scope)],
+        }
+
+    def _res_field(self, field, file):
+        resolved = ResolvedFieldNode(field.name, self._res_type_expr(field.type, file), field.type.isOptional)
+        if self.cpc:
+            resolved.cpc_fields = {
+                "kind": "ResolvedField", "alias": getattr(field, "alias", None),
+                **self._node_fields(field, file, ScopeEnum.FIELD),
+            }
+        return resolved
 
     def _res_params(self, params: List[Parameter], file: str = "unknown") -> List[ResolvedParameter]:
-        return [ResolvedParameter(p.name, self._res_type_expr(p.type, file)) for p in params]
+        resolved = [ResolvedParameter(p.name, self._res_type_expr(p.type, file)) for p in params]
+        if self.cpc:
+            for parameter, result in zip(params, resolved):
+                result.cpc_fields = {"kind": "ResolvedParameter",
+                                     **self._node_fields(parameter, file, ScopeEnum.FIELD)}
+        return resolved
 
     def _res_match(self, node: MatchNode, file: str) -> SemanticFlowStep:
         """Resolve a MATCH node into a SemanticFlowStep tree."""
@@ -127,11 +162,16 @@ class SemanticPipeline:
         cases = []
         for c in node.cases:
             case_step = SemanticFlowStep(
-                self._get_range(node, file),
+                self._get_range(c if self.cpc else node, file),
                 "CASE",
                 ResolvedExpression("String", TypeContract("String"), c.condition),
                 {}
             )
+            if self.cpc:
+                case_step.cpc_fields = {"patterns": c.patterns}
+                case_step.subSteps = [self._res_step(step, file) for step in c.steps]
+                cases.append(case_step)
+                continue
             # MatchCase.target is currently a string representation of the result
             case_step.subSteps = [SemanticFlowStep(
                 self._get_range(node, file),
@@ -141,13 +181,18 @@ class SemanticPipeline:
             )]
             cases.append(case_step)
             
-        return SemanticFlowStep(
+        resolved = SemanticFlowStep(
             self._get_range(node, file),
             "MATCH",
             target_expr,
             {},
             sub_steps=cases
         )
+        if self.cpc:
+            resolved.stepNumber = getattr(node, "stepNumber", None)
+            resolved.annotations = self.annotation_resolver.resolve(node.annotations, ScopeEnum.STEP)
+            resolved.cpc_fields = {"stepId": getattr(node, "stepId", None), "branch": getattr(node, "branch", None)}
+        return resolved
 
     def _res_step(self, step: Any, file: str) -> SemanticFlowStep:
         if isinstance(step, MatchNode):
@@ -157,19 +202,24 @@ class SemanticPipeline:
         if not hasattr(step, "action") or not hasattr(step, "target"):
             name = getattr(step, "name", "unknown")
             kind = getattr(step, "kind", "UNKNOWN")
-            return SemanticFlowStep(
+            resolved = SemanticFlowStep(
                 self._get_range(step, file),
                 "DATA" if kind == "Field" else kind.upper(),
                 ResolvedExpression("String", TypeContract("String"), name),
                 {}
             )
+            if self.cpc:
+                resolved.annotations = self.annotation_resolver.resolve(step.annotations, ScopeEnum.FIELD)
+                if hasattr(step, "type"):
+                    resolved.cpc_fields = {"dataType": self._res_type_expr(step.type, file).to_dict()}
+            return resolved
 
         # Resolve target expression
         target = step.target
         otherwise_path = None
         
         # Handle inline OTHERWISE (e.g. ENSURE x OTHERWISE THROW y)
-        if step.action == "ENSURE" and " OTHERWISE " in target:
+        if not self.cpc and step.action == "ENSURE" and " OTHERWISE " in target:
             parts = target.split(" OTHERWISE ", 1)
             target = parts[0]
             ow_text = parts[1]
@@ -204,11 +254,14 @@ class SemanticPipeline:
                     ResolvedExpression("String", TypeContract("String"), ow_target),
                     {}
                 )
+                if self.cpc:
+                    otherwise_path.annotations = s.annotations
+                    otherwise_path.cpc_fields = {"branch": "otherwise"}
                 # Remove from sub-steps as it's now in otherwise_path
                 subs.pop(i)
                 break
 
-        return SemanticFlowStep(
+        resolved = SemanticFlowStep(
             self._get_range(step, file),
             step.action,
             target_expr,
@@ -220,6 +273,21 @@ class SemanticPipeline:
             depends_on=getattr(step, "dependsOn", None) or [],
             step_number=getattr(step, "stepNumber", None)
         )
+        if self.cpc:
+            resolved.annotations = self.annotation_resolver.resolve(step.annotations, ScopeEnum.STEP)
+            resolved.cpc_fields = {
+                "stepId": getattr(step, "stepId", None),
+                "branch": getattr(step, "branch", None),
+                "conditionNodes": getattr(step, "postconditionNodes", []),
+            }
+            handlers = [
+                child for child in resolved.subSteps
+                if getattr(child, "cpc_fields", {}).get("branch") == "ON_ERROR"
+            ]
+            if len(handlers) == 1:
+                resolved.errorPath = handlers[0]
+                resolved.subSteps.remove(handlers[0])
+        return resolved
 
     def _signatures_match(self, flow: ResolvedFlowNode, method: ResolvedMethodNode) -> bool:
         if len(flow.inputs) != len(method.inputs):
@@ -259,7 +327,9 @@ class SemanticPipeline:
         file_nodes = {}
         unknown_counter = 0
         for ast in asts:
-            if ast.sourceFile and ast.sourceFile != "unknown":
+            if self.cpc and ast.sourceFile == "stdin":
+                fpath = "stdin"
+            elif ast.sourceFile and ast.sourceFile != "unknown":
                 fpath = os.path.abspath(ast.sourceFile)
             else:
                 fpath = f"unknown_{unknown_counter}"
@@ -281,7 +351,15 @@ class SemanticPipeline:
                         imports.append({"path": abs_import, "alias": d.alias})
                     else:
                         imports.append({"path": val_clean, "alias": d.alias})
+            if self.cpc:
+                imports = ast.cpc_imports
             file_nodes[fpath] = ProjectFileNode(fpath, ns_name, imports, ast)
+            if self.cpc:
+                file_nodes[fpath].cpc_fields = {"directives": [
+                    {"directive": directive.directiveType, "values": directive.values,
+                     "sourceMap": self._get_range(directive, fpath).to_dict()}
+                    for directive in ast.directives if directive.directiveType != "IMPORT"
+                ]}
 
         
         comp_unit = CompilationUnit(file_nodes, sorted(file_nodes.keys()))
@@ -367,6 +445,10 @@ class SemanticPipeline:
             for d in ast.decisions:
                 fqn = f"{node.namespace}.{d.name}" if node.namespace != "global" else d.name
                 res = ResolvedDecisionNode(self._get_range(d, fpath), d.name, d.chosen, [], [], "")
+                if self.cpc:
+                    res.rationale = d.rationale or ""
+                    res.alternatives = d.alternatives
+                    res.annotations = self.annotation_resolver.resolve(d.annotations, ScopeEnum.GLOBAL)
                 res.fqn = fqn
                 self.symbol_table.define(SymbolEntry(fqn, SymbolKind.Decision, self.symbol_table.global_scope, res))
                 self.decision_resolver.resolve(res)
@@ -397,7 +479,11 @@ class SemanticPipeline:
             for t in ast.types:
                 fqn = f"{node.namespace}.{t.name}" if node.namespace != "global" else t.name
                 res_t: ResolvedTypeNode = self.symbol_table.resolve(fqn).nodeLink
-                res_t.fields = {f.name: ResolvedFieldNode(f.name, self._res_type_expr(f.type, fpath), f.type.isOptional) for f in t.fields}
+                res_t.fields = {f.name: self._res_field(f, fpath) for f in t.fields}
+                if self.cpc and t.definition is not None:
+                    res_t.cpc_fields = {"definition": self._res_type_expr(t.definition, fpath).to_dict()}
+                    res_t.isEnum = t.isEnum
+                    res_t.enumValues = list(t.definition.enumValues or ())
                 
             for c in ast.components:
                 fqn = f"{node.namespace}.{c.name}" if node.namespace != "global" else c.name
@@ -408,6 +494,11 @@ class SemanticPipeline:
                         annotations=self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
                     ) for m in c.methods
                 }
+                if self.cpc:
+                    res_c.cpc_fields = {
+                        "fields": {field.name: self._res_field(field, fpath).to_dict() for field in c.fields},
+                        "interfaces": c.interfaces,
+                    }
                 
                 # US-X-SEMAST-005 / AT-X-SEMAST-005-03: Dependency Resolution
                 res_deps = []
@@ -443,15 +534,29 @@ class SemanticPipeline:
             for f in ast.flows:
                 fqn = f"{node.namespace}.{f.name}" if node.namespace != "global" else f.name
                 res_f: ResolvedFlowNode = self.symbol_table.resolve(fqn).nodeLink
-                res_f.inputs = self._res_params(f.parameters)
+                res_f.inputs = self._res_params(f.parameters, fpath if self.cpc else "unknown")
                 res_f.output = self._res_type_expr(f.returnType, fpath)
                 res_f.pipeline = [self._res_step(s, fpath) for s in f.steps]
 
             for s in ast.strategies:
                 fqn = f"{node.namespace}.{s.name}" if node.namespace != "global" else s.name
                 res_s: ResolvedStrategyNode = self.symbol_table.resolve(fqn).nodeLink
-                res_s.inputs = self._res_params(s.inputs)
+                res_s.inputs = self._res_params(s.inputs, fpath if self.cpc else "unknown")
                 res_s.output = self._res_type_expr(s.output, fpath)
+                if self.cpc:
+                    res_s.algorithm = s.algorithm
+                    res_s.cpc_fields = {
+                        "inputs": [parameter.to_dict() for parameter in res_s.inputs],
+                        "output": res_s.output.to_dict(),
+                        "clauses": [
+                            {**clause, "annotations": [
+                                resolved.to_dict() for resolved in self.annotation_resolver.resolve(
+                                    annotations, ScopeEnum.FLOW
+                                )
+                            ]}
+                            for clause, annotations in zip(s.clauses, s.clauseAnnotations)
+                        ],
+                    }
 
             self.symbol_table.exit_scope()
 
@@ -472,10 +577,21 @@ class SemanticPipeline:
                     c.idempotent, c.version, c.hasBehaviors,
                 )
                 res_c.annotations = self.annotation_resolver.resolve(getattr(c, "annotations", []), ScopeEnum.COMPONENT)
+                if self.cpc:
+                    self.symbol_table.enter_scope(fnode.namespace)
+                    try:
+                        res_c.cpc_fields = {
+                            "parameters": [parameter.to_dict() for parameter in self._res_params(c.inputs, fpath)],
+                            "resultType": self._res_type_expr(c.output, fpath).to_dict() if c.output else None,
+                        }
+                    finally:
+                        self.symbol_table.exit_scope()
                 all_contracts.append(res_c)
             for m in ast.models:
                 res_m = ResolvedModelNode(self._get_range(m, fpath), m.name, getattr(m, 'fields', []), m.verifies)
                 res_m.annotations = self.annotation_resolver.resolve(getattr(m, "annotations", []), ScopeEnum.COMPONENT)
+                if self.cpc:
+                    res_m.cpc_fields = {"modelType": m.type, "modelFile": m.file, "assumptions": m.assumptions}
                 all_models.append(res_m)
             for a in ast.assumptions:
                 res_a = ResolvedAssumptionNode(self._get_range(a, fpath), a.name, a.consequence, affected=getattr(a, 'affects', []))
@@ -518,6 +634,10 @@ class SemanticPipeline:
                 # Preserve scope and name for LINT-003/006
                 res_c.scope = getattr(c_ast, 'scope', None)
                 res_c.name = getattr(c_ast, 'name', None)
+                if self.cpc:
+                    constraint_scope = ScopeEnum.LOCAL if res_c.scope == "LOCAL" else ScopeEnum.GLOBAL
+                    res_c.annotations = self.annotation_resolver.resolve(c_ast.annotations, constraint_scope)
+                    res_c.cpc_fields = {"scope": res_c.scope, "name": res_c.name}
                 all_constraints.append(res_c)
         
         # Build NamespaceNodes for ConstraintValidator/System
@@ -529,15 +649,18 @@ class SemanticPipeline:
 
         ns_nodes = {}
         for ns_name in all_ns_names:
-             # Find symbols for this namespace in global_scope
-             prefix = ns_name + "." if ns_name != "global" else ""
-             ns_types = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Type and (s.name.startswith(prefix) if prefix else "." not in s.name)}
-             ns_comps = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Component and (s.name.startswith(prefix) if prefix else "." not in s.name)}
-             ns_flows = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Flow and (s.name.startswith(prefix) if prefix else "." not in s.name)}
-             ns_decs = {s.name.replace(prefix, ""): s.nodeLink for s in self.symbol_table.global_scope.symbols.values() if s.kind == SymbolKind.Decision and (s.name.startswith(prefix) if prefix else "." not in s.name)}
-             
-             source_range = SourceRange("",0,0,0,0) # Placeholder
-             ns_nodes[ns_name] = NamespaceNode(source_range, ns_name, ns_types, ns_comps, ns_flows, {}, ns_decs)
+            prefix = ns_name + "." if ns_name != "global" else ""
+            kinds = (SymbolKind.Type, SymbolKind.Component, SymbolKind.Flow, SymbolKind.Strategy, SymbolKind.Decision)
+            members = {kind: {} for kind in kinds}
+            for symbol in self.symbol_table.global_scope.symbols.values():
+                if symbol.kind in members and symbol.name == prefix + symbol.nodeLink.name:
+                    members[symbol.kind][symbol.nodeLink.name] = symbol.nodeLink
+            source_range = SourceRange("", 0, 0, 0, 0)
+            ns_nodes[ns_name] = NamespaceNode(
+                source_range, ns_name, members[SymbolKind.Type], members[SymbolKind.Component],
+                members[SymbolKind.Flow], members[SymbolKind.Strategy] if self.cpc else {},
+                members[SymbolKind.Decision],
+            )
 
         metadata.files = list(file_nodes.values())
 
@@ -594,6 +717,18 @@ class SemanticPipeline:
             postconditions=system_postconditions
         )
         system.annotations = system_annotations
+        if self.cpc:
+            system.cpc_fields = {
+                "postconditions": [
+                    {"kind": "ResolvedPostcondition", "expression": condition.expression,
+                     **self._node_fields(condition, fnode.filePath, ScopeEnum.GLOBAL)}
+                    for fnode in file_nodes.values() for condition in fnode.syntacticRoot.ensures
+                ],
+                "matches": [
+                    self._res_match(match, fnode.filePath).to_dict()
+                    for fnode in file_nodes.values() for match in fnode.syntacticRoot.matches
+                ],
+            }
         
         # Pass 4: Linting Engine (GEP-6)
         linter = LintEngine(self.reporter, version=effective_version)
