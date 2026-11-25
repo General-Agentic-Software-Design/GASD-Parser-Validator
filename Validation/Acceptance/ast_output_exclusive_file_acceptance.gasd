@@ -37,7 +37,7 @@ FLOW test_acceptance_content_identity():
         POSTCONDITION: "out.json is created"
     2. ACHIEVE "Run gasd_parser --json valid.gasd and capture stdout"
         POSTCONDITION: "stdout JSON is captured"
-    3. ENSURE "Compare the whole JSON document, excluding only generated node IDs and validation timestamps from independent runs"
+    3. ENSURE "Compare the whole JSON document, accounting for generated node IDs, validation timestamps and the embedded byte digest from independent runs"
         OTHERWISE THROW "Acceptance Failure: File content differs from stdout content"
     4. ENSURE "With fixed node IDs and validation timestamps, compare the raw bytes including whitespace"
         OTHERWISE THROW "Acceptance Failure: Stdout and file use different serialization"

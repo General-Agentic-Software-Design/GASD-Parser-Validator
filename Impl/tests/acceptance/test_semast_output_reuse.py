@@ -40,6 +40,10 @@ def test_semast_cli_activation():
         assert result2.returncode == 0, f"stderr: {result2.stderr}"
         out1 = json.loads(result1.stdout)
         out2 = json.loads(result2.stdout)
+        byte_hash = "semantic_ast_bytes_sha512"
+        first_digest = out1["semantic_validate"].pop(byte_hash)
+        second_digest = out2["semantic_validate"].pop(byte_hash)
+        assert first_digest != second_digest
         # Generated IDs and validation times vary between runs.
         def strip_ids(obj):
             if isinstance(obj, dict):

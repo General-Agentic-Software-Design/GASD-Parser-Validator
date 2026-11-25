@@ -1,0 +1,51 @@
+VERSION 1.2
+/*
+   Template for agent.md/build.md.
+
+   Replace placeholders:
+   - <GASD_SPEC_PATH>
+   - <REQUIREMENTS_SOURCE_PATH>
+   - <BUILD_PLAN_PATH>
+   - <TARGET_COMPONENT>
+   - <TARGET_LANGUAGE>
+   - <PROPERTY_TEST_FRAMEWORK>
+   - <TEST_RUNNER_STACK>
+   - <VALIDATION_COMMAND>
+   - <PAUSE_CONDITION>
+*/
+CONTEXT: "Agent template: build-plan preparation for <TARGET_COMPONENT>"
+TARGET: "GASD Agent Template"
+TRACE: "SOURCE-BUILD-SCRIPT-PATH"
+NAMESPACE: "agent.template.build"
+
+CONSTRAINT: "Agent MUST do only what is requested and nothing more."
+CONSTRAINT: "Agent MUST wait for the next human instruction after completing the requested preparation."
+CONSTRAINT: "Agent MUST master <GASD_SPEC_PATH> before editing GASD artifacts."
+CONSTRAINT: "Agent MUST prepare <BUILD_PLAN_PATH> for <TARGET_COMPONENT>."
+CONSTRAINT: "Target implementation language is <TARGET_LANGUAGE>."
+CONSTRAINT: "Target property-test framework is <PROPERTY_TEST_FRAMEWORK>."
+CONSTRAINT: "Target runner stack is <TEST_RUNNER_STACK>."
+
+FLOW prepare_build_plan_template():
+    1. ACHIEVE "Read and master <GASD_SPEC_PATH>":
+        POSTCONDITION: result.gasd_spec_mastered == true
+    2. ACHIEVE "Read <REQUIREMENTS_SOURCE_PATH>":
+        POSTCONDITION: result.requirements_source_loaded == true
+    3. ACHIEVE "Read <BUILD_PLAN_PATH>":
+        POSTCONDITION: result.build_plan_loaded == true
+    4. ACHIEVE "Update all six phases of <BUILD_PLAN_PATH> for <TARGET_COMPONENT> with detailed ready-to-build steps":
+        POSTCONDITION: result.build_plan_phase_count == 6
+    5. ENSURE "All six phases are thorough, ordered, and scoped to <TARGET_LANGUAGE>, <PROPERTY_TEST_FRAMEWORK>, and <TEST_RUNNER_STACK>"
+        OTHERWISE THROW BuildPlanScopeError
+    6. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW validate_build_plan_template():
+    1. ACHIEVE "Run <VALIDATION_COMMAND>":
+        POSTCONDITION: result.validation_command_completed == true
+    2. ENSURE "<BUILD_PLAN_PATH> has no GASD syntax or semantic errors"
+        OTHERWISE THROW BuildPlanValidationError
+    3. ACHIEVE "If validation errors exist, fix <BUILD_PLAN_PATH> and rerun <VALIDATION_COMMAND>":
+        POSTCONDITION: result.validation_errors_resolved == true
+    4. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true

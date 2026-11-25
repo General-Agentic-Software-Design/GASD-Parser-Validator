@@ -9,6 +9,7 @@ VERSION 1.2
 CONTEXT: "Compiler / Language Tooling — Semantic Validation Marker"
 TARGET: "Python3"
 TRACE: "US-PARSER-008"
+TRACE: "AC-AST-PROVENANCE-015-05", "AC-AST-PROVENANCE-015-06"
 
 IMPORT "semantic_ast_model_design.gasd" AS Model
 
@@ -67,5 +68,6 @@ FLOW inject_validation_marker(system: SemanticSystem, passed: Boolean) -> Semant
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "The 'semantic_validate' marker MUST ONLY be present in the final JSON output when --json and --ast-sem are both active." @trace(#AC-PARSER-008-01) AS CONST_MARKER_VISIBILITY
+CONSTRAINT: "The root semantic_validate marker appears in validated GASD 1.2 AST exports to stdout and files, including with --ast-output alone." @trace(#AC-PARSER-008-01, #AC-AST-PROVENANCE-015-05) AS CONST_MARKER_VISIBILITY
+CONSTRAINT: "The exported marker includes the byte digest, content digest and content rules version as specified in ast_provenance_design.gasd." @trace(#AC-AST-PROVENANCE-015-05, #AC-AST-PROVENANCE-015-06) AS CONST_MARKER_PROVENANCE
 CONSTRAINT: "Status MUST NOT be 'PASSED' if any FATAL or ERROR diagnostics were emitted during the semantic pass." @trace(#AC-PARSER-008-06) AS CONST_MARKER_INTEGRITY

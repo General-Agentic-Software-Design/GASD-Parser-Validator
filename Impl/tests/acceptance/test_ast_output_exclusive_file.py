@@ -7,6 +7,7 @@ Trace: US-PARSER-013
 """
 
 from datetime import datetime
+from hashlib import sha512
 from itertools import count
 import subprocess
 import os
@@ -114,7 +115,7 @@ def test_ast_output_content_identity(tmp_path, source):
 
 
 def comparable_ast(document):
-    """Omit generated UUIDs and the validation time from independent runs."""
+    """Omit generated UUIDs, validation time, and the digest that covers them."""
     def strip_node_ids(value):
         if isinstance(value, list):
             for item in value:
@@ -127,30 +128,51 @@ def comparable_ast(document):
 
     strip_node_ids(document)
     document["semantic_validate"].pop("validation_time")
+    document["semantic_validate"].pop("semantic_ast_bytes_sha512")
     return document
 
 
 def test_ast_output_byte_identity_with_fixed_run_metadata(tmp_path, monkeypatch, capsysbinary):
+    """RT-AST-PROVENANCE-015-02: Each destination receives the same provenance."""
     spec = tmp_path / "input.gasd"
     spec.write_text(VALID_GASD, encoding="utf-8")
     output = tmp_path / "ast.json"
     fixed_time = datetime(2026, 1, 1)
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "datetime", SimpleNamespace(datetime=SimpleNamespace(utcnow=lambda: fixed_time)))
 
     def invoke(*args):
         ids = count()
         monkeypatch.setattr(SemanticNodes, "uuid4", lambda: UUID(int=next(ids)))
-        monkeypatch.setattr(sys, "argv", ["gasd_parser", "--json", str(spec), *args])
+        monkeypatch.setattr(sys, "argv", ["gasd_parser", str(spec), *args])
         with pytest.raises(SystemExit) as completed:
             cli.main()
         assert completed.value.code == 0
         return capsysbinary.readouterr()
 
-    redirected = invoke()
-    exported = invoke("--ast-output", str(output))
+    redirected = invoke("--json")
+    exported = invoke("--json", "--ast-output", str(output))
 
     assert exported.out == b""
     assert redirected.out == output.read_bytes()
+    assert json.loads(exported.err)["semantic_validate"] == json.loads(redirected.err)["semantic_validate"]
+
+    file_only = invoke("--ast-output", str(output))
+    assert file_only.out == b""
+    assert redirected.out == output.read_bytes()
+
+    artifact = json.loads(redirected.out)
+    marker = artifact["semantic_validate"]
+    assert set(marker) == {
+        "status", "parser_version", "build_time", "validation_time", "gasd_file_version",
+        "semantic_ast_bytes_sha512", "semantic_ast_content_sha512", "semantic_ast_content_version",
+    }
+    assert marker["status"] == "PASSED"
+    assert marker["gasd_file_version"] == "1.2"
+    assert artifact["provenance"]["sources"] == [{
+        "path": spec.name,
+        "sha512": sha512(spec.read_bytes()).hexdigest(),
+    }]
 
 
 def test_ast_output_unwritable_path():

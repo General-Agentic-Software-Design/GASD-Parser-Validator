@@ -1,0 +1,25 @@
+VERSION 1.2
+CONTEXT: "AST provenance regression validation"
+TARGET: "Python3"
+NAMESPACE: "validation.ast_provenance.regression"
+TRACE: "RT-AST-PROVENANCE-014-01", "RT-AST-PROVENANCE-014-02", "RT-AST-PROVENANCE-015-01", "RT-AST-PROVENANCE-015-02", "RT-AST-PROVENANCE-015-03", "RT-AST-PROVENANCE-017-01", "RT-AST-PROVENANCE-017-02", "RT-AST-PROVENANCE-017-03", "RT-AST-PROVENANCE-017-04"
+
+FLOW verify_ast_provenance_regressions():
+    1. ACHIEVE "Replace an entry or an import on disk between capture and parsing" @trace(#RT-AST-PROVENANCE-014-01) AS PROVENANCE_REGRESSION_1
+        POSTCONDITION: "The AST semantics and the reported source digest both refer to the captured revision."
+    2. ACHIEVE "Pipe a valid raw GASD byte stream to the parser" @trace(#RT-AST-PROVENANCE-014-02) AS PROVENANCE_REGRESSION_2
+        POSTCONDITION: "The stdin inventory entry hashes exactly the bytes sent into the parser."
+    3. ACHIEVE "Emit two valid AST serializations that differ by their trailing newline" @trace(#RT-AST-PROVENANCE-015-01) AS PROVENANCE_REGRESSION_3
+        POSTCONDITION: "The byte fingerprints differ and each matches the corresponding exact serialization."
+    4. ACHIEVE "Change export timestamps and remap generated IDs in separate comparisons" @trace(#RT-AST-PROVENANCE-017-01) AS PROVENANCE_REGRESSION_4
+        POSTCONDITION: "The byte digest changes and the content digest stays the same when reference targets are preserved."
+    5. ACHIEVE "Change only an ordinary source comment" @trace(#RT-AST-PROVENANCE-017-02) AS PROVENANCE_REGRESSION_5
+        POSTCONDITION: "The source digest and artifact digest change while the content digest stays the same."
+    6. ACHIEVE "Permute unordered definitions and then reorder a semantics-bearing sequence" @trace(#RT-AST-PROVENANCE-017-03) AS PROVENANCE_REGRESSION_6
+        POSTCONDITION: "The first permutation keeps the content digest and the second changes both digests."
+    7. ACHIEVE "Retarget a reference while retaining both possible targets" @trace(#RT-AST-PROVENANCE-017-04) AS PROVENANCE_REGRESSION_7
+        POSTCONDITION: "Both fingerprints change and the content digest identifies the new stable target path."
+    8. ACHIEVE "Export the same validated model to stdout and to a file with and without JSON reporting" @trace(#RT-AST-PROVENANCE-015-02) AS PROVENANCE_REGRESSION_8
+        POSTCONDITION: "All exports carry the full validation marker and the source inventory. With fixed generated IDs and validation time, the ASTs are byte-identical and both file exports leave stdout empty."
+    9. ACHIEVE "Verify the embedded and reported fingerprints against the AST bytes at both destinations" @trace(#RT-AST-PROVENANCE-015-03) AS PROVENANCE_REGRESSION_9
+        POSTCONDITION: "Hashing the AST with its embedded byte digest zeroed reproduces that digest. Hashing the delivered bytes reproduces the report digest. Both markers agree on the content digest and rules version."

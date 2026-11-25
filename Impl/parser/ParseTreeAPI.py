@@ -1,7 +1,22 @@
+from dataclasses import dataclass, field
+from hashlib import sha512
+from io import BytesIO, TextIOWrapper
+from pathlib import Path
+
 from antlr4 import InputStream, CommonTokenStream
 from .GASDIndentationLexer import GASDIndentationLexer
 from .generated.grammar.GASDParser import GASDParser
 from ..errors.ErrorReporter import ErrorReporter, GASDErrorListener
+
+
+@dataclass(frozen=True)
+class SourceCapture:
+    data: bytes
+    sha512: str = field(init=False)
+
+    def __post_init__(self):
+        object.__setattr__(self, "sha512", sha512(self.data).hexdigest())
+
 
 class ParseTreeAPI:
     """
@@ -34,11 +49,16 @@ class ParseTreeAPI:
         
         return tree, self.reporter
 
+    def read_capture(self, file_path: str) -> SourceCapture:
+        return SourceCapture(Path(file_path).read_bytes())
+
+    def parse_capture(self, capture: SourceCapture, source_file: str, *, encoding=None, errors=None):
+        with TextIOWrapper(BytesIO(capture.data), encoding=encoding, errors=errors) as source:
+            return self.parse(source.read(), source_file=source_file)
+
     def parseFile(self, file_path: str):
-        """Parses a GASD file from disk."""
-        with open(file_path, 'r') as f:
-            content = f.read()
-        return self.parse(content, source_file=file_path)[0]
+        """Parse a GASD file from a single binary capture."""
+        return self.parse_capture(self.read_capture(file_path), file_path)[0]
 
     def getErrors(self):
         return self.reporter.syntax_errors + self.reporter.semantic_errors if self.reporter else []
