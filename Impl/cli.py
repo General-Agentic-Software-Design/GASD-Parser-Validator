@@ -9,13 +9,18 @@ from .ast.ASTExporter import ASTExporter
 from .parser.ParseTreeAPI import ParseTreeAPI, SourceCapture
 from .validation.ValidationPipeline import ValidationPipeline
 from .errors.ErrorReporter import ErrorReporter, IOErrorData
-from .semantic.ASTProvenance import canonical_content, fingerprints
+from .semantic.ASTProvenance import (
+    CONTENT_HASH_KEY,
+    CONTENT_VERSION_KEY,
+    content_fingerprints,
+    report_fingerprints,
+)
 from .semantic.SemanticASTExporter import SemanticASTExporter
 from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.9"
+    __version__ = "2.1.10"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 def main():
@@ -277,12 +282,20 @@ def main():
     export_fingerprints = None
     if export_requested and not failure_count:
         ast_json = None
-        canonical_bytes = None
+        content_fields = None
         try:
             if semantic_system is not None:
                 ast_json = exporter.to_json(semantic_system, marker=marker, sources=source_digests)
                 if args.json:
-                    canonical_bytes = canonical_content(json.loads(ast_json))
+                    artifact = json.loads(ast_json)
+                    ast_marker = artifact.get("semantic_validate")
+                    if ast_marker is not None:
+                        content_fields = {
+                            CONTENT_HASH_KEY: ast_marker[CONTENT_HASH_KEY],
+                            CONTENT_VERSION_KEY: ast_marker[CONTENT_VERSION_KEY],
+                        }
+                    else:
+                        content_fields = content_fingerprints(artifact)
             elif collected_asts and args.no_validate:
                 ast = collected_asts if args.ast_combine or len(collected_asts) > 1 else collected_asts[0]
                 ast_json = ASTExporter().to_json(ast)
@@ -302,8 +315,8 @@ def main():
                     else:
                         stdout_buffer.write(ast_bytes)
                         stdout_buffer.flush()
-                if canonical_bytes is not None:
-                    export_fingerprints = fingerprints(ast_bytes, canonical_bytes)
+                if content_fields is not None:
+                    export_fingerprints = report_fingerprints(ast_bytes, content_fields)
         except (OSError, ValueError) as exc:
             output_error = getattr(exc, "strerror", None) or str(exc) or type(exc).__name__
 

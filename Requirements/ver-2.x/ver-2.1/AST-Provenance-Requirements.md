@@ -19,16 +19,39 @@ When the parser or ingestion flow emits `parse-report.json` for a successful sem
 
 | Report field | Bytes hashed |
 |---|---|
-| `semantic_validate.semantic_ast_bytes_sha512` | Every byte in the final `ast.json`, including the source inventory, any validation metadata, and any trailing newline. |
+| `semantic_validate.semantic_ast_bytes_sha512` | Every byte in the delivered AST, including the source inventory, the embedded validation marker when present, and any trailing newline. |
 | `semantic_validate.semantic_ast_content_sha512` | The canonical UTF-8 JSON representation of the validated semantic model. |
 
 Define and version the rules for projecting and serializing the semantic model so consumers can reproduce `semantic_ast_content_sha512`. Exclude source provenance, diagnostic source locations, export and validation timestamps, generated node IDs, and derived hashes. Preserve authored semantic values, resolved symbol identities and references, and ordering where it affects meaning. Use stable semantic identities for any references to nodes with generated IDs, and normalize unordered collections deterministically.
 
 Obelisk supplies the same exported artifact bytes to POX and Scaffgen. Independent exports can produce different artifact fingerprints when timestamps, generated IDs, or serialization change. Exports with the same canonical semantic model produce the same semantic fingerprint.
 
+### Provenance parity across AST output destinations
+
+`--json` alone writes the AST to stdout. `--ast-output` writes the same AST format to the selected file with either report setting. Both destinations use the same provenance schema, including `provenance.sources` and any `semantic_validate` fields carried by the AST. With validation time and generated IDs fixed, the delivered AST bytes must be identical across destinations.
+
+When a successful semantic AST carries a validation marker, use this shape in both destinations. Both digests use 128 lowercase hexadecimal characters. The values below illustrate the format.
+
+```json
+{
+  "semantic_validate": {
+    "status": "PASSED",
+    "parser_version": "2.1.9",
+    "build_time": "2026-11-24T04:16:46Z",
+    "validation_time": "2026-11-25T01:55:02.642435Z",
+    "gasd_file_version": "1.2",
+    "semantic_ast_bytes_sha512": "ce09f794a9795de0be64fba75be02b219d05d254039a1f6ae06d01f49b9c38578525bf2e0d02a9bc1e99ef3188fc977683e77b4621a8abc01c74d16c01267de9",
+    "semantic_ast_content_sha512": "650da89a8d406f38ecf1c9710ba4cfdedcde286dbf9f1818898a55db842efc6191b6b45c8240250e1a469b48f52d93d60e58cc51ca3322dba161ecb07712c52a",
+    "semantic_ast_content_version": "1"
+  }
+}
+```
+
+Within the AST, `semantic_ast_bytes_sha512` hashes the delivered UTF-8 bytes with the 128 digits of its own value in the root `semantic_validate` object replaced by 128 ASCII zeros. Keep every other byte, including the content fingerprint and any trailing newline. The report's field of the same name hashes all delivered bytes directly, including the filled-in embedded digest. The content digest and rules version agree between the AST marker and its report. Exports for GASD versions without an AST validation marker still carry `provenance.sources` and publish both fingerprints if a JSON report is requested.
+
 ### Semantic content fingerprint, version 1
 
-`parse-report.json` identifies these rules with `semantic_validate.semantic_ast_content_version` set to `"1"`. Use the semantic AST JSON from the same successful export as the input to this projection.
+The parse report and the embedded AST marker, when present, identify these rules with `semantic_validate.semantic_ast_content_version` set to `"1"`. Use the semantic AST JSON from the same successful export as the input to this projection.
 
 1. Omit the root `provenance`, `semantic_validate`, and `compilationUnit` fields, and omit `metadata.files`. Project imports from `compilationUnit.fileNodes` into a root `imports` array when there are import edges. Each edge has `namespace` from its source file node, `alias` from the import or `null`, and `target`. The target is `{"namespace": name}` when the import path identifies a file node and `{"external": path}` otherwise. Sort edges by canonical JSON and collapse identical edges.
 2. Omit generated `id` and diagnostic `sourceMap` on semantic nodes, the derived `hash` on `ResolvedContract`, and `sourceFile`, `line`, `column`, `endLine`, and `endColumn` on embedded syntactic AST nodes. Preserve other fields, including authored documentation and authored timestamps. Annotation argument dictionaries retain their full JSON data, including keys that match internal AST field names.
@@ -44,11 +67,13 @@ Obelisk supplies the same exported artifact bytes to POX and Scaffgen. Independe
 | Edit to the entry file or a resolved import | A new export records the changed source digest under the same logical path. |
 | A source changes on disk after the parser captures it | The exported semantics and SHA-512 refer to the captured revision. |
 | Unreadable required source | The parser reports the affected path and exits unsuccessfully. |
-| Successful semantic AST export with a parse report | `semantic_validate` contains both lowercase SHA-512 digests. Hashing the exact AST file reproduces `semantic_ast_bytes_sha512`, and hashing the canonical semantic model reproduces `semantic_ast_content_sha512`. |
+| Successful semantic AST export with a parse report | The report's `semantic_validate` contains both lowercase SHA-512 digests. Hashing the delivered AST bytes reproduces the report's `semantic_ast_bytes_sha512`, and hashing the canonical semantic model reproduces `semantic_ast_content_sha512`. |
 | Repeat export with different validation timestamps or generated node IDs | `semantic_ast_bytes_sha512` changes and `semantic_ast_content_sha512` stays the same. |
 | Comment-only edit that leaves the semantic model unchanged | The edited source digest and `semantic_ast_bytes_sha512` change. `semantic_ast_content_sha512` stays the same. |
 | Edit that changes the validated semantic model, such as changing a resolved field type | Both fingerprints change. |
 | Parse report without a successful semantic AST export | Both fingerprint fields are absent. |
+| Semantic export to stdout or a file | The AST provenance has the same shape in each mode. A validated GASD 1.2 AST carries the eight-field marker. With generated IDs and validation times fixed, stdout and file exports have identical bytes, including when file export is requested without `--json`. |
+| AST with an embedded marker and a JSON report | Zeroing the embedded byte digest reproduces that digest from the AST bytes. Hashing the unmodified AST reproduces the report's byte digest, and both markers carry the same content digest and rules version. |
 
 ## User stories
 
@@ -80,10 +105,13 @@ As an Obelisk integration developer, I want the parse report to identify the exa
 | `AC-AST-PROVENANCE-015-02` | The parser or ingestion flow emits `parse-report.json` for a successful semantic export of any supported GASD input version. | The report has a `semantic_validate` object containing both `semantic_ast_bytes_sha512` and `semantic_ast_content_sha512`. Both values are strings matching `^[0-9a-f]{128}$`. This applies whether the AST itself carries a validation marker. | [AST fingerprints](#ast-fingerprints-in-the-parse-report) |
 | `AC-AST-PROVENANCE-015-03` | The parser or ingestion flow emits a report without a successful semantic AST export, as in a validation failure, a syntax-only export, or a failed AST write. | Both fingerprint keys are absent from the current report, even if an earlier AST file exists at the destination. | [AST fingerprints](#ast-fingerprints-in-the-parse-report) |
 | `AC-AST-PROVENANCE-015-04` | Obelisk supplies an exported semantic AST to POX and Scaffgen. | The bytes delivered to each consumer equal the original export byte-for-byte, and each SHA-512 digest equals the reported `semantic_ast_bytes_sha512`. | [AST fingerprints](#ast-fingerprints-in-the-parse-report) |
+| `AC-AST-PROVENANCE-015-05` | Export the same validated GASD 1.2 model with `--json`, with `--json --ast-output`, and with `--ast-output` alone. | All three modes deliver the same eight-field `semantic_validate` marker shape and the same `provenance.sources` schema. With fixed run metadata, the exported bytes are identical. File export keeps stdout empty. | [Output destination parity](#provenance-parity-across-ast-output-destinations) |
+| `AC-AST-PROVENANCE-015-06` | Verify the embedded marker and JSON report for a successful AST export. | Replacing the embedded byte digest digits with 128 ASCII zeros reproduces the embedded digest. Hashing the full delivered AST reproduces the report digest. The AST and report agree on `semantic_ast_content_sha512` and `semantic_ast_content_version`. | [Output destination parity](#provenance-parity-across-ast-output-destinations) |
 
 #### Subtasks
 
-- Have AST export provide the final byte sequence and the outcome of writing it to the selected destination. Compute the artifact fingerprint over that sequence.
+- Build the validation marker and its fingerprints in the AST serializer and route the final byte sequence to the selected destination.
+- Compute the report's artifact fingerprint over the delivered byte sequence.
 - Have the parser or ingestion report producer write both fields under `semantic_validate` for a successful semantic AST export. Use the final export outcome to decide whether the report includes them.
 - Verify that the Obelisk handoff delivers the original export bytes to both consumers.
 
@@ -117,6 +145,8 @@ As a semantic AST consumer, I want a reproducible fingerprint of the validated m
 | `AT-AST-PROVENANCE-015-02` | `AC-AST-PROVENANCE-015-03` | Check reports from a validation failure, a syntax-only AST export, and a failed write after semantic validation succeeds. Exercise a failed run with an earlier AST artifact at the destination. Verify that both fingerprint keys are absent in each report. |
 | `AT-AST-PROVENANCE-015-03` | `AC-AST-PROVENANCE-015-04` | Compare the copies delivered to POX and Scaffgen to the original export and verify their hashes against the same report value. |
 | `RT-AST-PROVENANCE-015-01` | `AC-AST-PROVENANCE-015-01` | Generate reports from two serialized semantic AST fixtures that differ only by a trailing LF. Verify that the exact-byte hashes differ and that each equals SHA-512 over all bytes of its fixture. |
+| `RT-AST-PROVENANCE-015-02` | `AC-AST-PROVENANCE-015-05` | Fix generated node IDs and validation time for a validated GASD 1.2 export. Compare the AST bytes from `--json`, `--json --ast-output`, and `--ast-output` alone. Verify the eight marker fields and empty stdout in both file modes. |
+| `RT-AST-PROVENANCE-015-03` | `AC-AST-PROVENANCE-015-06` | Independently hash an AST after zeroing its embedded byte digest and then hash its original bytes. Verify the embedded and report values respectively, and compare the content digest and rules version across both markers. |
 | `AT-AST-PROVENANCE-017-01` | `AC-AST-PROVENANCE-017-01`, `AC-AST-PROVENANCE-017-02` | Use the documented, versioned rules to independently construct the canonical UTF-8 JSON for a fixture with source provenance, diagnostic locations, export and validation timestamps, derived hashes, authored values, and references to generated nodes. Include ordered and unordered collections. Verify that the report matches the SHA-512 of the expected canonical bytes. |
 | `AT-AST-PROVENANCE-017-02` | `AC-AST-PROVENANCE-017-04` | Change the type of a resolved field and export the valid model again. Verify that both fingerprints change. |
 | `RT-AST-PROVENANCE-017-01` | `AC-AST-PROVENANCE-017-02`, `AC-AST-PROVENANCE-017-03` | Compare exports of the same sources with a different validation timestamp. Separately compare exports with remapped generated node IDs and references that still point to the same nodes. Verify that the byte fingerprint changes and the content fingerprint stays the same in each comparison. |

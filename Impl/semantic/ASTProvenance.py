@@ -6,6 +6,9 @@ import json
 
 
 CONTENT_VERSION = "1"
+BYTE_HASH_KEY = "semantic_ast_bytes_sha512"
+CONTENT_HASH_KEY = "semantic_ast_content_sha512"
+CONTENT_VERSION_KEY = "semantic_ast_content_version"
 
 _ROOT_METADATA = {"provenance", "semantic_validate", "compilationUnit"}
 _SYNTAX_LOCATIONS = {"sourceFile", "line", "column", "endLine", "endColumn"}
@@ -152,9 +155,12 @@ def canonical_content(artifact):
     return _encode(_Projection(root).normalize(root, []))
 
 
-def fingerprints(delivered_bytes, canonical_bytes):
+def content_fingerprints(artifact):
     return {
-        "semantic_ast_bytes_sha512": sha512(delivered_bytes).hexdigest(),
-        "semantic_ast_content_sha512": sha512(canonical_bytes).hexdigest(),
-        "semantic_ast_content_version": CONTENT_VERSION,
+        CONTENT_HASH_KEY: sha512(canonical_content(artifact)).hexdigest(),
+        CONTENT_VERSION_KEY: CONTENT_VERSION,
     }
+
+
+def report_fingerprints(delivered_bytes, content_fields):
+    return {BYTE_HASH_KEY: sha512(delivered_bytes).hexdigest(), **content_fields}

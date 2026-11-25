@@ -4,13 +4,13 @@ TARGET: "Python3"
 NAMESPACE: "design.ast_provenance"
 TRACE: "US-AST-PROVENANCE-014", "US-AST-PROVENANCE-015", "US-AST-PROVENANCE-017"
 TRACE: "AC-AST-PROVENANCE-014-01", "AC-AST-PROVENANCE-014-02", "AC-AST-PROVENANCE-014-03", "AC-AST-PROVENANCE-014-04"
-TRACE: "AC-AST-PROVENANCE-015-01", "AC-AST-PROVENANCE-015-02", "AC-AST-PROVENANCE-015-03", "AC-AST-PROVENANCE-015-04"
+TRACE: "AC-AST-PROVENANCE-015-01", "AC-AST-PROVENANCE-015-02", "AC-AST-PROVENANCE-015-03", "AC-AST-PROVENANCE-015-04", "AC-AST-PROVENANCE-015-05", "AC-AST-PROVENANCE-015-06"
 TRACE: "AC-AST-PROVENANCE-017-01", "AC-AST-PROVENANCE-017-02", "AC-AST-PROVENANCE-017-03", "AC-AST-PROVENANCE-017-04"
 
 // Impl/parser/ParseTreeAPI.py owns binary file capture and decoding.
 // Impl/cli.py owns the source queue, validation gate, write outcome and report.
-// Impl/semantic/SemanticASTExporter.py owns the artifact schema and path convention.
-// Impl/semantic/ASTProvenance.py owns digest computation and canonical_content.
+// Impl/semantic/SemanticASTExporter.py owns the artifact schema, paths and embedded byte digest.
+// Impl/semantic/ASTProvenance.py owns canonical_content and the report fingerprints.
 
 TYPE SourceCapture:
     data: Bytes
@@ -22,6 +22,10 @@ TYPE SourceEntry:
 
 TYPE SourceInventory:
     sources: List<SourceEntry>
+
+TYPE ContentFingerprints:
+    semantic_ast_content_sha512: String
+    semantic_ast_content_version: String
 
 TYPE ProvenanceFingerprints:
     semantic_ast_bytes_sha512: String
@@ -48,7 +52,8 @@ COMPONENT ASTProvenance:
     PATTERN: "Strategy"
     INTERFACE:
         canonical_content(artifact: Map<String, Any>) -> Bytes
-        fingerprints(delivered_bytes: Bytes, canonical_bytes: Bytes) -> ProvenanceFingerprints
+        content_fingerprints(artifact: Map<String, Any>) -> ContentFingerprints
+        report_fingerprints(delivered_bytes: Bytes, content: ContentFingerprints) -> ProvenanceFingerprints
 
 CONTRACT ParseSource.read_capture:
     INPUT: path: String
@@ -67,6 +72,13 @@ CONTRACT SemanticArtifact.source_inventory:
             POSTCONDITION: "result.sources is nonempty and contains one validated digest for each normalized logical path, in ascending path order"
         CASE incomplete:
             THROWS: ValueError
+
+CONTRACT SemanticArtifact.to_json:
+    INPUT: model: Any, marker: Optional<Map<String, Any>>, sources: Map<String, String>
+    OUTPUT: String
+    BEHAVIORS:
+        CASE serialized:
+            POSTCONDITION: "Build the root with the source inventory and normalized paths. When a validation marker is supplied, add the canonical content digest and rules version to it. Serialize with 128 ASCII zeros in the marker byte digest field, hash those UTF-8 bytes, and serialize again with the computed digest in the same field."
 
 CONTRACT ASTProvenance.canonical_content:
     INPUT: artifact: Map<String, Any>
@@ -177,20 +189,26 @@ FLOW deliver_artifact(request: ExportRequest, payload: Bytes) -> DeliveryOutcome
         RETURN ArtifactDelivery.write_stdout(payload)
     2. RETURN ArtifactDelivery.write_file(request.file_path, payload)
 
-FLOW prepare_canonical_bytes(request: ExportRequest, serialized: String) -> Optional<Bytes>:
+FLOW prepare_report_content(request: ExportRequest, serialized: String) -> Optional<ContentFingerprints>:
     1. IF request.wants_report == false:
         RETURN null
-    2. RETURN ASTProvenance.canonical_content(parse_json(serialized))
+    2. EXECUTE parse_json(serialized)
+    3. IF result_of(step 2).semantic_validate != null:
+        CREATE ContentFingerprints:
+            semantic_ast_content_sha512 = result_of(step 2).semantic_validate.semantic_ast_content_sha512
+            semantic_ast_content_version = result_of(step 2).semantic_validate.semantic_ast_content_version
+        RETURN result
+    4. RETURN ASTProvenance.content_fingerprints(result_of(step 2))
 
 FLOW export_semantic_artifact(request: ExportRequest, inputs: CapturedInputs, model: Any, marker: Optional<Map<String, Any>>) -> SemanticArtifactResult:
     1. ENSURE request.validated == true AND inputs.failures == 0 @trace(#AC-AST-PROVENANCE-014-04) AS AST_CHECK_EXPORT_GATE
         OTHERWISE THROW SemanticExportRejected
     2. EXECUTE SemanticArtifact.source_inventory(inputs.digests)
         POSTCONDITION: result.sources.length > 0
-    3. EXECUTE SemanticArtifact.to_json(model, marker, inputs.digests)
+    3. EXECUTE SemanticArtifact.to_json(model, marker, inputs.digests) @trace(#AC-AST-PROVENANCE-015-05, #AC-AST-PROVENANCE-015-06) AS AST_SERIALIZE_PROVENANCE
         POSTCONDITION: result != ""
     4. APPLY STRATEGY encode_artifact_bytes(result_of(step 3))
-    5. EXECUTE prepare_canonical_bytes(request, result_of(step 3))
+    5. EXECUTE prepare_report_content(request, result_of(step 3))
     6. EXECUTE deliver_artifact(request, result_of(step 4))
     7. ENSURE result_of(step 6).delivered == true
         OTHERWISE THROW SemanticDeliveryFailed
@@ -198,17 +216,13 @@ FLOW export_semantic_artifact(request: ExportRequest, inputs: CapturedInputs, mo
         bytes = result_of(step 4)
         delivered = true
         error = null
-        fingerprints = report_fingerprints(request, result_of(step 4), result_of(step 5))
+        fingerprints = report_delivered_fingerprints(request, result_of(step 4), result_of(step 5))
     9. RETURN result_of(step 8)
 
-FLOW report_fingerprints(request: ExportRequest, delivered_bytes: Bytes, canonical_bytes: Optional<Bytes>) -> Optional<ProvenanceFingerprints>:
-    1. IF request.wants_report == false OR request.validated == false:
+FLOW report_delivered_fingerprints(request: ExportRequest, delivered_bytes: Bytes, content: Optional<ContentFingerprints>) -> Optional<ProvenanceFingerprints>:
+    1. IF request.wants_report == false OR content == null:
         RETURN null
-    2. CREATE ProvenanceFingerprints:
-        semantic_ast_bytes_sha512 = SHA512_HEX(delivered_bytes)
-        semantic_ast_content_sha512 = SHA512_HEX(canonical_bytes)
-        semantic_ast_content_version = "1"
-    3. RETURN result_of(step 2)
+    2. RETURN ASTProvenance.report_fingerprints(delivered_bytes, content)
 
 STRATEGY project_semantic_root:
     ALGORITHM: "Remove root provenance, semantic_validate and compilationUnit and remove metadata.files"
@@ -251,7 +265,9 @@ FLOW canonical_content(artifact: Map<String, Any>) -> Bytes:
     7. APPLY STRATEGY encode_content_v1(result_of(step 6)) @trace(#AC-AST-PROVENANCE-017-03) AS AST_ENCODE_SEMANTICS
     8. RETURN result_of(step 7)
 
-CONSTRAINT "Fingerprint formats": "Source digests and both report digests match ^[0-9a-f]{128}$. The semantic_ast_content_version string equals 1." @trace(#AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-015-02, #AC-AST-PROVENANCE-017-01) AS AST_PROVENANCE_FORMAT
-CONSTRAINT "Delivery gate": "Publish both fingerprints under report semantic_validate only after a successful validated delivery. Preserve the existing AST marker and report fields. Files use exclusive output and reports use stderr. A failed export leaves both digest keys and their rules version absent." @trace(#AC-AST-PROVENANCE-015-01, #AC-AST-PROVENANCE-015-03) AS AST_REPORT_DELIVERY
-CONSTRAINT "Handoff bytes": "The complete delivered UTF-8 byte sequence, including any final newline, is the artifact shared with both consumers and the input to semantic_ast_bytes_sha512." @trace(#AC-AST-PROVENANCE-015-04) AS AST_HANDOFF
+CONSTRAINT "Fingerprint formats": "Source, embedded, and report digests match ^[0-9a-f]{128}$. The semantic_ast_content_version string equals 1." @trace(#AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-015-02, #AC-AST-PROVENANCE-017-01) AS AST_PROVENANCE_FORMAT
+CONSTRAINT "Delivery gate": "Publish both fingerprints under report semantic_validate only after a successful validated delivery. Files use exclusive output and reports use stderr. A failed export leaves both digest keys and their rules version absent from the report." @trace(#AC-AST-PROVENANCE-015-01, #AC-AST-PROVENANCE-015-03) AS AST_REPORT_DELIVERY
+CONSTRAINT "Handoff bytes": "The complete delivered UTF-8 byte sequence, including any final newline, is the artifact shared with both consumers and the input to the report byte digest." @trace(#AC-AST-PROVENANCE-015-04) AS AST_HANDOFF
+CONSTRAINT "Provenance destination parity": "Construct the complete artifact before routing its bytes. The AST carries the same provenance fields in stdout and file modes, including file export without a JSON report. With fixed run metadata the destinations deliver identical bytes." @trace(#AC-AST-PROVENANCE-015-05) AS AST_PROVENANCE_FORMAT_PARITY
+CONSTRAINT "Embedded digest verification": "Only the embedded byte digest value is zeroed when hashing the AST for its own marker. The report hashes the delivered bytes including the final embedded digest. Both markers carry the same content digest and rules version." @trace(#AC-AST-PROVENANCE-015-06) AS AST_EMBEDDED_DIGEST
 CONSTRAINT "Unordered collections": "Sort root globalConstraints, contracts, models and assumptions, metadata target and trace, SemanticFlowStep dependsOn, resolved expression dependencies, ResolvedComponent dependencies, resources, provides and requires, ResolvedDecision affectedComponents, ResolvedAssumption affected, and ResolvedResource permissions. Preserve multiplicity and all other array order." @trace(#AC-AST-PROVENANCE-017-02, #AC-AST-PROVENANCE-017-04) AS AST_CONTENT_ORDER

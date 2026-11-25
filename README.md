@@ -2,7 +2,7 @@
 
 The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.2**).
 
-Version **2.1.9** adds source provenance and two SHA-512 fingerprints to validated AST exports. Both `--json` stdout and `--ast-output` use the same AST format. The parser includes GEP-7 contract signature validation, ordered case guards in both AST exports, and a Python API for verifying observed calls.
+Version **2.1.10** gives `--json` stdout and `--ast-output` file exports the same AST provenance format, including both SHA-512 fingerprints in the GASD 1.2 validation marker. The parser includes GEP-7 contract signature validation, ordered case guards in both AST exports, and a Python API for verifying observed calls.
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ By enforcing strict, language-level compliance through standard compiler design,
 The easiest way to use the parser is to install it as a standalone tool:
 
 ```bash
-python3 -m pip install Build/Installation/dist/gasd_parser-2.1.9-py3-none-any.whl
+python3 -m pip install Build/Installation/dist/gasd_parser-2.1.10-py3-none-any.whl
 ```
 
 To uninstall the standalone CLI:
@@ -97,6 +97,8 @@ gasd_parser spec1.gasd spec2.gasd --ast-combine --ast-output combined.json
 ### AST provenance
 
 Each validated semantic AST includes `provenance.sources`, a sorted list of the logical paths and SHA-512 digests of the exact source bytes used. The JSON report's `semantic_validate` object contains `semantic_ast_bytes_sha512` for the complete exported artifact, `semantic_ast_content_sha512` for the canonical semantic model, and `semantic_ast_content_version` for the applicable [content fingerprint rules](Requirements/ver-2.x/ver-2.1/AST-Provenance-Requirements.md#semantic-content-fingerprint-version-1).
+
+Validated GASD 1.2 exports also carry those fingerprint fields in the AST's `semantic_validate` marker for both stdout and file output. Verify the embedded byte digest by replacing its value with 128 ASCII zeros before hashing the AST bytes. Verify the report's byte digest by hashing the delivered bytes as-is. [AST provenance requirements](Requirements/ver-2.x/ver-2.1/AST-Provenance-Requirements.md#provenance-parity-across-ast-output-destinations)
 
 ### Verifying an observed call
 

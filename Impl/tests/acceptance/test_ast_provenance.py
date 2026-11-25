@@ -149,6 +149,25 @@ def test_report_matches_both_export_destinations(tmp_path, version):
         assert sha512(delivered.read_bytes()).hexdigest() == file_report[BYTE_HASH]
 
 
+@pytest.mark.parametrize("destination", [None, "ast.json"])
+def test_embedded_fingerprints(tmp_path, destination):
+    """RT-AST-PROVENANCE-015-03: Verify the AST marker against the delivered bytes."""
+    source = spec("app", 'TYPE Item: value: String', version="1.2")
+    (tmp_path / "entry.gasd").write_bytes(source)
+    artifact, report_marker = export(tmp_path, "entry.gasd", destination=destination)
+    marker = json.loads(artifact)["semantic_validate"]
+
+    embedded_digest = marker[BYTE_HASH]
+    assert len(embedded_digest) == 128
+    assert set(embedded_digest) <= set("0123456789abcdef")
+    digest_field = f'"{BYTE_HASH}": "{embedded_digest}"'.encode("ascii")
+    assert artifact.count(digest_field) == 1
+    zeroed_field = digest_field.replace(embedded_digest.encode("ascii"), b"0" * 128)
+    zeroed_artifact = artifact.replace(digest_field, zeroed_field, 1)
+    assert embedded_digest == sha512(zeroed_artifact).hexdigest()
+    assert {**marker, BYTE_HASH: sha512(artifact).hexdigest()} == report_marker
+
+
 @pytest.mark.parametrize("name", ["entry.gasd", "dep.gasd"])
 @pytest.mark.parametrize("failure", ["read", "identify"])
 def test_required_source_failure(tmp_path, monkeypatch, capsysbinary, name, failure):

@@ -3,6 +3,7 @@ CONTEXT: "AST provenance design validation"
 TARGET: "Python3"
 NAMESPACE: "validation.ast_provenance.design"
 TRACE: "AC-AST-PROVENANCE-014-01", "AC-AST-PROVENANCE-014-02", "AC-AST-PROVENANCE-014-04", "AC-AST-PROVENANCE-015-01", "AC-AST-PROVENANCE-015-02", "AC-AST-PROVENANCE-015-03", "AC-AST-PROVENANCE-017-01", "AC-AST-PROVENANCE-017-02"
+TRACE: "AC-AST-PROVENANCE-015-05", "AC-AST-PROVENANCE-015-06"
 
 FLOW verify_ast_provenance_design():
     1. ACHIEVE "Check ownership of source capture and path identity" @trace(#AC-AST-PROVENANCE-014-01, #AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-014-04) AS PROVENANCE_DESIGN_1
@@ -11,3 +12,5 @@ FLOW verify_ast_provenance_design():
         POSTCONDITION: "The byte digest hashes the delivered serialization and the content digest hashes canonical JSON. The report includes both only after successful validated export."
     3. ACHIEVE "Check the published projection contract using a known semantic model" @trace(#AC-AST-PROVENANCE-017-01, #AC-AST-PROVENANCE-017-02) AS PROVENANCE_DESIGN_3
         POSTCONDITION: "An independent consumer matches the content digest by applying the documented rules version to the actual export. Check reference paths, projected namespace imports, exclusion of diagnostics, opaque annotation values, and canonical collection order against a known fixture."
+    4. ACHIEVE "Check the serializer and delivery boundary for the embedded validation marker" @trace(#AC-AST-PROVENANCE-015-05, #AC-AST-PROVENANCE-015-06) AS PROVENANCE_DESIGN_4
+        POSTCONDITION: "The serializer completes the source inventory and validation marker before routing to stdout or a file. The embedded byte digest hashes the serialization with the digest field zeroed. After successful delivery, the JSON report hashes the final bytes and shares the content digest and rules version."

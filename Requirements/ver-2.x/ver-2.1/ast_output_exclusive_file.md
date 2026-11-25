@@ -15,7 +15,7 @@ So that downstream tools can consume either destination with the same code.
 
 Use one AST serializer for stdout and file export. A semantic export is a top-level `SemanticSystem` with its validation marker when applicable. An export with `--no-validate` uses the syntactic AST format. When `--ast-output` is supplied, it takes precedence over the stdout destination. The machine-readable validation report requested by `--json` goes to stderr.
 
-Destination parity applies to the entire serialized AST for the same input and validation state. Independent runs can produce different generated node UUIDs and validation timestamps. If parsing produces no AST, stdout stays empty and the destination file is left untouched.
+Destination parity applies to the entire serialized AST for the same input and validation state. Independent runs can produce different generated node UUIDs, validation timestamps, and byte digests that cover them. If parsing produces no AST, stdout stays empty and the destination file is left untouched. [AST provenance requirements](AST-Provenance-Requirements.md#provenance-parity-across-ast-output-destinations)
 
 ---
 
@@ -39,7 +39,7 @@ Destination parity applies to the entire serialized AST for the same input and v
 | AT-PARSER-013-01 | Run `gasd_parser --ast-sem --ast-output out.json valid.gasd` and verify `out.json` contains a valid, complete AST JSON document.                             |
 | AT-PARSER-013-02 | Run `gasd_parser --ast-sem --ast-output out.json valid.gasd` and capture stdout; verify stdout does **not** contain any JSON content (no `{`, no AST nodes). |
 | AT-PARSER-013-03 | Run `gasd_parser --json valid.gasd` and verify stdout contains the top-level AST and stderr contains the JSON validation report. |
-| AT-PARSER-013-04 | Run `gasd_parser --json valid.gasd` and `gasd_parser --json --ast-output out.json valid.gasd`. Compare the complete JSON documents, accounting for per-run UUIDs and validation timestamps. With those values fixed, compare the bytes. |
+| AT-PARSER-013-04 | Run `gasd_parser --json valid.gasd` and `gasd_parser --json --ast-output out.json valid.gasd`. Compare the complete JSON documents, accounting for per-run UUIDs, validation timestamps, and their byte digest. With UUIDs and timestamps fixed, compare the bytes. |
 | AT-PARSER-013-05 | Run `gasd_parser --ast-sem --ast-output /invalid/path/out.json valid.gasd` and verify the exit code is non-zero and stderr contains an error message indicating the file could not be written. |
 | AT-PARSER-013-06 | Run `gasd_parser --json --ast-output out.json valid.gasd` and verify that stdout is empty, `out.json` contains the full AST, and stderr carries the validation report. |
 

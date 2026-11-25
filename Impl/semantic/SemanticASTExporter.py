@@ -1,7 +1,10 @@
+from hashlib import sha512
 import json
 import os
 import re
 from typing import List, Union, Optional, Any
+
+from .ASTProvenance import BYTE_HASH_KEY, content_fingerprints
 from .SemanticNodes import SemanticSystem
 
 class SemanticASTExporter:
@@ -40,18 +43,19 @@ class SemanticASTExporter:
             data = [self._inject_marker_version(system.to_dict(), marker) for system in ast]
             data = self.relativize_dict(data, cwd)
             root = {"asts": data, "provenance": provenance}
-            if marker:
-                root["semantic_validate"] = marker
-                if data and isinstance(data[0], dict) and "metadata" in data[0]:
-                    root["metadata"] = data[0]["metadata"]
-            return json.dumps(root, indent=2)
+            if marker and data and isinstance(data[0], dict) and "metadata" in data[0]:
+                root["metadata"] = data[0]["metadata"]
+        else:
+            root = self.relativize_dict(self._inject_marker_version(ast.to_dict(), marker), cwd)
+            root["provenance"] = provenance
 
-        data = self._inject_marker_version(ast.to_dict(), marker)
-        data = self.relativize_dict(data, cwd)
         if marker:
-            data["semantic_validate"] = marker
-        data["provenance"] = provenance
-        return json.dumps(data, indent=2)
+            embedded_marker = {**marker, BYTE_HASH_KEY: "0" * 128, **content_fingerprints(root)}
+            root["semantic_validate"] = embedded_marker
+            # Hash the artifact with its own digest field zeroed.
+            zeroed_artifact = json.dumps(root, indent=2).encode("utf-8")
+            embedded_marker[BYTE_HASH_KEY] = sha512(zeroed_artifact).hexdigest()
+        return json.dumps(root, indent=2)
 
     def relativize_dict(self, obj: Any, cwd: str) -> Any:
         """Recursively walks the object and relativizes path fields, keys, and values."""
