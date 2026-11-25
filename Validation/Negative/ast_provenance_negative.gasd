@@ -1,0 +1,11 @@
+VERSION 1.2
+CONTEXT: "AST provenance negative validation"
+TARGET: "Python3"
+NAMESPACE: "validation.ast_provenance.negative"
+TRACE: "AT-AST-PROVENANCE-014-03", "AT-AST-PROVENANCE-015-02"
+
+FLOW verify_ast_provenance_failures():
+    1. ACHIEVE "Fail to read or identify an entry file or required GASD import" @trace(#AT-AST-PROVENANCE-014-03) AS PROVENANCE_NEGATIVE_1
+        POSTCONDITION: "The diagnostic identifies the affected path, the exit status is nonzero and the run has no successful semantic AST export."
+    2. ACHIEVE "Emit reports for validation failure, syntax-only output and failed semantic file output" @trace(#AT-AST-PROVENANCE-015-02) AS PROVENANCE_NEGATIVE_2
+        POSTCONDITION: "Both fingerprints and the content rules version are absent in all reports, including when an old AST already exists. A validation failure leaves the earlier destination untouched."

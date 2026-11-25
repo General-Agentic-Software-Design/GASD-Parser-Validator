@@ -1,0 +1,53 @@
+VERSION 1.2
+/*
+   Template for agent.md/code-agent.md.
+
+   Replace placeholders:
+   - <GASD_SPEC_PATH>
+   - <BUILD_PLAN_PATH>
+   - <IMPLEMENTATION_PHASE>
+   - <STORY_ID_RANGE>
+   - <DESIGN_GASD_GLOB>
+   - <IMPLEMENTATION_OUTPUT_PATH>
+   - <TARGET_LANGUAGE>
+   - <PAUSE_CONDITION>
+*/
+CONTEXT: "Agent template: implementation generation and hardening"
+TARGET: "GASD Agent / <TARGET_LANGUAGE> Coding Agent Template"
+TRACE: "SOURCE-CODE-AGENT-SCRIPT-PATH"
+NAMESPACE: "agent.template.code"
+
+CONSTRAINT: "Agent MUST become expert in GASD and <TARGET_LANGUAGE> before implementation work."
+CONSTRAINT: "Agent MUST read <GASD_SPEC_PATH> before implementation work."
+CONSTRAINT: "Agent MUST do only what is requested and nothing more."
+CONSTRAINT: "Agent MUST execute only the intended implementation scope and then wait for the next instruction."
+CONSTRAINT: "Agent MUST NOT run tests during implementation generation or implementation audit unless explicitly instructed."
+CONSTRAINT: "Implementation MUST follow all <DESIGN_GASD_GLOB> specifications thoroughly."
+
+FLOW generate_implementation_template():
+    1. ACHIEVE "Read <GASD_SPEC_PATH>":
+        POSTCONDITION: result.gasd_spec_loaded == true
+    2. ACHIEVE "Read <BUILD_PLAN_PATH> <IMPLEMENTATION_PHASE>":
+        POSTCONDITION: result.implementation_phase_loaded == true
+    3. ACHIEVE "Execute <IMPLEMENTATION_PHASE> for one user story at a time from <STORY_ID_RANGE>":
+        POSTCONDITION: result.story_scoped_implementation_complete == true
+    4. ACHIEVE "Generate implementation artifacts in <IMPLEMENTATION_OUTPUT_PATH>":
+        POSTCONDITION: result.implementation_artifacts_generated == true
+    5. ENSURE "Generated implementation code is thorough, high quality, and conforms to <DESIGN_GASD_GLOB>"
+        OTHERWISE THROW ImplementationQualityError
+    6. ENSURE "No tests are run during this phase"
+        OTHERWISE THROW PrematureTestExecutionError
+    7. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW harden_implementation_template():
+    1. ACHIEVE "Audit generated implementation code against <DESIGN_GASD_GLOB>":
+        POSTCONDITION: result.design_conformance_audit_complete == true
+    2. ENSURE "Every required design behavior is implemented"
+        OTHERWISE THROW MissingImplementationError
+    3. ENSURE "There is no missing production code for the requested scope"
+        OTHERWISE THROW MissingCodeError
+    4. ENSURE "No tests are run during this audit"
+        OTHERWISE THROW PrematureTestExecutionError
+    5. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true

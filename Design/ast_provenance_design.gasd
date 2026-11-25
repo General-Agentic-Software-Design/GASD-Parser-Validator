@@ -1,0 +1,257 @@
+VERSION 1.2
+CONTEXT: "Compiler / Language Tooling - AST Provenance"
+TARGET: "Python3"
+NAMESPACE: "design.ast_provenance"
+TRACE: "US-AST-PROVENANCE-014", "US-AST-PROVENANCE-015", "US-AST-PROVENANCE-017"
+TRACE: "AC-AST-PROVENANCE-014-01", "AC-AST-PROVENANCE-014-02", "AC-AST-PROVENANCE-014-03", "AC-AST-PROVENANCE-014-04"
+TRACE: "AC-AST-PROVENANCE-015-01", "AC-AST-PROVENANCE-015-02", "AC-AST-PROVENANCE-015-03", "AC-AST-PROVENANCE-015-04"
+TRACE: "AC-AST-PROVENANCE-017-01", "AC-AST-PROVENANCE-017-02", "AC-AST-PROVENANCE-017-03", "AC-AST-PROVENANCE-017-04"
+
+// Impl/parser/ParseTreeAPI.py owns binary file capture and decoding.
+// Impl/cli.py owns the source queue, validation gate, write outcome and report.
+// Impl/semantic/SemanticASTExporter.py owns the artifact schema and path convention.
+// Impl/semantic/ASTProvenance.py owns digest computation and canonical_content.
+
+TYPE SourceCapture:
+    data: Bytes
+    sha512: String
+
+TYPE SourceEntry:
+    path: String
+    sha512: String
+
+TYPE SourceInventory:
+    sources: List<SourceEntry>
+
+TYPE ProvenanceFingerprints:
+    semantic_ast_bytes_sha512: String
+    semantic_ast_content_sha512: String
+    semantic_ast_content_version: String
+
+TYPE DeliveryOutcome:
+    delivered: Boolean
+    error: Optional<String>
+
+COMPONENT ParseSource:
+    PATTERN: "Adapter"
+    INTERFACE:
+        read_capture(path: String) -> SourceCapture
+        parse_capture(capture: SourceCapture, source_path: String) -> Any
+
+COMPONENT SemanticArtifact:
+    PATTERN: "Adapter"
+    INTERFACE:
+        source_inventory(digests: Map<String, String>) -> SourceInventory
+        to_json(model: Any, marker: Optional<Map<String, Any>>, sources: Map<String, String>) -> String
+
+COMPONENT ASTProvenance:
+    PATTERN: "Strategy"
+    INTERFACE:
+        canonical_content(artifact: Map<String, Any>) -> Bytes
+        fingerprints(delivered_bytes: Bytes, canonical_bytes: Bytes) -> ProvenanceFingerprints
+
+CONTRACT ParseSource.read_capture:
+    INPUT: path: String
+    OUTPUT: SourceCapture
+    BEHAVIORS:
+        CASE captured:
+            POSTCONDITION: "result.data equals the bytes from the binary read and result.sha512 equals their lowercase SHA-512"
+        CASE unreadable:
+            THROWS: OSError
+
+CONTRACT SemanticArtifact.source_inventory:
+    INPUT: digests: Map<String, String>
+    OUTPUT: SourceInventory
+    BEHAVIORS:
+        CASE complete:
+            POSTCONDITION: "result.sources is nonempty and contains one validated digest for each normalized logical path, in ascending path order"
+        CASE incomplete:
+            THROWS: ValueError
+
+CONTRACT ASTProvenance.canonical_content:
+    INPUT: artifact: Map<String, Any>
+    OUTPUT: Bytes
+    BEHAVIORS:
+        CASE encoded:
+            POSTCONDITION: "result equals the version 1 projection serialized by the canonical JSON encoder"
+
+TYPE CapturedInputs:
+    pending: List<String>
+    seen: List<String>
+    trees: List<Any>
+    digests: Map<String, String>
+    failures: Integer
+
+TYPE SourceVisit:
+    path: String
+    state: CapturedInputs
+
+TYPE ExportRequest:
+    file_path: Optional<String>
+    wants_report: Boolean
+    validated: Boolean
+
+TYPE SemanticArtifactResult:
+    bytes: Bytes
+    delivered: Boolean
+    fingerprints: Optional<ProvenanceFingerprints>
+    error: Optional<String>
+
+COMPONENT SourceQueue:
+    PATTERN: "Iterator"
+    INTERFACE:
+        dequeue(state: CapturedInputs) -> SourceVisit
+        mark_seen(state: CapturedInputs, path: String) -> CapturedInputs
+        record_failure(state: CapturedInputs, path: String) -> CapturedInputs
+        append_tree(state: CapturedInputs, tree: Any, entry: SourceEntry) -> CapturedInputs
+        schedule_imports(state: CapturedInputs, tree: Any, importer: String, strict: Boolean) -> CapturedInputs
+
+COMPONENT ArtifactDelivery:
+    PATTERN: "Adapter"
+    INTERFACE:
+        write_file(path: String, bytes: Bytes) -> DeliveryOutcome
+        write_stdout(bytes: Bytes) -> DeliveryOutcome
+
+STRATEGY read_source_snapshot @trace(#AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-014-03) AS AST_SOURCE_SNAPSHOT:
+    ALGORITHM: "Read the file in binary mode once and return SourceCapture(raw, SHA512_HEX(raw))"
+    INPUT: path: String
+    OUTPUT: SourceCapture
+
+STRATEGY read_stdin_snapshot:
+    ALGORITHM: "Read the binary stdin stream once and return SourceCapture(raw, SHA512_HEX(raw))"
+    OUTPUT: SourceCapture
+
+STRATEGY normalize_source_path @trace(#AC-AST-PROVENANCE-014-01, #AC-AST-PROVENANCE-014-04) AS AST_SOURCE_PATH:
+    ALGORITHM: "Use the AST exporter logical path function, preserve stdin, and reject an empty or unresolvable identity"
+    INPUT: path: String
+    OUTPUT: String
+
+STRATEGY resolve_file_imports @trace(#AC-AST-PROVENANCE-014-01, #AC-AST-PROVENANCE-014-04) AS AST_FILE_IMPORT_PATHS:
+    ALGORITHM: "Select .gasd imports, resolve against the importer directory or current directory for stdin, and queue all required paths in strict mode and existing paths otherwise"
+    INPUT: tree: Any, importer: String, strict: Boolean
+    OUTPUT: List<String>
+
+FLOW capture_source(input_path: String) -> SourceCapture:
+    1. IF input_path == "stdin":
+        APPLY STRATEGY read_stdin_snapshot()
+        RETURN result
+    2. APPLY STRATEGY read_source_snapshot(input_path) @trace(#AC-AST-PROVENANCE-014-02) AS AST_READ_ONCE
+        POSTCONDITION: result.sha512 == SHA512_HEX(result.data)
+    3. RETURN result_of(step 2)
+
+FLOW capture_source_queue(state: CapturedInputs, strict: Boolean) -> CapturedInputs:
+    1. IF state.pending.length == 0:
+        RETURN state
+    2. EXECUTE SourceQueue.dequeue(state)
+        POSTCONDITION:
+            result.path == state.pending.first
+            result.state.pending.length == state.pending.length - 1
+    3. IF result_of(step 2).state.seen.contains(result_of(step 2).path):
+        RETURN capture_source_queue(result_of(step 2).state, strict)
+    4. EXECUTE SourceQueue.mark_seen(result_of(step 2).state, result_of(step 2).path)
+        POSTCONDITION: result.seen.contains(result_of(step 2).path) == true
+    5. EXECUTE capture_source(result_of(step 2).path)
+        ON_ERROR: RETURN capture_source_queue(SourceQueue.record_failure(result_of(step 4), result_of(step 2).path), strict)
+    6. APPLY STRATEGY normalize_source_path(result_of(step 2).path)
+        ON_ERROR: RETURN capture_source_queue(SourceQueue.record_failure(result_of(step 4), result_of(step 2).path), strict)
+    7. EXECUTE ParseSource.parse_capture(result_of(step 5), result_of(step 2).path)
+        ON_ERROR: RETURN capture_source_queue(SourceQueue.record_failure(result_of(step 4), result_of(step 2).path), strict)
+    8. IF result_of(step 7).valid == false:
+        RETURN capture_source_queue(SourceQueue.record_failure(result_of(step 4), result_of(step 2).path), strict)
+    9. CREATE SourceEntry:
+        path = result_of(step 6)
+        sha512 = result_of(step 5).sha512
+    10. EXECUTE SourceQueue.append_tree(result_of(step 4), result_of(step 7), result_of(step 9))
+        ON_ERROR: RETURN capture_source_queue(SourceQueue.record_failure(result_of(step 4), result_of(step 2).path), strict)
+    11. EXECUTE SourceQueue.schedule_imports(result_of(step 10), result_of(step 7), result_of(step 2).path, strict)
+        POSTCONDITION: result.pending.contains_all(resolve_file_imports(result_of(step 7), result_of(step 2).path, strict)) == true
+    12. RETURN capture_source_queue(result_of(step 11), strict)
+
+STRATEGY encode_artifact_bytes:
+    ALGORITHM: "Encode the final semantic serializer text as UTF-8 without modifying its whitespace"
+    INPUT: json_text: String
+    OUTPUT: Bytes
+
+FLOW deliver_artifact(request: ExportRequest, payload: Bytes) -> DeliveryOutcome:
+    1. IF request.file_path == null:
+        RETURN ArtifactDelivery.write_stdout(payload)
+    2. RETURN ArtifactDelivery.write_file(request.file_path, payload)
+
+FLOW prepare_canonical_bytes(request: ExportRequest, serialized: String) -> Optional<Bytes>:
+    1. IF request.wants_report == false:
+        RETURN null
+    2. RETURN ASTProvenance.canonical_content(parse_json(serialized))
+
+FLOW export_semantic_artifact(request: ExportRequest, inputs: CapturedInputs, model: Any, marker: Optional<Map<String, Any>>) -> SemanticArtifactResult:
+    1. ENSURE request.validated == true AND inputs.failures == 0 @trace(#AC-AST-PROVENANCE-014-04) AS AST_CHECK_EXPORT_GATE
+        OTHERWISE THROW SemanticExportRejected
+    2. EXECUTE SemanticArtifact.source_inventory(inputs.digests)
+        POSTCONDITION: result.sources.length > 0
+    3. EXECUTE SemanticArtifact.to_json(model, marker, inputs.digests)
+        POSTCONDITION: result != ""
+    4. APPLY STRATEGY encode_artifact_bytes(result_of(step 3))
+    5. EXECUTE prepare_canonical_bytes(request, result_of(step 3))
+    6. EXECUTE deliver_artifact(request, result_of(step 4))
+    7. ENSURE result_of(step 6).delivered == true
+        OTHERWISE THROW SemanticDeliveryFailed
+    8. CREATE SemanticArtifactResult:
+        bytes = result_of(step 4)
+        delivered = true
+        error = null
+        fingerprints = report_fingerprints(request, result_of(step 4), result_of(step 5))
+    9. RETURN result_of(step 8)
+
+FLOW report_fingerprints(request: ExportRequest, delivered_bytes: Bytes, canonical_bytes: Optional<Bytes>) -> Optional<ProvenanceFingerprints>:
+    1. IF request.wants_report == false OR request.validated == false:
+        RETURN null
+    2. CREATE ProvenanceFingerprints:
+        semantic_ast_bytes_sha512 = SHA512_HEX(delivered_bytes)
+        semantic_ast_content_sha512 = SHA512_HEX(canonical_bytes)
+        semantic_ast_content_version = "1"
+    3. RETURN result_of(step 2)
+
+STRATEGY project_semantic_root:
+    ALGORITHM: "Remove root provenance, semantic_validate and compilationUnit and remove metadata.files"
+    INPUT: artifact: Map<String, Any>
+    OUTPUT: Map<String, Any>
+
+STRATEGY project_import_edges:
+    ALGORITHM: "Map each compilationUnit file import to namespace, alias and target. Resolve the target to its file node namespace or retain its external name. Deduplicate and sort by canonical JSON."
+    INPUT: artifact: Map<String, Any>
+    OUTPUT: List<Map<String, Any>>
+
+STRATEGY collect_generated_ids:
+    ALGORITHM: "Collect string id values on semantic node objects with kind and node metadata, skipping opaque annotation arguments"
+    INPUT: model: Map<String, Any>
+    OUTPUT: List<String>
+
+STRATEGY index_reference_paths:
+    ALGORITHM: "Index each generated ID by its canonical structural path. Use map keys and ordered array indices. For unordered members use kind and name or text. Append canonical shape with null generated link targets for unnamed or ambiguous members. Choose the first encoded path for repeated IDs."
+    INPUT: model: Map<String, Any>, generated_ids: List<String>
+    OUTPUT: Map<String, List<Any>>
+
+STRATEGY normalize_semantic_nodes:
+    ALGORITHM: "Erase node IDs and source maps, derived contract hashes and embedded syntactic coordinates. Keep annotation arguments verbatim. Replace indexed symbolId values with node path objects and sort the unordered arrays."
+    INPUT: model: Map<String, Any>, target_paths: Map<String, List<Any>>
+    OUTPUT: Map<String, Any>
+
+STRATEGY encode_content_v1:
+    ALGORITHM: "UTF-8 of compact sorted-key JSON with ASCII string escapes, exact integers, shortest round-trip finite floats, and rejection of non-finite values"
+    INPUT: model: Map<String, Any>
+    OUTPUT: Bytes
+
+FLOW canonical_content(artifact: Map<String, Any>) -> Bytes:
+    1. APPLY STRATEGY project_semantic_root(artifact) @trace(#AC-AST-PROVENANCE-017-01, #AC-AST-PROVENANCE-017-02) AS AST_PROJECT_ROOT
+    2. APPLY STRATEGY project_import_edges(artifact)
+    3. IF result_of(step 2).length > 0:
+        UPDATE result_of(step 1).imports = result_of(step 2)
+    4. APPLY STRATEGY collect_generated_ids(result_of(step 1))
+    5. APPLY STRATEGY index_reference_paths(result_of(step 1), result_of(step 4)) @trace(#AC-AST-PROVENANCE-017-04) AS AST_PROJECT_REFERENCES
+    6. APPLY STRATEGY normalize_semantic_nodes(result_of(step 1), result_of(step 5))
+    7. APPLY STRATEGY encode_content_v1(result_of(step 6)) @trace(#AC-AST-PROVENANCE-017-03) AS AST_ENCODE_SEMANTICS
+    8. RETURN result_of(step 7)
+
+CONSTRAINT "Fingerprint formats": "Source digests and both report digests match ^[0-9a-f]{128}$. The semantic_ast_content_version string equals 1." @trace(#AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-015-02, #AC-AST-PROVENANCE-017-01) AS AST_PROVENANCE_FORMAT
+CONSTRAINT "Delivery gate": "Publish both fingerprints under report semantic_validate only after a successful validated delivery. Preserve the existing AST marker and report fields. Files use exclusive output and reports use stderr. A failed export leaves both digest keys and their rules version absent." @trace(#AC-AST-PROVENANCE-015-01, #AC-AST-PROVENANCE-015-03) AS AST_REPORT_DELIVERY
+CONSTRAINT "Handoff bytes": "The complete delivered UTF-8 byte sequence, including any final newline, is the artifact shared with both consumers and the input to semantic_ast_bytes_sha512." @trace(#AC-AST-PROVENANCE-015-04) AS AST_HANDOFF
+CONSTRAINT "Unordered collections": "Sort root globalConstraints, contracts, models and assumptions, metadata target and trace, SemanticFlowStep dependsOn, resolved expression dependencies, ResolvedComponent dependencies, resources, provides and requires, ResolvedDecision affectedComponents, ResolvedAssumption affected, and ResolvedResource permissions. Preserve multiplicity and all other array order." @trace(#AC-AST-PROVENANCE-017-02, #AC-AST-PROVENANCE-017-04) AS AST_CONTENT_ORDER

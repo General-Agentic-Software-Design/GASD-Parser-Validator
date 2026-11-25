@@ -1,0 +1,13 @@
+VERSION 1.2
+CONTEXT: "AST provenance design validation"
+TARGET: "Python3"
+NAMESPACE: "validation.ast_provenance.design"
+TRACE: "AC-AST-PROVENANCE-014-01", "AC-AST-PROVENANCE-014-02", "AC-AST-PROVENANCE-014-04", "AC-AST-PROVENANCE-015-01", "AC-AST-PROVENANCE-015-02", "AC-AST-PROVENANCE-015-03", "AC-AST-PROVENANCE-017-01", "AC-AST-PROVENANCE-017-02"
+
+FLOW verify_ast_provenance_design():
+    1. ACHIEVE "Check ownership of source capture and path identity" @trace(#AC-AST-PROVENANCE-014-01, #AC-AST-PROVENANCE-014-02, #AC-AST-PROVENANCE-014-04) AS PROVENANCE_DESIGN_1
+        POSTCONDITION: "One binary capture supplies the digest and parser text and the exported path matches the AST source-location convention. Invalid inventories fail before delivery."
+    2. ACHIEVE "Check the two fingerprint inputs and the report boundary" @trace(#AC-AST-PROVENANCE-015-01, #AC-AST-PROVENANCE-015-02, #AC-AST-PROVENANCE-015-03) AS PROVENANCE_DESIGN_2
+        POSTCONDITION: "The byte digest hashes the delivered serialization and the content digest hashes canonical JSON. The report includes both only after successful validated export."
+    3. ACHIEVE "Check the published projection contract using a known semantic model" @trace(#AC-AST-PROVENANCE-017-01, #AC-AST-PROVENANCE-017-02) AS PROVENANCE_DESIGN_3
+        POSTCONDITION: "An independent consumer matches the content digest by applying the documented rules version to the actual export. Check reference paths, projected namespace imports, exclusion of diagnostics, opaque annotation values, and canonical collection order against a known fixture."

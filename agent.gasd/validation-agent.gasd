@@ -1,0 +1,58 @@
+VERSION 1.2
+/*
+   Template for agent.md/validation-agent.md.
+
+   Replace placeholders:
+   - <BUILD_PLAN_PATH>
+   - <VALIDATION_PHASE>
+   - <STORY_ID_RANGE>
+   - <DESIGN_GLOB>
+   - <VALIDATION_OUTPUT_GLOB>
+   - <VALIDATION_COMMAND>
+   - <PAUSE_CONDITION>
+*/
+CONTEXT: "Agent template: validation generation and hardening"
+TARGET: "GASD Agent / Validation Agent Template"
+TRACE: "SOURCE-VALIDATION-AGENT-SCRIPT-PATH"
+NAMESPACE: "agent.template.validation"
+
+CONSTRAINT: "Agent MUST do only what is requested and nothing more."
+CONSTRAINT: "Agent MUST execute only the intended validation scope and then wait for the next instruction."
+CONSTRAINT: "<VALIDATION_OUTPUT_GLOB> MUST thoroughly cover design validation, acceptance tests, negative tests, and regression tests."
+CONSTRAINT: "<VALIDATION_OUTPUT_GLOB> MUST NOT contain weak null-only ACHIEVE postconditions."
+CONSTRAINT: "Every ACHIEVE POSTCONDITION in <VALIDATION_OUTPUT_GLOB> MUST assert a concrete, measurable validation outcome."
+CONSTRAINT: "Generated validation GASD MUST be checked with <VALIDATION_COMMAND>."
+
+FLOW generate_validation_template():
+    1. ACHIEVE "Read <BUILD_PLAN_PATH> <VALIDATION_PHASE>":
+        POSTCONDITION: result.validation_phase_loaded == true
+    2. ACHIEVE "Execute <VALIDATION_PHASE> one user story at a time from <STORY_ID_RANGE>":
+        POSTCONDITION: result.story_scoped_validation_generation_complete == true
+    3. ACHIEVE "Write validation artifacts to <VALIDATION_OUTPUT_GLOB>":
+        POSTCONDITION: result.validation_artifacts_written == true
+    4. ENSURE "Validation artifacts thoroughly capture Design, Acceptance, Negative, and Regression coverage"
+        OTHERWISE THROW ValidationCoverageError
+    5. ACHIEVE "Audit generated <VALIDATION_OUTPUT_GLOB> ACHIEVE postconditions for concrete semantic validation outcomes":
+        POSTCONDITION: result.weak_postcondition_count == 0
+    6. ENSURE "No generated <VALIDATION_OUTPUT_GLOB> artifact contains a weak null-only ACHIEVE postcondition"
+        OTHERWISE THROW WeakPostconditionError
+    7. ACHIEVE "Validate generated validation GASD with <VALIDATION_COMMAND>":
+        POSTCONDITION: result.validation_passed == true
+    8. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW harden_validation_template():
+    1. ACHIEVE "Audit <VALIDATION_OUTPUT_GLOB> against <DESIGN_GLOB> thoroughly":
+        POSTCONDITION: result.design_coverage_audit_complete == true
+    2. ENSURE "<VALIDATION_OUTPUT_GLOB> captures all <DESIGN_GLOB> behavior required for later test generation"
+        OTHERWISE THROW ValidationCoverageError
+    3. ENSURE "Validation artifacts are thorough and complete"
+        OTHERWISE THROW ValidationCompletenessError
+    4. ACHIEVE "Audit every ACHIEVE POSTCONDITION in <VALIDATION_OUTPUT_GLOB> for concrete, measurable validation outcomes":
+        POSTCONDITION: result.weak_postcondition_count == 0
+    5. ENSURE "No hardened <VALIDATION_OUTPUT_GLOB> artifact contains a weak null-only ACHIEVE postcondition"
+        OTHERWISE THROW WeakPostconditionError
+    6. ACHIEVE "Validate generated validation GASD with <VALIDATION_COMMAND>":
+        POSTCONDITION: result.validation_passed == true
+    7. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true

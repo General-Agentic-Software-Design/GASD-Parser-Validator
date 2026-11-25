@@ -1,0 +1,53 @@
+VERSION 1.2
+/*
+   Template for agent.md/test-gen-agent.md.
+
+   Replace placeholders:
+   - <BUILD_PLAN_PATH>
+   - <TEST_GENERATION_PHASE>
+   - <STORY_ID_RANGE>
+   - <REQUIREMENTS_GLOB>
+   - <VALIDATION_GLOB>
+   - <DESIGN_GLOB>
+   - <TEST_OUTPUT_GLOB>
+   - <PAUSE_CONDITION>
+*/
+CONTEXT: "Agent template: test generation and hardening"
+TARGET: "GASD Agent / Testing Agent Template"
+TRACE: "SOURCE-TEST-GEN-AGENT-SCRIPT-PATH"
+NAMESPACE: "agent.template.test_generation"
+
+CONSTRAINT: "Agent MUST become a GASD testing expert before test-generation work."
+CONSTRAINT: "Agent MUST do only what is requested and nothing more."
+CONSTRAINT: "Agent MUST execute only the intended test-generation scope and then wait for the next instruction."
+CONSTRAINT: "Agent MUST NOT run generated tests during test generation or test audit unless explicitly instructed."
+CONSTRAINT: "Generated tests in <TEST_OUTPUT_GLOB> MUST contain real test logic and MUST NOT be stubs."
+CONSTRAINT: "Generated tests MUST cover <REQUIREMENTS_GLOB>, <VALIDATION_GLOB>, and <DESIGN_GLOB> for the requested scope."
+
+FLOW generate_tests_template():
+    1. ACHIEVE "Read <BUILD_PLAN_PATH> <TEST_GENERATION_PHASE>":
+        POSTCONDITION: result.test_generation_phase_loaded == true
+    2. ACHIEVE "Execute <TEST_GENERATION_PHASE> one user story at a time from <STORY_ID_RANGE>":
+        POSTCONDITION: result.story_scoped_test_generation_complete == true
+    3. ACHIEVE "Show result as each user story is completed":
+        POSTCONDITION: result.per_story_progress_reported == true
+    4. ACHIEVE "Write generated tests to <TEST_OUTPUT_GLOB>":
+        POSTCONDITION: result.test_artifacts_written == true
+    5. ENSURE "Generated test cases are thorough and contain real test logic"
+        OTHERWISE THROW TestStubError
+    6. ENSURE "No tests are run during this phase"
+        OTHERWISE THROW PrematureTestExecutionError
+    7. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW harden_tests_template():
+    1. ACHIEVE "Audit generated detailed test logic against <REQUIREMENTS_GLOB>, <VALIDATION_GLOB>, and <DESIGN_GLOB>":
+        POSTCONDITION: result.test_logic_trace_audit_complete == true
+    2. ENSURE "Generated tests are real logic and not stubs"
+        OTHERWISE THROW TestStubError
+    3. ENSURE "Generated tests have no missing required coverage"
+        OTHERWISE THROW TestCoverageGapError
+    4. ENSURE "No tests are run during this audit"
+        OTHERWISE THROW PrematureTestExecutionError
+    5. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true

@@ -1,0 +1,75 @@
+VERSION 1.2
+/*
+   Run flows from the repository root with a requirements Markdown path.
+
+   create_parser_user_stories("Requirements/ver-2.x/ver-2.1/AST-Provenance-Requirements.md")
+
+   Pass user_stories_file as the second argument to keep stories in a separate Markdown file.
+*/
+CONTEXT: "Product requirements and user stories for GASD Parser & Validator"
+TARGET: "GASD Parser & Validator Product Manager Agent"
+TRACE: "agent.gasd/user-story-agent.gasd"
+NAMESPACE: "agent.gasd_parser.user_story"
+
+CONSTRAINT: "Each flow MUST read input_file as its source of requirements and acceptance criteria. Resolve relative paths from the repository root. The input MUST be an existing readable Markdown file."
+CONSTRAINT: "Use user_stories_file as the story destination when supplied. When it is omitted or null, add or update story sections in input_file while preserving the source requirements text. Keep edits within the selected story destination."
+CONSTRAINT: "Creation may create a separate story Markdown file. Audit and hardening require an existing readable Markdown file with user stories. Report the affected path and make no edits if a required input or destination is invalid."
+CONSTRAINT: "Keep stories within the selected requirements scope. Consult GASD/GASD-1.2/GASD_Specification.md when a requirement depends on GASD language behavior."
+CONSTRAINT: "Use the applicable epic and preserve existing trace identifiers. Follow the selected story document's trace ID conventions. Use US-PARSER-NNN, AC-PARSER-NNN-NN, AT-PARSER-NNN-NN, and RT-PARSER-NNN-NN when the document has no established convention. Link each acceptance criterion to its source requirement ID or Markdown section."
+CONSTRAINT: "After completing the requested story work, wait for the next human instruction."
+
+FLOW create_parser_user_stories(input_file: String, user_stories_file: Optional<String>):
+    1. ENSURE "input_file is a readable requirements Markdown file"
+        OTHERWISE THROW RequirementsFileError
+    2. ENSURE "The resolved story destination is a writable Markdown file or a valid Markdown creation target"
+        OTHERWISE THROW UserStoriesFileError
+    3. ACHIEVE "Read input_file and any existing stories in the resolved story destination":
+        POSTCONDITION: result.requirements_and_existing_stories_loaded == true
+    4. ACHIEVE "Derive user stories and necessary sub-tasks from the selected requirements, reusing applicable epics and existing stories":
+        POSTCONDITION: result.user_story_structure_complete == true
+    5. ENSURE "Each scoped requirement has story coverage, testable acceptance criteria, and source traceability"
+        OTHERWISE THROW RequirementCompletenessError
+    6. ACHIEVE "Write the story sections to the resolved story destination":
+        POSTCONDITION: result.user_stories_written == true
+    7. ACHIEVE "Wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW audit_parser_user_story_coverage(input_file: String, user_stories_file: Optional<String>):
+    1. ENSURE "input_file is a readable requirements Markdown file"
+        OTHERWISE THROW RequirementsFileError
+    2. ENSURE "The resolved story destination is a readable and writable Markdown file with existing user stories"
+        OTHERWISE THROW UserStoriesFileError
+    3. ACHIEVE "Compare the requirements and acceptance criteria in input_file with the stories and tests in the resolved story file":
+        POSTCONDITION: result.requirements_coverage_comparison_complete == true
+    4. ACHIEVE "Resolve coverage gaps in the selected requirements scope with traceable stories and testable acceptance criteria":
+        POSTCONDITION: result.coverage_gaps_resolved == true
+    5. ENSURE "The stories cover the selected requirements and their acceptance criteria"
+        OTHERWISE THROW RequirementCoverageGapError
+    6. ACHIEVE "Write any story edits to the resolved story destination":
+        POSTCONDITION: result.story_coverage_updates_complete == true
+    7. ACHIEVE "Wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
+
+FLOW harden_parser_user_story_spec(input_file: String, user_stories_file: Optional<String>):
+    1. ENSURE "input_file is a readable requirements Markdown file"
+        OTHERWISE THROW RequirementsFileError
+    2. ENSURE "The resolved story destination is a readable and writable Markdown file with existing user stories"
+        OTHERWISE THROW UserStoriesFileError
+    3. ACHIEVE "Read input_file and identify the stories in the resolved story file that cover those requirements":
+        POSTCONDITION: result.requirements_and_scoped_stories_loaded == true
+    4. ACHIEVE "Make the actor, capability, reason, and source trace explicit for each scoped story":
+        POSTCONDITION: result.story_contracts_complete == true
+    5. ACHIEVE "Clarify the scope, artifact ownership, and required output of each applicable sub-task":
+        POSTCONDITION: result.subtask_scope_and_artifacts_explicit == true
+    6. ACHIEVE "Make each acceptance criterion testable with explicit inputs and observable outcomes such as an exit status, diagnostic, or AST field":
+        POSTCONDITION: result.acceptance_criteria_testable == true
+    7. ACHIEVE "Cover relevant failure, edge, compatibility, and determinism cases supported by the selected requirements":
+        POSTCONDITION: result.required_cases_covered == true
+    8. ENSURE "The hardened stories cover the selected requirements and can drive design, acceptance, regression, and negative validation"
+        OTHERWISE THROW RequirementCoverageGapError
+    9. ENSURE "The hardened acceptance criteria have valid source and story traces"
+        OTHERWISE THROW RequirementTraceabilityError
+    10. ACHIEVE "Write the hardened story sections to the resolved story destination":
+        POSTCONDITION: result.hardened_stories_written == true
+    11. ACHIEVE "Wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true

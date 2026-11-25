@@ -1,0 +1,47 @@
+VERSION 1.2
+/*
+   Template for agent.md/packaging-agent.md.
+
+   Replace placeholders:
+   - <REQUIREMENTS_PATH>
+   - <GASD_SPEC_PATH>
+   - <BUILD_PLAN_PATH>
+   - <PACKAGING_PHASE>
+   - <README_PATH>
+   - <INSTALLATION_OUTPUT_PATH>
+   - <TEST_VALIDATION_COMMAND>
+   - <PAUSE_CONDITION>
+*/
+CONTEXT: "Agent template: release and packaging"
+TARGET: "GASD Agent / Release Agent Template"
+TRACE: "SOURCE-PACKAGING-AGENT-SCRIPT-PATH"
+NAMESPACE: "agent.template.packaging"
+
+CONSTRAINT: "Agent MUST become a release expert before packaging work."
+CONSTRAINT: "Agent MUST read <REQUIREMENTS_PATH> and <GASD_SPEC_PATH> before release work."
+CONSTRAINT: "Agent MUST do only what is requested and nothing more."
+CONSTRAINT: "Agent MUST execute only the intended packaging scope and then wait for the next instruction."
+
+FLOW create_readme_template():
+    1. ACHIEVE "Create <README_PATH> explaining the project":
+        POSTCONDITION: result.readme_project_overview_complete == true
+    2. ACHIEVE "Document development installation":
+        POSTCONDITION: result.development_install_documented == true
+    3. ACHIEVE "Document production installation":
+        POSTCONDITION: result.production_install_documented == true
+    4. ACHIEVE "Document how to run <TEST_VALIDATION_COMMAND> for validation":
+        POSTCONDITION: result.test_validation_command_documented == true
+    5. ENSURE "<README_PATH> is complete for project overview, dev install, production install, and test validation"
+        OTHERWISE THROW ReadmeCompletenessError
+
+FLOW execute_packaging_template():
+    1. ACHIEVE "Read <REQUIREMENTS_PATH> and <GASD_SPEC_PATH>":
+        POSTCONDITION: result.release_source_inputs_loaded == true
+    2. ACHIEVE "Read <BUILD_PLAN_PATH> <PACKAGING_PHASE>":
+        POSTCONDITION: result.packaging_phase_loaded == true
+    3. ACHIEVE "Execute <PACKAGING_PHASE>":
+        POSTCONDITION: result.packaging_phase_executed == true
+    4. ACHIEVE "Prepare release artifacts in <INSTALLATION_OUTPUT_PATH>":
+        POSTCONDITION: result.release_artifacts_prepared == true
+    5. ACHIEVE "Pause at <PAUSE_CONDITION> and wait for the next human instruction":
+        POSTCONDITION: result.paused_for_human_instruction == true
