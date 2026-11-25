@@ -1,0 +1,17 @@
+VERSION 1.2
+CONTEXT: "CPC AST compatibility checks"
+TARGET: "Python3"
+NAMESPACE: "validation.cpc_ast.regression"
+TRACE: "AST-AC-001-01", "AST-AC-001-02", "AST-AC-003-01", "AST-AC-003-02"
+
+CONSTRAINT: "Scenarios derive from Design/cpc_semantic_ast_design.gasd and the traced CPC parser AST requirements."
+
+FLOW verify_cpc_ast():
+    1. ACHIEVE "Preserve existing provenance"
+        POSTCONDITION: "Validated semantic exports carry the full marker and verified inventory for each supported input version. Syntax-only exports omit the verified inventory and handoff digest."
+    2. ACHIEVE "Compare CPC destination behavior"
+        POSTCONDITION: "The standard output and file destinations both receive a single AST. With controlled run metadata both contain the same bytes. File mode leaves stdout empty. The JSON and human-readable reports include the digest on stderr."
+    3. ACHIEVE "Hash exact output bytes"
+        POSTCONDITION: "The external byte digest equals an independent hash in both destinations. Two fixed JSON payloads differing only by a final LF have distinct accurate byte digests. Check the embedded byte digest separately using its documented self-field zeroing rule."
+    4. ACHIEVE "Retry after a failed export"
+        POSTCONDITION: "When a previous valid AST is at the destination a later failed run preserves it. Its report contains no successful CPC result or exact artifact digest for the failed run."

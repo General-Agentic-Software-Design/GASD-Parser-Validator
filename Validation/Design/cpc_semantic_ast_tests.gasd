@@ -1,0 +1,15 @@
+VERSION 1.2
+CONTEXT: "Source occurrence inventory design checks"
+TARGET: "Python3"
+NAMESPACE: "validation.cpc_ast.design"
+TRACE: "AST-AC-002-01", "AST-AC-002-02", "AST-AC-002-03"
+
+CONSTRAINT: "Scenarios derive from Design/cpc_semantic_ast_design.gasd and the traced CPC parser AST requirements."
+
+FLOW verify_cpc_ast():
+    1. ACHIEVE "Inspect syntax-derived expectations"
+        POSTCONDITION: "Observe the expected inventory before semantic construction for imported declarations and two identical annotations with separate AS identifiers on one numbered step. Match a fixture-authored list of paths, lines, columns, owners, and semantic values."
+    2. ACHIEVE "Check the source inventory schema"
+        POSTCONDITION: "On a successful CPC export validate source_inventory_version and every item. Resolve each JSON Pointer from the root. Confirm that declarations used by Scaffgen and constraints used by POX resolve to their semantic nodes without ambiguous identity."
+    3. ACHIEVE "Review semantic preservation"
+        POSTCONDITION: "Compare qualified interfaces, operation signatures, result and error types, data field constraints, flow actions, guards, ordered branches and dependencies, annotations, contract cases, entry-point bindings, assumptions, invariants and model references with the authored fixtures."

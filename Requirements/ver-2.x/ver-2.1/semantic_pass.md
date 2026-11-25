@@ -6,7 +6,7 @@
 ### User Story
 
 As a **GASD Tooling Integrator**,
-I want the **Semantic AST JSON output** (generated via `--json --ast-sem`) to include a **validation certificate** (marker),
+I want each validated **Semantic AST JSON export** to include a **validation certificate** (marker),
 So that downstream tools can programmatically verify the AST has passed semantic checks and track its origin (version and build time).
 
 ---
@@ -15,7 +15,7 @@ So that downstream tools can programmatically verify the AST has passed semantic
 
 | ID               | Criteria                                                                                               |
 | ---------------- | ------------------------------------------------------------------------------------------------------ |
-| AC-PARSER-008-01 | When running with both `--json` and `--ast-sem`, the JSON output MUST include a root-level key `semantic_validate`. |
+| AC-PARSER-008-01 | A validated semantic AST written to stdout or a file MUST include a root-level key `semantic_validate`. |
 | AC-PARSER-008-02 | The `semantic_validate` object MUST contain a `status` field set to `"PASSED"` upon successful validation. |
 | AC-PARSER-008-03 | The object MUST include `parser_version` containing the current version of the `gasd_parser`.           |
 | AC-PARSER-008-04 | The object MUST include `build_time` containing the build-time timestamp of the parser binary/package.   |
@@ -24,19 +24,22 @@ So that downstream tools can programmatically verify the AST has passed semantic
 
 ---
 
-### Example Output (Passed)
+### Example Output (Excerpt)
 
 ```json
 {
+  "kind": "SemanticSystem",
   "semantic_validate": {
     "status": "PASSED",
-    "parser_version": "2.1.3",
-    "build_time": "2026-04-10T14:30:00Z",
-    "validation_time": "2026-04-12T22:15:00Z"
-  },
-  "nodes": [...]
+    "parser_version": "2.1.11",
+    "build_time": "2026-11-25T23:01:45Z",
+    "validation_time": "2026-11-26T00:00:00Z",
+    "gasd_file_version": "1.2"
+  }
 }
 ```
+
+The full marker also carries three fingerprint fields. `PASSED` is published in a semantic AST after both validation and source reconciliation succeed. [Complete marker](AST-Provenance-Requirements.md#provenance-parity-across-ast-output-destinations)
 
 ### Pre-requisite / Error Example (Failure)
 
@@ -47,7 +50,7 @@ When an external tool (like `pox`) receives an AST that lacks this marker or fai
   "errors": [
     {
       "error_code": "INPUT_NOT_SEMANTIC",
-      "message": "[INPUT_NOT_SEMANTIC] Input is a Syntactic AST (missing semantic_pass). at :0:0",
+      "message": "[INPUT_NOT_SEMANTIC] Input is a syntactic AST without a semantic_validate marker.",
       "file": "stdin",
       "line": 0,
       "column": 0,

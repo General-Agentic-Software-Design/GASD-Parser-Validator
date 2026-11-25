@@ -12,6 +12,8 @@ TARGET: "ANTLR4", "Python3"
 TRACE: "US-V2-001", "US-V2-002", "US-V2-003", "US-V2-004", "US-V2-005", "US-V2-006", "US-V2-007", "US-V2-008", "US-V2-009", "US-PARSER-008", "US-PARSER-009", "US-PARSER-010", "US-PARSER-011", "US-PARSER-012", "US-PARSER-013"
 TRACE: "GEP-7", "AT-GEP7-001", "AT-GEP7-002", "AT-GEP7-003", "AT-GEP7-004", "RT-GEP7-001", "RT-GEP7-002", "NT-GEP7-001", "NT-GEP7-002", "NT-GEP7-003"
 
+TRACE: "AST-US-001", "AST-US-002", "AST-US-003", "AST-AT-001", "AST-AT-002", "AST-AT-003"
+
 CONSTRAINT: "GASD agent MUST only execute one phase and pause by default, unless explicitly instructed by a human."
 CONSTRAINT: "GASD agent MUST read and master 'GASD/GASD-1.2/GASD_Specification.md' and 'GASD/GASD-1.1/GASD_Specification-1.1.md' before generating any GASD files."
 CONSTRAINT: "GASD agent MUST read and master 'Requirements/ver-2.x/ver-2.0/User_story.md' before executing any phase."
@@ -25,6 +27,7 @@ CONSTRAINT: "GASD agent MUST read and master 'Requirements/ver-2.x/ver-2.0/User_
 FLOW phase1_generate_design():
     1. ACHIEVE "Read Requirements/ver-2.x/ver-2.0/User_story.md", "Requirements/ver-2.x/ver-2.1/CLI Optimization and Flag Consolidation.md", "Requirements/ver-2.x/ver-2.1/semantic_pass.md", "Requirements/ver-2.x/ver-2.1/gasd_file_version.md", "Requirements/ver-2.x/ver-2.1/relative_source_map_paths.md", "Requirements/ver-2.x/ver-2.1/cli_default_info_output.md", "Requirements/ver-2.x/ver-2.1/enforce_invariant_order.md", "Requirements/ver-2.x/ver-2.1/ast_output_exclusive_file.md" and "Requirements/ver-2.x/ver-2.1/GEP-7: GASD 1.2 Contract Validation and Case Guards.md"
         POSTCONDITION: "Requirements IDs extracted from all documents"
+        POSTCONDITION: "Source capture, occurrence verification, and artifact publication requirements are traced from Requirements/ver-2.x/ver-2.1/GASD_Parser_AST_Requirements.md"
     2. ENSURE "All #US-V2, #AC-V2, #AT-V2, #RT-V2, #US-PARSER-007, #AC-PARSER-007, #AT-PARSER-007, #RT-PARSER-007, #US-PARSER-008, #AC-PARSER-008, #AT-PARSER-008, #RT-PARSER-008, #US-PARSER-009, #AC-PARSER-009, #AT-PARSER-009, #RT-PARSER-009, #US-PARSER-010, #AC-PARSER-010, #AT-PARSER-010, #RT-PARSER-010, #US-PARSER-011, #AC-PARSER-011, #AT-PARSER-011, #RT-PARSER-011, #US-PARSER-012, #AC-PARSER-012, #AT-PARSER-012, #RT-PARSER-012, #US-PARSER-013, #AC-PARSER-013, #AT-PARSER-013, #RT-PARSER-013 IDs are extracted"
         OTHERWISE THROW "Requirements Traceability Failed"
     3. ACHIEVE "Generate Design/component_design.gasd" @trace #US-V2-001, #US-PARSER-007
@@ -47,8 +50,9 @@ FLOW phase1_generate_design():
     9. ACHIEVE "Generate Design/enforce_invariant_order_design.gasd" @trace #US-PARSER-012
         POSTCONDITION: "Design/enforce_invariant_order_design.gasd exists and defines mandatory INVARIANT <SCOPE> ordering"
     ### Design: AST JSON destination parity (US-PARSER-013)
-    10. ACHIEVE "Update Design/ast_output_exclusive_file_design.gasd for the shared AST JSON format" @trace #US-PARSER-013
+    10. ACHIEVE "Specify AST routing and source reconciliation in Design/ast_output_exclusive_file_design.gasd and Design/cpc_semantic_ast_design.gasd" @trace(#US-PARSER-013, #AST-US-001, #AST-US-002, #AST-US-003)
         POSTCONDITION: "The design uses the existing file export format for stdout and defines exclusive AST routing and stderr diagnostics"
+        POSTCONDITION: "Validated semantic exports reconcile occurrences by default and report the exact-byte digest after delivery"
     11. ACHIEVE "Update Design/contract_modeling_design.gasd for GEP-7" @trace #GEP-7
         POSTCONDITION: "The design specifies typed signatures, case rules and LINT-007, guard order and AST export, observed call verification, and bundled example compatibility. Every GEP-7 test ID is traced."
     12. ENSURE "All generated design gasd pass 'gasd_parser --ast-sem' with no errors"
@@ -94,6 +98,7 @@ FLOW phase2_generate_validations():
     ### Validation: AST JSON destination parity (US-PARSER-013)
     15. ACHIEVE "Update the AST output design, acceptance, regression, and negative validation scenarios under Validation/" @trace #US-PARSER-013
         POSTCONDITION: "Scenarios cover the complete JSON document, encoding, exclusive routing, combined and syntax-only export, stdin, diagnostics, and output failures"
+        POSTCONDITION: "The CPC scenarios cover transitive source capture, export reconciliation, inventory mappings, and the exact-byte digest"
     16. ACHIEVE "Generate GEP-7 contract validation scenarios in Validation/Design, Validation/Acceptance, Validation/Regression, and Validation/Negative" @trace #GEP-7
         POSTCONDITION: "The scenarios cover typed signatures, both AST export modes, guard eligibility, all verification statuses, inventory behavior, and invalid contract structure, binding, and timing."
     17. ENSURE "Each folder (Validation/Design, Validation/Acceptance, Validation/Regression, Validation/Negative, Validation/SemanticRegistry, Validation/Linting, Validation/CLI) or file (Validation/Design/semantic_validation_marker_tests.gasd, Validation/Design/gasd_file_version_tests.gasd, Validation/Design/relative_json_paths_tests.gasd, Validation/Design/cli_default_info_output_tests.gasd, Validation/Design/enforce_invariant_order_tests.gasd, Validation/Design/ast_output_exclusive_file_tests.gasd) passes 'gasd_parser --ast-sem' with no errors"
@@ -173,6 +178,7 @@ FLOW phase3_generate_tests():
     ### Testing: AST JSON destination parity (US-PARSER-013)
     23. ACHIEVE "Update acceptance, regression, and negative AST output tests from the validation scenarios" @trace #US-PARSER-013
         POSTCONDITION: "CLI tests compare the full exports, verify byte equality with fixed run metadata, and assert that diagnostics remain accessible on stderr"
+        POSTCONDITION: "Impl/tests/acceptance/test_cpc_semantic_ast.py verifies source reconciliation through the ordinary export flags"
     24. ACHIEVE "Generate executable tests from the GEP-7 validation scenarios in Impl/tests" @trace #GEP-7
         POSTCONDITION: "All GEP-7 IDs map to tests. Feature tests are run against the unchanged baseline to record the gaps that Phase 4 must close."
     25. ENSURE "All acceptance tests (Steps 4-24) accurately reflect the logic defined in the Validation/ folders"
@@ -203,7 +209,7 @@ FLOW phase4_generate_implementation():
     // --- CLI Flag Consolidation (US-PARSER-007) ---
     6. ACHIEVE "Implement version-sensitive CLI flag logic: --gasd-ver {1.1 | 1.2}, --ast-combine, and LINT-013 validation" @trace #US-V2-009, #US-PARSER-007
         POSTCONDITION: "CLI versioning and batch logic updated"
-    7. ACHIEVE "Consolidate validation controls: Implement --ast-sem as primary mode with --validate (default) and --no-validate overrides" @trace #AC-PARSER-007-02, #AC-PARSER-007-03, #AC-PARSER-007-04
+    7. ACHIEVE "Enable semantic validation by default and use --no-validate for syntax-only output" @trace #AC-PARSER-007-02, #AC-PARSER-007-03, #AC-PARSER-007-04
         POSTCONDITION: "AST-SEM and validation flags implemented"
     8. ACHIEVE "Remove --ast flag and ensure it is treated as an unknown option; ensure no-flag execution defaults to --ast-sem with validation" @trace #AC-PARSER-007-01, #AC-PARSER-007-02
         POSTCONDITION: "--ast flag removed"
@@ -221,6 +227,7 @@ FLOW phase4_generate_implementation():
     ### Implementation: AST JSON destination parity (US-PARSER-013)
     14. ACHIEVE "Route the existing AST serialization to stdout or --ast-output with the JSON report on stderr" @trace #US-PARSER-013
         POSTCONDITION: "An explicit path receives the same UTF-8 AST bytes that stdout would receive and leaves stdout empty"
+        POSTCONDITION: "Validated semantic exports capture sources and reconcile the occurrence inventory before either destination receives the AST"
     
     15. ACHIEVE "Implement GEP-7 from the contract design and validations" @trace #GEP-7
         POSTCONDITION: "The grammar and generated parser retain ordered guards, both AST exports preserve them, the validator enforces contract rules, and the verifier evaluates observed calls. Bundled examples satisfy the same static rules."
@@ -271,7 +278,7 @@ FLOW phase5_full_quality_gate():
     15. ACHIEVE "Pass full suite validation on GASD 1.2 examples via: python3 -m Impl.cli Specs/examples/gasd-1.2 --gasd-ver 1.2" @trace #RT-GEP7-001
         POSTCONDITION: "GASD 1.2 examples validated"
         POSTCONDITION: "All bundled GASD 1.2 examples pass individually and as a suite with zero warnings"
-    16. ENSURE "609+ tests pass with 100% success rate across acceptance, regression, negative, design validation, and semantic test suites, including all GEP-7 checks"
+    16. ENSURE "All acceptance, regression, negative, design validation, and semantic tests pass, including the CPC export and GEP-7 checks"
         OTHERWISE THROW "Build Failure: Quality Gate Failed"
 
 // ===================================================================
@@ -280,17 +287,17 @@ FLOW phase5_full_quality_gate():
 // ===================================================================
 
 FLOW phase6_final_packaging():
-    1. ACHIEVE "Set the project version to 2.1.8 and run the full quality gate before packaging"
-        POSTCONDITION: "The CLI, package metadata, and installation documentation reflect version 2.1.8"
+    1. ACHIEVE "Bump the project version in Impl/__init__.py and pass the full quality gate before packaging"
+        POSTCONDITION: "The CLI, package metadata, and installation documentation agree on the release version"
     2. ACHIEVE "Inject current ISO-8601 timestamp into Impl/__init__.py during build"
         POSTCONDITION: "__build_time__ reflects actual execution time"
     3. ACHIEVE "Synchronize and clean up all project artifacts and documentation"
-        POSTCONDITION: "Deprecated --ast flag references removed from documentation and test docstrings"
+        POSTCONDITION: "The README, installation guide, and release notes show the current version and default semantic export commands"
     4. ACHIEVE "Assemble production artifacts into Build/Installation/dist/ directory"
-        POSTCONDITION: "gasd_parser-2.1.8-py3-none-any.whl and gasd_parser-2.1.8.tar.gz built via package.sh"
+        POSTCONDITION: "package.sh builds the wheel and source distribution for the release version"
     5. ENSURE "No operations modify, pollute, or delete the parent 'Build/' folder — all artifacts must strictly go to 'Build/Installation/dist/'"
         OTHERWISE THROW "Packaging Failed: Build Directory Mutation"
     6. ACHIEVE "Verify clean installation of the packaged wheel"
-        POSTCONDITION: "pip install Build/Installation/dist/gasd_parser-2.1.8-py3-none-any.whl succeeds in temporary venv"
-    7. ENSURE "Final distribution passes smoke tests for stdout and file AST parity, reports gasd_parser 2.1.8 and its build timestamp, and exposes the GEP-7 verifier" @trace #US-PARSER-013
+        POSTCONDITION: "Installing the release wheel from Build/Installation/dist in a temporary environment succeeds"
+    7. ENSURE "The installed CLI reports its version and build time, passes stdout and file AST parity, verifies source occurrences by default, publishes the exact-byte digest, and exposes the GEP-7 verifier" @trace(#US-PARSER-013, #AST-AC-003-01, #AST-AC-003-02)
         OTHERWISE THROW "Packaging Failed: Functionality Sanity Error"

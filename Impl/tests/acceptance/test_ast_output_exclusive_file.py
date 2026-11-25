@@ -121,7 +121,7 @@ def comparable_ast(document):
             for item in value:
                 strip_node_ids(item)
         elif isinstance(value, dict):
-            if "kind" in value and "sourceMap" in value:
+            if "kind" in value and "sourceMap" in value and "id" in value:
                 UUID(value.pop("id"))
             for item in value.values():
                 strip_node_ids(item)

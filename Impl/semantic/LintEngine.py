@@ -128,6 +128,7 @@ class LintEngine:
                 _ENV_TX_TYPES = {"ACID", "SERIALIZABLE", "READ_COMMITTED", "REPEATABLE_READ"}
                 if isinstance(tx_val, str) and tx_val.upper() in _ENV_TX_TYPES:
                     has_assumption = any(
+                        (node is a) or
                         (node.name in a.affected) or
                         (ann.alias and ann.alias in a.affected) or
                         "TX" in a.name or
@@ -149,6 +150,7 @@ class LintEngine:
             ann_defn = REGISTRY.get(ann.name)
             if ann_defn and ann_defn.triple.environmental and ann.name not in _LINT012_SKIP:
                 has_assumption = any(
+                    (node is a) or
                     (node.name in a.affected) or
                     (ann.alias and ann.alias in a.affected) or
                     (ann.alias and ann.alias in a.name) or

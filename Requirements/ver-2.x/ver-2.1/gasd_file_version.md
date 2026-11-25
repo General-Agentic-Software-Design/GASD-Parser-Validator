@@ -6,7 +6,7 @@
 ### User Story
 
 As a **GASD Tooling Integrator**,
-I want the **Semantic AST JSON output** (generated via `--json --ast-sem` or `--ast-sem --ast-output`) to include the **GASD file version** explicitly in both the validation marker and semantic metadata,
+I want each validated **Semantic AST JSON export** to include the **GASD file version** explicitly in both the validation marker and semantic metadata,
 So that downstream tools can conditionally adjust validation and execution logic based on the format version, or flag the format as "unknown" to prompt human inspection.
 
 ---
@@ -24,7 +24,7 @@ So that downstream tools can conditionally adjust validation and execution logic
 
 ---
 
-### Example Output (With Version Specified)
+### Example Output (Excerpt With Version Specified)
 
 ```json
 {
@@ -33,16 +33,15 @@ So that downstream tools can conditionally adjust validation and execution logic
   },
   "semantic_validate": {
     "status": "PASSED",
-    "parser_version": "2.1.3",
+    "parser_version": "2.1.11",
     "build_time": "2026-04-10T14:30:00Z",
     "validation_time": "2026-04-12T22:15:00Z",
     "gasd_file_version": "1.2"
-  },
-  "nodes": [...]
+  }
 }
 ```
 
-### Example Output (Without Version Specified)
+### Example Output (Excerpt Without Version Specified)
 
 ```json
 {
@@ -51,12 +50,11 @@ So that downstream tools can conditionally adjust validation and execution logic
   },
   "semantic_validate": {
     "status": "PASSED",
-    "parser_version": "2.1.3",
+    "parser_version": "2.1.11",
     "build_time": "2026-04-10T14:30:00Z",
     "validation_time": "2026-04-12T22:15:00Z",
     "gasd_file_version": "unknown"
-  },
-  "nodes": [...]
+  }
 }
 ```
 

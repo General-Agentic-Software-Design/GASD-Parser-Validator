@@ -24,7 +24,7 @@ So that I can immediately see the tool's version details along with the standard
 ### Example Output
 
 ```text
-GASD-Parser Version: 2.1.3 (Build: 2026-04-10T14:30:00Z)
+GASD-Parser Version: 2.1.11 (Build: 2026-11-25T23:15:24Z)
 
 usage: gasd_parser [-h] [--json] [--ast-sem] [--ast-combine] [--ast-output AST_OUTPUT] [--gasd-ver GASD_VER] [--no-validate] [-v]
                    [path ...]

@@ -1,12 +1,14 @@
 """Executable acceptance, regression, negative and design checks for AST provenance."""
 
 from copy import deepcopy
+from datetime import datetime
 from hashlib import sha512
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -140,7 +142,7 @@ def test_report_matches_both_export_destinations(tmp_path, version):
     (tmp_path / "entry.gasd").write_bytes(spec("app", 'TYPE Item: value: String', version))
     stdout, stdout_report = export(tmp_path, "entry.gasd")
     artifact, file_report = export(tmp_path, "entry.gasd", destination="ast.json")
-    assert ("semantic_validate" in json.loads(stdout)) is (version == "1.2")
+    assert json.loads(stdout)["semantic_validate"]["gasd_file_version"] == version
     assert stdout_report[CONTENT_HASH] == file_report[CONTENT_HASH]
     for consumer in ("pox", "scaffgen"):
         delivered = tmp_path / f"{consumer}.json"
@@ -246,6 +248,8 @@ def test_terminal_newline_is_hashed(tmp_path, monkeypatch, capsysbinary):
     (tmp_path / "entry.gasd").write_bytes(spec("app", 'TYPE Item: value: String'))
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", ["gasd_parser", "--json", "entry.gasd"])
+    fixed_time = datetime(2026, 1, 1)
+    monkeypatch.setattr(cli, "datetime", SimpleNamespace(datetime=SimpleNamespace(utcnow=lambda: fixed_time)))
     serializer = SemanticASTExporter.to_json
     artifact = None
 
@@ -254,7 +258,9 @@ def test_terminal_newline_is_hashed(tmp_path, monkeypatch, capsysbinary):
         if artifact is None:
             artifact = serializer(self, *args, **kwargs)
             return artifact
-        return artifact + "\n"
+        embedded = json.loads(artifact)["semantic_validate"][BYTE_HASH]
+        zeroed = artifact.replace(embedded, "0" * 128, 1) + "\n"
+        return artifact.replace(embedded, sha512(zeroed.encode()).hexdigest(), 1) + "\n"
 
     monkeypatch.setattr(SemanticASTExporter, "to_json", with_optional_newline)
     outputs = []
@@ -263,9 +269,11 @@ def test_terminal_newline_is_hashed(tmp_path, monkeypatch, capsysbinary):
             cli.main()
         assert stopped.value.code == 0
         out, err = capsysbinary.readouterr()
-        marker = json.loads(err)["semantic_validate"]
-        assert marker[BYTE_HASH] == sha512(out).hexdigest()
-        outputs.append((out, marker))
+        report = json.loads(err)
+        marker = report["semantic_validate"]
+        assert report["semantic_ast_sha512"] == marker[BYTE_HASH] == sha512(out).hexdigest()
+        embedded = json.loads(out)["semantic_validate"][BYTE_HASH].encode()
+        outputs.append((out.replace(embedded, b"0" * 128, 1), marker))
     assert outputs[1][0] == outputs[0][0] + b"\n"
     assert outputs[1][1][CONTENT_HASH] == outputs[0][1][CONTENT_HASH]
     assert outputs[1][1][BYTE_HASH] != outputs[0][1][BYTE_HASH]

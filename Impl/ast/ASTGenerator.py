@@ -6,9 +6,10 @@ from ..parser.generated.grammar.GASDParser import GASDParser
 from ..parser.generated.grammar.GASDParserVisitor import GASDParserVisitor
 
 class ASTGenerator(GASDParserVisitor):
-    def __init__(self, source_file="unknown"):
+    def __init__(self, source_file="unknown", *, cpc=False):
         self.source_file = source_file
         self.pending_annotations = []
+        self.cpc = cpc
 
     def visit(self, tree):
         # type_name = type(tree).__name__
@@ -113,7 +114,15 @@ class ASTGenerator(GASDParserVisitor):
         )
         res_file.annotations = self.pending_annotations
         self.pending_annotations = []
+        if self.cpc:
+            res_file.cpc_annotation_positions = self._annotation_positions(ctx)
         return res_file
+
+    def _annotation_positions(self, ctx):
+        if isinstance(ctx, GASDParser.AnnotationContext):
+            yield ctx.start.line, ctx.start.column
+        for child in getattr(ctx, "children", None) or ():
+            yield from self._annotation_positions(child)
 
     def visitSection(self, ctx: GASDParser.SectionContext):
         # We need an explicit visitSection because 'section : annotations NEWLINE'
@@ -127,7 +136,10 @@ class ASTGenerator(GASDParserVisitor):
         return None
 
     def visitEnsure_stmt(self, ctx: GASDParser.Ensure_stmtContext):
-        return EnsureNode(expression=ctx.STRING_LITERAL().getText().strip('"'), **self._get_loc(ctx))
+        result = EnsureNode(expression=ctx.STRING_LITERAL().getText().strip('"'), **self._get_loc(ctx))
+        if self.cpc:
+            result.annotations = self._visit_anns(ctx.annotations())
+        return result
 
     def visitMatch_section(self, ctx: GASDParser.Match_sectionContext):
         return self.visit(ctx.match_expr())
@@ -212,7 +224,11 @@ class ASTGenerator(GASDParserVisitor):
                 if "*" in affects_node.getText():
                     affects.append("*")
 
-        return Decision(name=name, chosen=chosen, rationale=rationale, alternatives=alternatives, affects=affects, **loc)
+        decision = Decision(name=name, chosen=chosen, rationale=rationale, alternatives=alternatives, affects=affects, **loc)
+        if self.cpc:
+            decision.annotations = self.pending_annotations + self._visit_anns(ctx.annotations())
+            self.pending_annotations = []
+        return decision
 
     def visitType_def(self, ctx: GASDParser.Type_defContext):
         loc = self._get_loc(ctx)
@@ -242,7 +258,10 @@ class ASTGenerator(GASDParserVisitor):
             te_ctx = ctx.type_expr()
             if hasattr(te_ctx, 'ENUM_KW') and te_ctx.ENUM_KW():
                 is_enum = True
-        return TypeDefinition(name=name, fields=fields, isEnum=is_enum, annotations=anns, **loc)
+        result = TypeDefinition(name=name, fields=fields, isEnum=is_enum, annotations=anns, **loc)
+        if self.cpc:
+            result.definition = self.visit(ctx.type_expr()) if ctx.type_expr() else None
+        return result
 
     def visitField_def(self, ctx: GASDParser.Field_defContext):
         loc = self._get_loc(ctx)
@@ -250,7 +269,11 @@ class ASTGenerator(GASDParserVisitor):
         anns = self.pending_annotations + self._visit_anns(ctx.annotations())
         self.pending_annotations = []
         type_expr = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Unknown", **loc)
-        return FieldDefinition(name=name, type=type_expr, annotations=anns, **loc)
+        result = FieldDefinition(name=name, type=type_expr, annotations=anns, **loc)
+        if self.cpc:
+            result.annotations.extend(self.visit(annotation) for annotation in ctx.annotation())
+            result.alias = ctx.alias_val().getText().strip('"\'') if ctx.alias_val() else None
+        return result
 
     # === Labeled Type Expression Visitors ===
 
@@ -265,11 +288,11 @@ class ASTGenerator(GASDParserVisitor):
 
     def visitRecordType(self, ctx: GASDParser.RecordTypeContext):
         loc = self._get_loc(ctx)
-        args = []
-        if hasattr(ctx, 'param_list') and ctx.param_list():
-             # self.visit() on param just returns a Parameter object
-             args = [self.visit(p).type for p in ctx.param_list().param()]
-        return TypeExpression(baseType="Record", genericArgs=args, **loc)
+        fields = self.visit(ctx.param_list()) if ctx.param_list() else []
+        result = TypeExpression(baseType="Record", genericArgs=[field.type for field in fields], **loc)
+        if self.cpc:
+            result.recordFields = fields
+        return result
 
     def visitEnumType(self, ctx: GASDParser.EnumTypeContext):
         loc = self._get_loc(ctx)
@@ -286,7 +309,10 @@ class ASTGenerator(GASDParserVisitor):
         loc = self._get_loc(ctx)
         inner = self.visit(ctx.type_expr())
         if inner:
-            return replace(inner, isOptional=True, **loc)
+            result = replace(inner, isOptional=True, **loc)
+            if self.cpc and hasattr(inner, "recordFields"):
+                result.recordFields = inner.recordFields
+            return result
         return TypeExpression(baseType="Any", isOptional=True, **loc)
 
     def visitSimpleType(self, ctx: GASDParser.SimpleTypeContext):
@@ -322,7 +348,8 @@ class ASTGenerator(GASDParserVisitor):
             "pattern": None,
             "dependencies": [],
             "methods": [],
-            "fields": []
+            "fields": [],
+            "interfaces": [],
         }
         
         for item in ctx.component_body_item():
@@ -337,6 +364,10 @@ class ASTGenerator(GASDParserVisitor):
             annotations=anns,
             **loc
         )
+        if self.cpc:
+            res.fields = self._current_component["fields"]
+            res.interfaces = self._current_component["interfaces"]
+            res.annotations.extend(self.pending_annotations)
         self.pending_annotations = []
         del self._current_component
         return res
@@ -351,11 +382,26 @@ class ASTGenerator(GASDParserVisitor):
             if "*" in list_node.getText():
                 self._current_component["dependencies"].append("*")
         elif ctx.INTERFACE_KW():
-            for m in ctx.method_sig():
-                self._current_component["methods"].append(self.visit(m))
-            for f in ctx.field_def():
-                # We could add fields to ComponentDefinition if needed, but for now just skip or log
-                pass
+            if self.cpc:
+                methods, fields = [], []
+                for child in ctx.children:
+                    if isinstance(child, GASDParser.Method_sigContext):
+                        methods.append(self.visit(child))
+                    elif isinstance(child, GASDParser.Field_defContext):
+                        fields.append(self.visit(child))
+                    elif isinstance(child, GASDParser.AnnotationsContext):
+                        self.pending_annotations.extend(self._visit_anns(child))
+                self._current_component["methods"].extend(methods)
+                self._current_component["fields"].extend(fields)
+                self._current_component["interfaces"].append({
+                    **self._get_loc(ctx), "kind": "Interface",
+                    "operations": [method.name for method in methods], "fields": [field.name for field in fields],
+                })
+            else:
+                for method in ctx.method_sig():
+                    self._current_component["methods"].append(self.visit(method))
+        elif self.cpc and ctx.annotations():
+            self.pending_annotations.extend(self._visit_anns(ctx.annotations()))
         return None
     def visitMethod_sig(self, ctx: GASDParser.Method_sigContext):
         loc = self._get_loc(ctx)
@@ -390,6 +436,10 @@ class ASTGenerator(GASDParserVisitor):
         # Visit children to find flow_steps, match_exprs, etc.
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
+            if (self.cpc and not steps and isinstance(child, GASDParser.Flow_stepContext)
+                    and isinstance(child.getChild(0), GASDParser.AnnotationsContext) and not child.internal_block()):
+                anns.extend(self.visit(child.annotations()))
+                continue
             if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.Field_defContext, GASDParser.Match_exprContext)):
                 res = self.visit(child)
                 if res:
@@ -398,11 +448,15 @@ class ASTGenerator(GASDParserVisitor):
         return FlowDefinition(name=name, parameters=params, steps=steps, returnType=ret, annotations=anns, **loc)
     def visitFlow_step(self, ctx: GASDParser.Flow_stepContext):
         loc = self._get_loc(ctx)
+        own_annotations = []
         
         if hasattr(ctx, 'annotations') and ctx.annotations():
             anns = self.visit(ctx.annotations())
             if anns:
-                self.pending_annotations.extend(anns)
+                if self.cpc:
+                    own_annotations = anns
+                else:
+                    self.pending_annotations.extend(anns)
         
         step_num = None
         step_id_ctx = None
@@ -468,6 +522,17 @@ class ASTGenerator(GASDParserVisitor):
                 **loc
             )
 
+        if self.cpc:
+            res.stepNumber = step_num
+            res.annotations = sorted(
+                own_annotations + (main_op.get("annotations", []) if isinstance(main_op, dict) else []),
+                key=lambda annotation: (annotation.line, annotation.column),
+            )
+            res.stepId = step_id_ctx.getText() if step_id_ctx else None
+            res.postconditionNodes = main_op.get("postconditionNodes", []) if isinstance(main_op, dict) else []
+            if ctx.internal_block():
+                for statement in ctx.internal_block().postcondition_stmt():
+                    res.postconditionNodes.extend(self._cpc_condition(item) for item in statement.postcondition_expr())
         # Handle internal_block content for properties/dependencies
         if ctx.internal_block():
             block_items = self.visit(ctx.internal_block())
@@ -478,7 +543,9 @@ class ASTGenerator(GASDParserVisitor):
                     res.postconditions.extend(item[1:])
                 elif isinstance(item, list) and len(item) > 0 and isinstance(item[0], str) and item[0] == "TIMEOUT":
                     res.timeout = item[1]
-                elif isinstance(item, FlowStepNode):
+                elif self.cpc and getattr(item, "action", None) == "ANNOTATION":
+                    res.annotations.extend(item.annotations)
+                elif isinstance(item, FlowStepNode) or (self.cpc and isinstance(item, MatchNode)):
                     if getattr(res, 'subSteps', None) is None: res.subSteps = []
                     res.subSteps.append(item)
 
@@ -495,7 +562,10 @@ class ASTGenerator(GASDParserVisitor):
         items = []
         for i in range(ctx.getChildCount()):
             child = ctx.getChild(i)
-            if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.Step_propertyContext, 
+            if self.cpc and isinstance(child, GASDParser.On_error_clauseContext):
+                items.append(self._cpc_action_step(child.action(), "ON_ERROR"))
+            elif (self.cpc and isinstance(child, GASDParser.Match_exprContext)) or isinstance(
+                    child, (GASDParser.Flow_stepContext, GASDParser.Step_propertyContext,
                                  GASDParser.Otherwise_stmtContext, GASDParser.Depends_stmtContext,
                                  GASDParser.Postcondition_stmtContext, GASDParser.Timeout_stmtContext)):
                 res = self.visit(child)
@@ -510,6 +580,39 @@ class ASTGenerator(GASDParserVisitor):
         pcs = [pe.getText() for pe in ctx.postcondition_expr()]
         return ["POSTCONDITION"] + pcs
 
+    def _cpc_condition(self, ctx):
+        def expression(node):
+            left, right = getattr(node, "left", None), getattr(node, "right", None)
+            if left is not None and right is not None:
+                return {
+                    "operator": node.getChild(1).getText(),
+                    "left": expression(left),
+                    "right": expression(right),
+                }
+            return {"value": node.getText()}
+
+        return {**self._get_loc(ctx), "kind": "Postcondition", "expression": expression(ctx.expr())}
+
+    def _cpc_annotations(self, ctx):
+        if isinstance(ctx, GASDParser.AnnotationContext):
+            return [self.visit(ctx)]
+        if isinstance(ctx, (GASDParser.Flow_stepContext, GASDParser.Internal_blockContext)):
+            return []
+        return [
+            annotation
+            for child in getattr(ctx, "children", None) or ()
+            for annotation in self._cpc_annotations(child)
+        ]
+
+    def _cpc_action_step(self, ctx, branch=None):
+        action = self.visit(ctx)
+        step = FlowStepNode(
+            action=action["action"], target=action["target"],
+            annotations=action["annotations"], **self._get_loc(ctx),
+        )
+        step.branch = branch
+        return step
+
     def visitTimeout_stmt(self, ctx: GASDParser.Timeout_stmtContext):
         return ["TIMEOUT", ctx.duration_literal().getText()]
 
@@ -523,6 +626,24 @@ class ASTGenerator(GASDParserVisitor):
         return MatchNode(expression=expr_text, cases=cases, **loc)
 
     def visitMatch_case(self, ctx: GASDParser.Match_caseContext):
+        if self.cpc:
+            patterns = [pattern.getText() for pattern in ctx.match_pattern()] or ["DEFAULT"]
+            if ctx.match_case_block_items():
+                steps = self.visit(ctx.match_case_block_items())
+            elif ctx.flow_step():
+                steps = [self.visit(ctx.flow_step())]
+            elif ctx.action():
+                steps = [self._cpc_action_step(ctx.action())]
+            elif ctx.expr():
+                steps = [FlowStepNode(action="VALUE", target=ctx.expr().getText(), **self._get_loc(ctx.expr()))]
+            else:
+                steps = []
+            case = MatchCase(condition=" | ".join(patterns), target="")
+            case.patterns = patterns
+            case.steps = steps
+            for key, value in self._get_loc(ctx).items():
+                setattr(case, key, value)
+            return case
         cond = ctx.getChild(0).getText()
         # Find the result part (index 2 or the block)
         res_node = ctx.getChild(2)
@@ -653,7 +774,7 @@ class ASTGenerator(GASDParserVisitor):
                 parts.append(ctx.getChild(i).getText())
             target = " ".join(parts).strip()
         
-        return {
+        result = {
             "action": action_name, 
             "target": target, 
             "postconditions": postconditions,
@@ -661,6 +782,13 @@ class ASTGenerator(GASDParserVisitor):
             "asBinding": as_binding,
             "typePath": type_path
         }
+        if self.cpc:
+            if not result["action"]:
+                result["action"] = ctx.start.text
+            result["annotations"] = self._cpc_annotations(ctx)
+            if hasattr(ctx, "postcondition_expr") and ctx.postcondition_expr():
+                result["postconditionNodes"] = [self._cpc_condition(ctx.postcondition_expr())]
+        return result
 
     def visitControl_flow(self, ctx: GASDParser.Control_flowContext):
         loc = self._get_loc(ctx)
@@ -671,22 +799,56 @@ class ASTGenerator(GASDParserVisitor):
                 if not isinstance(child, GASDParser.AnnotationsContext):
                     parts.append(child.getText())
             target = " ".join(parts).strip()
-            return {"action": "ENSURE", "target": target}
+            result = {"action": "ENSURE", "target": target}
+            if self.cpc:
+                result["annotations"] = self._cpc_annotations(ctx.annotations(0))
+                annotations = ctx.annotations()
+                otherwise = next((child for child in ctx.children if child.getText() == "OTHERWISE"), None)
+                if otherwise is not None:
+                    token = otherwise.start if hasattr(otherwise, "start") else otherwise.getSymbol()
+                    otherwise_index = token.tokenIndex
+                    result["annotations"] = self._cpc_annotations(
+                        next((a for a in annotations if a.start.tokenIndex < otherwise_index), None)
+                    )
+                    branch_annotations = next((a for a in annotations if a.start.tokenIndex > otherwise_index), None)
+                    separator = parts.index("OTHERWISE")
+                    branch = FlowStepNode(
+                        action="OTHERWISE", target=" ".join(parts[separator + 1:]),
+                        annotations=self._cpc_annotations(branch_annotations),
+                        line=token.line, column=token.column, sourceFile=self.source_file,
+                    )
+                    result["target"] = " ".join(parts[:separator])
+                    result["subSteps"] = [branch]
+            return result
             
-        if ctx.IF_KW() or ctx.ON_ERROR_KW():
-            action_name = "IF" if ctx.IF_KW() else "ON_ERROR"
+        if ctx.IF_KW() or ctx.ON_ERROR_KW() or (self.cpc and ctx.ELSE_KW()):
+            action_name = ctx.start.text
             target = self._get_text(ctx.expr(), 0) if ctx.expr() else ""
             substeps = []
+            branch = {"IF": "then", "ELSE": "else", "ON_ERROR": "error"}[action_name]
             for i in range(ctx.getChildCount()):
                 child = ctx.getChild(i)
+                if self.cpc and child.getText() == "ELSE":
+                    branch = "else"
                 if isinstance(child, (GASDParser.Flow_stepContext, GASDParser.ActionContext)):
+                    if self.cpc:
+                        step = self._cpc_action_step(child) if isinstance(child, GASDParser.ActionContext) else self.visit(child)
+                        step.branch = branch
+                        substeps.append(step)
+                        continue
                     res = self.visit(child)
                     if res:
                         if isinstance(res, dict):
                             substeps.append(FlowStepNode(action=res["action"], target=res["target"], **loc))
                         else:
                             substeps.append(res)
-            return {"action": action_name, "target": target, "subSteps": substeps}
+            result = {"action": action_name, "target": target, "subSteps": substeps}
+            if self.cpc:
+                result["annotations"] = [
+                    annotation for ctx_annotations in ctx.annotations()
+                    for annotation in self._cpc_annotations(ctx_annotations)
+                ]
+            return result
 
         action_name = ctx.getChild(0).getText()
         target = self._get_text(ctx.expr())
@@ -734,7 +896,14 @@ class ASTGenerator(GASDParserVisitor):
             
         alias = ctx.alias.getText().strip('"\'') if ctx.AS_KW() and ctx.alias else None
         
-        return Annotation(name=name, arguments=args, alias=alias)
+        annotation = Annotation(name=name, arguments=args, alias=alias)
+        if self.cpc:
+            annotation.line = ctx.start.line
+            annotation.column = ctx.start.column
+            annotation.sourceFile = self.source_file
+            if isinstance(ctx.parentCtx, GASDParser.Primary_exprContext):
+                annotation.attachment = "expression"
+        return annotation
 
     def visitStep_property(self, ctx: GASDParser.Step_propertyContext):
         name = ctx.soft_id().getText()
@@ -746,7 +915,10 @@ class ASTGenerator(GASDParserVisitor):
             
         loc = self._get_loc(ctx)
         # Map step property to a FlowStepNode with action="PROPERTY" to fit in subSteps
-        return FlowStepNode(stepNumber=None, action="PROPERTY", target=f"{name}: {val}", **loc)
+        result = FlowStepNode(stepNumber=None, action="PROPERTY", target=f"{name}: {val}", **loc)
+        if self.cpc:
+            result.annotations = self._cpc_annotations(ctx)
+        return result
 
     def visitContract_def(self, ctx: GASDParser.Contract_defContext):
         loc = self._get_loc(ctx)
@@ -807,8 +979,12 @@ class ASTGenerator(GASDParserVisitor):
         elif ctx.STRING_LITERAL():
             name = ctx.STRING_LITERAL().getText().strip('"\'')
             
+        clauses = [self.visit(clause) for clause in ctx.case_clause()]
+        if self.cpc:
+            for clause, syntax in zip(clauses, ctx.case_clause()):
+                clause.update(self._get_loc(syntax))
         return ContractCase(
-            name=name, clauses=[self.visit(clause) for clause in ctx.case_clause()],
+            name=name, clauses=clauses,
             when=[self.visit(guard) for guard in ctx.case_guard()],
             hasLegacySteps=bool(ctx.legacy_case_step()), **loc,
         )
@@ -898,7 +1074,10 @@ class ASTGenerator(GASDParserVisitor):
         if ctx.ASSUMPTIONS_KW():
             assumptions = [a.getText().strip('"\'') for a in ctx.STRING_LITERAL()[2:]] # Skip first name and path
         
-        return ModelDefinition(name=name, type=model_type, file=file_path, verifies=verifies, assumptions=assumptions, **loc)
+        result = ModelDefinition(name=name, type=model_type, file=file_path, verifies=verifies, assumptions=assumptions, **loc)
+        if self.cpc:
+            result.annotations = self._visit_anns(ctx.annotations())
+        return result
 
     def visitAssumption_def(self, ctx: GASDParser.Assumption_defContext):
         loc = self._get_loc(ctx)
@@ -917,7 +1096,10 @@ class ASTGenerator(GASDParserVisitor):
         if ctx.CONSEQUENCE_KW() and sl:
             consequence = sl[-1].getText().strip('"\'')
         
-        return AssumptionDefinition(name=name, affects=affects, consequence=consequence, **loc)
+        result = AssumptionDefinition(name=name, affects=affects, consequence=consequence, **loc)
+        if self.cpc and hasattr(ctx, "annotations"):
+            result.annotations = self._visit_anns(ctx.annotations())
+        return result
 
     def visitConstraint_stmt(self, ctx: GASDParser.Constraint_stmtContext):
         name = None
@@ -937,7 +1119,10 @@ class ASTGenerator(GASDParserVisitor):
                     name = ctx.soft_id().getText()
                 text = str_literals[0].getText().strip('"\'')
         
-        return ConstraintNode(kind="Constraint", text=text, name=name, **self._get_loc(ctx))
+        result = ConstraintNode(kind="Constraint", text=text, name=name, **self._get_loc(ctx))
+        if self.cpc:
+            result.annotations = self._visit_anns(ctx.annotations())
+        return result
 
     def visitInvariant_stmt(self, ctx: GASDParser.Invariant_stmtContext):
         scope = None
@@ -962,13 +1147,16 @@ class ASTGenerator(GASDParserVisitor):
                     name = ctx.soft_id().getText()
                 text = str_literals[0].getText().strip('"\'')
         
-        return ConstraintNode(
+        result = ConstraintNode(
             text=text,
             kind="Invariant",
             name=name,
             scope=scope,
             **self._get_loc(ctx)
         )
+        if self.cpc:
+            result.annotations = self._visit_anns(ctx.annotations())
+        return result
 
     def visitTodo_stmt(self, ctx: GASDParser.Todo_stmtContext):
         return TodoNode(text=ctx.STRING_LITERAL().getText().strip('"'), **self._get_loc(ctx))
@@ -1015,7 +1203,19 @@ class ASTGenerator(GASDParserVisitor):
             elif child_text == "OUTPUT":
                 output = self.visit(item.type_expr())
 
-        return StrategyDefinition(name=name, algorithm=algo, precondition=prec, complexity=comp, inputs=inputs, output=output, annotations=anns, **loc)
+        result = StrategyDefinition(
+            name=name, algorithm=algo, precondition=prec, complexity=comp,
+            inputs=inputs, output=output, annotations=anns, **loc,
+        )
+        if self.cpc:
+            result.clauses = [
+                {**self._get_loc(item), "kind": item.start.text,
+                 "value": "".join(child.getText() for child in item.children[2:]
+                                  if not isinstance(child, GASDParser.AnnotationsContext)).strip()}
+                for item in ctx.strategy_item()
+            ]
+            result.clauseAnnotations = [self._visit_anns(item.annotations()) for item in ctx.strategy_item()]
+        return result
 
 
     def _visit_anns(self, ctx_list):

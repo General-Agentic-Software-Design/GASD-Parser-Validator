@@ -2,7 +2,7 @@ VERSION 1.1
 /*
    Validation: Semantic AST — CLI Integration Tests
    ================================================
-   Verifies the --ast-sem flag and legacy AST option interoperability.
+   Verifies default semantic validation, export routing, and syntax-only output.
    Based on Design/cli_design.gasd.
 */
 
@@ -16,38 +16,38 @@ TRACE: "US-SEMAST-016", "US-SEMAST-018", "US-X-SEMAST-010"
 
 FLOW test_semast_cli_activation():
     @trace #AT-SEMAST-016-01, #AC-SEMAST-016-01
-    1. ACHIEVE "Run CLI with valid file and --ast-sem flag"
-    2. ENSURE "CLI initiates semantic analysis pipeline and outputs .semAST.json"
+    1. ACHIEVE "Run CLI with a valid file and --json"
+    2. ENSURE "The CLI writes one validated SemanticSystem to stdout and a JSON report with the byte digest to stderr"
         OTHERWISE THROW "Validation Failed"
 
-FLOW test_semast_cli_dual_output():
+FLOW test_semast_cli_syntax_output():
     @trace #AT-SEMAST-016-02, #AC-SEMAST-016-02
-    1. ACHIEVE "Run CLI with both --ast and --ast-sem flags"
-    2. ENSURE "CLI outputs both syntactic (.ast.json) and semantic representations"
+    1. ACHIEVE "Run CLI with --json --no-validate"
+    2. ENSURE "The CLI writes a syntactic AST without a verified inventory or artifact digest"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_multi_file_input():
     @trace #AT-X-SEMAST-010-01, #AC-X-SEMAST-010-01
-    1. ACHIEVE "Run CLI with multiple GASD files as input"
+    1. ACHIEVE "Run CLI with --json and multiple GASD files as input"
     2. ENSURE "CLI processes them as a single compilation unit and generates one global Semantic AST"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_output_dir():
     @trace #AT-SEMAST-016-03, #AC-SEMAST-016-03
-    1. ACHIEVE "Run CLI with --ast-sem and --ast-out ./custom-dir"
-    2. ENSURE "Semantic output is correctly placed in specified remote directory"
+    1. ACHIEVE "Run CLI with --ast-output ./custom-dir/ast.json"
+    2. ENSURE "The file contains the reconciled semantic AST and stdout is empty"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_combine():
     @trace #AT-SEMAST-016-04, #AC-SEMAST-016-04, #AC-SEMAST-018-04
-    1. ACHIEVE "Run CLI on directory with --ast-sem and --ast-combine single.json"
-    2. ENSURE "Output is a single .semAST.json containing array of SemanticSystems"
+    1. ACHIEVE "Run CLI on a directory with --ast-combine --ast-output single.json"
+    2. ENSURE "Output is a single SemanticSystem containing all successfully validated inputs"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_errors():
     @trace #AT-SEMAST-016-05, #AC-SEMAST-016-05, #AC-X-SEMAST-010-01, #AC-X-SEMAST-010-05
     1. ACHIEVE "Run CLI with --ast-sem on multiple files with validation errors"
-    2. ENSURE "Semantic errors are aggregated across files and printed to stdout"
+    2. ENSURE "Semantic errors are aggregated across files and printed to stderr"
         OTHERWISE THROW "Validation Failed"
     3. ENSURE "The output ends with a summary of total errors/warnings found"
         OTHERWISE THROW "Validation Failed"
@@ -61,13 +61,13 @@ FLOW test_semast_cli_deterministic_errors():
 FLOW test_semast_cli_default_behavior():
     @trace #AT-SEMAST-016-06, #AC-SEMAST-016-06
     1. ACHIEVE "Run CLI without any AST flags"
-    2. ENSURE "Only syntactic validation occurs; no semantic structures are built"
+    2. ENSURE "Semantic validation runs and prints a summary without exporting an AST"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_combined_opts():
     @trace #AT-SEMAST-018-01, #AC-SEMAST-018-05
-    1. ACHIEVE "Run CLI with --ast, --ast-sem, and --ast-combine together"
-    2. ENSURE "Tool generates combined syntactic AND combined semantic artifacts"
+    1. ACHIEVE "Run CLI with --json --ast-combine --ast-output single.json"
+    2. ENSURE "The CLI writes one source-checked AST to the file and a JSON report to stderr"
         OTHERWISE THROW "Validation Failed"
 
 // ===================================================================
