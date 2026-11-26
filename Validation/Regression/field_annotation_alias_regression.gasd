@@ -1,0 +1,13 @@
+VERSION 1.2
+CONTEXT: "Compatibility validation for TYPE field annotation identifiers"
+TARGET: "Python3"
+NAMESPACE: "validation.field_annotation_alias.regression"
+TRACE: "AC-V2-001-03", "AT-V2-111", "AC-PARSER-008-06"
+
+CONSTRAINT: "Scenarios derive from Design/field_annotation_alias_design.gasd."
+
+FLOW verify_legacy_field_annotations():
+    1. ACHIEVE "Export an unaliased TYPE field in a GASD 1.1 file and a file without a VERSION directive"
+        POSTCONDITION: "Both semantic exports succeed. LINT-011 is informational and refers to the field annotation's own location."
+    2. ACHIEVE "Validate GASD 1.1 and 1.2 files together with unaliased fields in each"
+        POSTCONDITION: "Each file receives one LINT-011 at its annotation, with INFO for 1.1 and ERROR for 1.2. The failed batch publishes no AST."

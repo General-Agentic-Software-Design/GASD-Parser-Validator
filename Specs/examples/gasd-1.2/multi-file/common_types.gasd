@@ -9,7 +9,7 @@ NAMESPACE: "org.gasd.examples.multifile.common"
 
 TYPE Money:
     amount: Decimal
-    currency: String @min_length(3) @max_length(3) AS CURRENCY_CODE_LEN
+    currency: String @min_length(3) AS CURRENCY_CODE_MIN @max_length(3) AS CURRENCY_CODE_LEN
 
 TYPE OrderItem:
     sku: String

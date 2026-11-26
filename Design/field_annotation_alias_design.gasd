@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "Validate AS identifiers on TYPE field annotations"
+TARGET: "Python3"
+NAMESPACE: "design.field_annotation_alias"
+TRACE: "US-V2-007", "AC-V2-001-02", "AC-V2-007-03", "AT-V2-111", "AC-PARSER-008-06", "AST-AC-002-03", "AST-AC-003-01"
+
+CONSTRAINT: "Check authored TYPE field annotations for LINT-011 during semantic validation, including validation runs without an AST export. Apply the effective version of the file that owns each annotation."
+CONSTRAINT: "Report each missing identifier once at the annotation's first token, with ERROR severity in GASD 1.2 and INFO in GASD 1.1."
+CONSTRAINT: "A LINT-011 error prevents semantic AST publication to stdout or a file. A successful semantic export preserves each authored field annotation identifier on both the annotation and its pointing source inventory entry."
+CONSTRAINT: "A syntax-only run keeps the AS clause optional. The semantic rule runs only when semantic validation is requested."

@@ -1,0 +1,13 @@
+VERSION 1.2
+CONTEXT: "Design validation for TYPE field annotation identifiers"
+TARGET: "Python3"
+NAMESPACE: "validation.field_annotation_alias.design"
+TRACE: "AC-V2-007-03", "AC-PARSER-008-06"
+
+CONSTRAINT: "Scenarios derive from Design/field_annotation_alias_design.gasd."
+
+FLOW verify_field_annotation_lint_modes():
+    1. ACHIEVE "Validate an unaliased GASD 1.2 TYPE field with no AST destination"
+        POSTCONDITION: "The ordinary semantic run fails with LINT-011 at the annotation's first token."
+    2. ACHIEVE "Parse the same field using syntax-only JSON export"
+        POSTCONDITION: "The syntactic AST is produced and the report has no LINT-011 diagnostic."

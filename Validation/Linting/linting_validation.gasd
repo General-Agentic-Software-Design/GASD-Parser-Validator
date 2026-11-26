@@ -65,6 +65,7 @@ FLOW validate_lint_rules():
     /// LINT-011: Annotation without AS identifier
     11. ACHIEVE "Validate LINT-011":
         POSTCONDITION: result.severity_v12 == "ERROR" AND result.severity_v11 == "Info"
+        POSTCONDITION: "Apply the rule to each authored TYPE field annotation and report the position of its first token."
         @trace(#AC-V2-001-02) AS ACHIEVE_L011_TRACE
     
     /// LINT-012: Env-dep annotation without ASSUMPTION

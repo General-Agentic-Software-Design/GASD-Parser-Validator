@@ -1,0 +1,13 @@
+VERSION 1.2
+CONTEXT: "Rejection validation for missing TYPE field annotation identifiers"
+TARGET: "Python3"
+NAMESPACE: "validation.field_annotation_alias.negative"
+TRACE: "AC-V2-007-03", "AT-V2-111", "AC-PARSER-008-06", "AST-AC-003-01"
+
+CONSTRAINT: "Scenarios derive from Design/field_annotation_alias_design.gasd."
+
+FLOW verify_missing_field_identifiers():
+    1. ACHIEVE "Attempt semantic export of an unaliased GASD 1.2 TYPE field to stdout and a fresh file"
+        POSTCONDITION: "Each run fails with a single LINT-011 ERROR at the annotation's first token and publishes no AST or successful marker."
+    2. ACHIEVE "Validate a field carrying two unaliased annotations on the same line"
+        POSTCONDITION: "Each authored occurrence produces exactly one LINT-011 ERROR at its own column."

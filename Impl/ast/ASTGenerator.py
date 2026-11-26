@@ -267,11 +267,11 @@ class ASTGenerator(GASDParserVisitor):
         loc = self._get_loc(ctx)
         name = ctx.soft_id().getText() if ctx.soft_id() else "Anonymous"
         anns = self.pending_annotations + self._visit_anns(ctx.annotations())
+        anns.extend(self.visit(annotation) for annotation in ctx.annotation())
         self.pending_annotations = []
         type_expr = self.visit(ctx.type_expr()) if ctx.type_expr() else TypeExpression(baseType="Unknown", **loc)
         result = FieldDefinition(name=name, type=type_expr, annotations=anns, **loc)
         if self.cpc:
-            result.annotations.extend(self.visit(annotation) for annotation in ctx.annotation())
             result.alias = ctx.alias_val().getText().strip('"\'') if ctx.alias_val() else None
         return result
 
@@ -897,9 +897,9 @@ class ASTGenerator(GASDParserVisitor):
         alias = ctx.alias.getText().strip('"\'') if ctx.AS_KW() and ctx.alias else None
         
         annotation = Annotation(name=name, arguments=args, alias=alias)
+        annotation.line = ctx.start.line
+        annotation.column = ctx.start.column
         if self.cpc:
-            annotation.line = ctx.start.line
-            annotation.column = ctx.start.column
             annotation.sourceFile = self.source_file
             if isinstance(ctx.parentCtx, GASDParser.Primary_exprContext):
                 annotation.attachment = "expression"

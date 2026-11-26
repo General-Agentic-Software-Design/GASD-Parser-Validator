@@ -733,7 +733,7 @@ class SemanticPipeline:
         # Pass 4: Linting Engine (GEP-6)
         linter = LintEngine(self.reporter, version=effective_version)
         linter.file_versions = self.file_versions
-        linter.lint_system(system)
+        linter.lint_system(system, cli_version=global_version)
         
         constraint_errors = self.constraint_validator.validate_system(system)
         for msg in constraint_errors:

@@ -30,7 +30,7 @@ DECISION "Self-Definition Level":
 TYPE Directive:
     type: Enum(VERSION, CONTEXT, TARGET, TRACE, NAMESPACE, IMPORT)
     value: String @min_length(1) AS DIRECTIVE_VALUE_MIN
-    alias: String @optional // Used for IMPORT AS
+    alias: String @optional AS DIRECTIVE_ALIAS_OPTIONAL // Used for IMPORT AS
 
 // --- 3. Abstract Data Types (Section 5) ---
 
@@ -58,12 +58,12 @@ TYPE PrimitiveType @status("OFFICIAL") AS PRIMITIVE_TYPE_STATUS:
 
 TYPE ResultResult: // Correct syntax: Result<T> is handled by Parser, but here we define its properties
     value: Any
-    error: Any @optional
+    error: Any @optional AS RESULT_RESULT_ERROR_OPTIONAL
 
 TYPE Annotation:
     name: String
-    args: Map<String, Any> @optional
-    alias: String @optional // AS identifier (GASD 1.2)
+    args: Map<String, Any> @optional AS ANNOTATION_ARGS_OPTIONAL
+    alias: String @optional AS ANNOTATION_ALIAS_OPTIONAL // AS identifier (GASD 1.2)
 
 TYPE Parameter:
     name: String
@@ -77,21 +77,21 @@ TYPE Diagnostic:
 TYPE GasdDocument:
     path: String
     content: String
-    directives: List<Directive> @optional
-    decisions: List<DecisionDefinition> @optional
-    types: List<TypeDefinition> @optional
-    components: List<ComponentDefinition> @optional
-    contracts: List<ContractDefinition> @optional
-    flows: List<FlowDefinition> @optional
-    strategies: List<StrategyDefinition> @optional
-    constraints: List<ConstraintDefinition> @optional
-    invariants: List<InvariantDefinition> @optional
-    ensures: List<EnsureDefinition> @optional
-    models: List<ModelDefinition> @optional
-    assumptions: List<AssumptionDefinition> @optional
-    resources: List<ResourceItem> @optional
-    questions: List<Question> @optional
-    approvals: List<Approval> @optional
+    directives: List<Directive> @optional AS GASD_DOCUMENT_DIRECTIVES_OPTIONAL
+    decisions: List<DecisionDefinition> @optional AS GASD_DOCUMENT_DECISIONS_OPTIONAL
+    types: List<TypeDefinition> @optional AS GASD_DOCUMENT_TYPES_OPTIONAL
+    components: List<ComponentDefinition> @optional AS GASD_DOCUMENT_COMPONENTS_OPTIONAL
+    contracts: List<ContractDefinition> @optional AS GASD_DOCUMENT_CONTRACTS_OPTIONAL
+    flows: List<FlowDefinition> @optional AS GASD_DOCUMENT_FLOWS_OPTIONAL
+    strategies: List<StrategyDefinition> @optional AS GASD_DOCUMENT_STRATEGIES_OPTIONAL
+    constraints: List<ConstraintDefinition> @optional AS GASD_DOCUMENT_CONSTRAINTS_OPTIONAL
+    invariants: List<InvariantDefinition> @optional AS GASD_DOCUMENT_INVARIANTS_OPTIONAL
+    ensures: List<EnsureDefinition> @optional AS GASD_DOCUMENT_ENSURES_OPTIONAL
+    models: List<ModelDefinition> @optional AS GASD_DOCUMENT_MODELS_OPTIONAL
+    assumptions: List<AssumptionDefinition> @optional AS GASD_DOCUMENT_ASSUMPTIONS_OPTIONAL
+    resources: List<ResourceItem> @optional AS GASD_DOCUMENT_RESOURCES_OPTIONAL
+    questions: List<Question> @optional AS GASD_DOCUMENT_QUESTIONS_OPTIONAL
+    approvals: List<Approval> @optional AS GASD_DOCUMENT_APPROVALS_OPTIONAL
 
 // --- 4. Assumptions for Annotations with Environmental Dependencies (Section 9.2 / Section 14.7) ---
 // NOTE: Declared before StandardAnnotation to satisfy LINT-012 ordering requirements.
@@ -334,42 +334,42 @@ TYPE DecisionDefinition:
     name: String
     chosen: String
     rationale: String
-    alternatives: List<String> @optional
+    alternatives: List<String> @optional AS DECISION_DEFINITION_ALTERNATIVES_OPTIONAL
     affects: List<String>
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS DECISION_DEFINITION_ANNOTATIONS_OPTIONAL
 
 /// A data contract field.
 TYPE Field:
     name: String
     type: String
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS FIELD_ANNOTATIONS_OPTIONAL
 
 /// A design-level object definition.
 TYPE TypeDefinition:
     name: String
     fields: List<Field>
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS TYPE_DEFINITION_ANNOTATIONS_OPTIONAL
 
 /// A component method contract.
 TYPE MethodSignature:
     name: String
     args: List<Parameter>
     return_type: String
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS METHOD_SIGNATURE_ANNOTATIONS_OPTIONAL
 
 /// A reference to an external document, pattern, or asset.
 TYPE ResourceItem:
     name: String
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS RESOURCE_ITEM_ANNOTATIONS_OPTIONAL
 
 /// An architectural building block.
 /// @compliance V005: MUST have an INTERFACE block with at least one method.
 TYPE ComponentDefinition:
     name: String
-    pattern: String @optional
-    dependencies: List<String> @optional
+    pattern: String @optional AS COMPONENT_DEFINITION_PATTERN_OPTIONAL
+    dependencies: List<String> @optional AS COMPONENT_DEFINITION_DEPENDENCIES_OPTIONAL
     interface_methods: List<MethodSignature>
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS COMPONENT_DEFINITION_ANNOTATIONS_OPTIONAL
 
 /// A contract definition for an external dependency boundary.
 TYPE ContractDefinition:
@@ -377,16 +377,16 @@ TYPE ContractDefinition:
     input: List<Parameter>
     output: String
     behaviors: List<CaseDefinition>
-    idempotent: Boolean @default(false)
-    version: String @optional
+    idempotent: Boolean @default(false) AS CONTRACT_DEFINITION_IDEMPOTENT_DEFAULT
+    version: String @optional AS CONTRACT_DEFINITION_VERSION_OPTIONAL
 
 /// A specific outcome case within a CONTRACT.
 TYPE CaseDefinition:
     name: String
-    when: List<String> @optional
-    postcondition: List<String> @optional
-    throws: String @optional
-    after: String @optional
+    when: List<String> @optional AS CASE_DEFINITION_WHEN_OPTIONAL
+    postcondition: List<String> @optional AS CASE_DEFINITION_POSTCONDITION_OPTIONAL
+    throws: String @optional AS CASE_DEFINITION_THROWS_OPTIONAL
+    after: String @optional AS CASE_DEFINITION_AFTER_OPTIONAL
 
 /// An external formal verification model reference.
 TYPE ModelDefinition:
@@ -394,7 +394,7 @@ TYPE ModelDefinition:
     type: String
     file: String
     verifies: List<String>
-    assumptions: List<String> @optional
+    assumptions: List<String> @optional AS MODEL_DEFINITION_ASSUMPTIONS_OPTIONAL
 
 /// An environmental dependency declaration.
 TYPE AssumptionDefinition:
@@ -414,45 +414,45 @@ TYPE FlowStep:
     number: Integer
     action: Enum(VALIDATE, ACHIEVE, CREATE, PERSIST, RETURN, LOG, ENSURE, MATCH, IF, UPDATE, APPLY, THROW)
     target: String
-    binding: String @optional // AS TYPE.X binding — REQUIRED for VALIDATE steps (GEP-5)
-    postcondition: List<String> @optional // REQUIRED for ACHIEVE in 1.2
-    on_error: String @optional // ON_ERROR clause — action to take on failure (e.g., THROW ErrorType). §7
-    timeout: String @optional // TIMEOUT duration (e.g., "3000ms"). §7.1
-    otherwise: String @optional // OTHERWISE clause for ENSURE steps (e.g., THROW ErrorType). §7
-    depends_on: List<Integer> @optional // Explicit step dependencies
-    assignments: Map<String, Any> @optional
-    update_set: String @optional
-    apply_to: String @optional
-    match_construct: MatchConstruct @optional
-    if_construct: IfConstruct @optional
-    annotations: List<Annotation> @optional
+    binding: String @optional AS FLOW_STEP_BINDING_OPTIONAL // AS TYPE.X binding — REQUIRED for VALIDATE steps (GEP-5)
+    postcondition: List<String> @optional AS FLOW_STEP_POSTCONDITION_OPTIONAL // REQUIRED for ACHIEVE in 1.2
+    on_error: String @optional AS FLOW_STEP_ON_ERROR_OPTIONAL // ON_ERROR clause — action to take on failure (e.g., THROW ErrorType). §7
+    timeout: String @optional AS FLOW_STEP_TIMEOUT_OPTIONAL // TIMEOUT duration (e.g., "3000ms"). §7.1
+    otherwise: String @optional AS FLOW_STEP_OTHERWISE_OPTIONAL // OTHERWISE clause for ENSURE steps (e.g., THROW ErrorType). §7
+    depends_on: List<Integer> @optional AS FLOW_STEP_DEPENDS_ON_OPTIONAL // Explicit step dependencies
+    assignments: Map<String, Any> @optional AS FLOW_STEP_ASSIGNMENTS_OPTIONAL
+    update_set: String @optional AS FLOW_STEP_UPDATE_SET_OPTIONAL
+    apply_to: String @optional AS FLOW_STEP_APPLY_TO_OPTIONAL
+    match_construct: MatchConstruct @optional AS FLOW_STEP_MATCH_CONSTRUCT_OPTIONAL
+    if_construct: IfConstruct @optional AS FLOW_STEP_IF_CONSTRUCT_OPTIONAL
+    annotations: List<Annotation> @optional AS FLOW_STEP_ANNOTATIONS_OPTIONAL
 
 /// A design-level logic flow.
 TYPE FlowDefinition:
     name: String
     args: List<Parameter>
-    return_type: String @optional
+    return_type: String @optional AS FLOW_DEFINITION_RETURN_TYPE_OPTIONAL
     steps: List<FlowStep>
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS FLOW_DEFINITION_ANNOTATIONS_OPTIONAL
 
 /// An algorithmic approach specification.
 /// @compliance V013: MUST define an ALGORITHM as a String (Section 8).
 TYPE StrategyDefinition:
     name: String
     algorithm: String
-    precondition: String @optional
-    complexity: String @optional
+    precondition: String @optional AS STRATEGY_DEFINITION_PRECONDITION_OPTIONAL
+    complexity: String @optional AS STRATEGY_DEFINITION_COMPLEXITY_OPTIONAL
     input: List<Parameter>
     output: String
-    annotations: List<Annotation> @optional
+    annotations: List<Annotation> @optional AS STRATEGY_DEFINITION_ANNOTATIONS_OPTIONAL
 
 // --- 6. Human-in-the-Loop (Section 10) ---
 
 /// An agent-raised question.
 TYPE Question:
     text: String
-    blocking: Boolean @default(true)
-    context: String @optional
+    blocking: Boolean @default(true) AS QUESTION_BLOCKING_DEFAULT
+    context: String @optional AS QUESTION_CONTEXT_OPTIONAL
 
 /// A human architectural approval.
 TYPE Approval:
@@ -460,7 +460,7 @@ TYPE Approval:
     status: Enum(APPROVED, REJECTED)
     by: String
     date: DateTime
-    notes: String @optional
+    notes: String @optional AS APPROVAL_NOTES_OPTIONAL
 
 /// A design-time TODO marker for deferred work.
 TYPE TodoMarker:
@@ -482,7 +482,7 @@ TYPE MatchConstruct:
 TYPE IfConstruct:
     condition: String
     then_steps: List<FlowStep>
-    else_steps: List<FlowStep> @optional
+    else_steps: List<FlowStep> @optional AS IF_CONSTRUCT_ELSE_STEPS_OPTIONAL
 
 // --- 8. Linting Engine (Section 15) ---
 
