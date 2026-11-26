@@ -1,0 +1,47 @@
+VERSION 1.2
+CONTEXT: "Agentic Self-Correction (Reflection) Loop"
+TARGET: "Python / LangChain / PyTest"
+NAMESPACE: "org.gasd.agentic.reflection"
+
+/* 
+   Scenario: Autonomous Bug Fixing
+   ===============================
+   An agent writes code, runs tests, and reflects on failures.
+   Features:
+   - Loop-based reflection using ON_ERROR.
+   - POSTCONDITION on test pass rates.
+   - AS IDs for reasoning transparency auditing.
+*/
+
+TYPE CodeDraft:
+    content: String
+    language: String
+    version: Integer
+
+TYPE TestResult:
+    passed: Boolean
+    error_message: String @optional AS ERROR_MSG_OPT
+    pass_rate: Float @range(0.0, 1.0) AS PASS_RATE_RANGE
+
+COMPONENT CoderAgent:
+    INTERFACE:
+        write_solution(task: String) -> Result<CodeDraft>
+        apply_fix(code: CodeDraft, error: String) -> Result<CodeDraft>
+
+COMPONENT TestRunner:
+    INTERFACE:
+        execute(code: CodeDraft) -> Result<TestResult>
+
+FLOW autonomous_develop(task: String) -> Result<CodeDraft>:
+    1. ACHIEVE "CoderAgent.write_solution"
+        POSTCONDITION: result.content != ""
+        @reasoning("Initial draft based on task description") AS INITIAL_THOUGHTS
+    2. ACHIEVE "TestRunner.execute"
+        DEPENDS_ON: [step 1]
+        POSTCONDITION: result.pass_rate >= 0.0
+    3. IF result_of(step 2).passed == false:
+        ACHIEVE "CoderAgent.apply_fix"
+            @reasoning("Reflecting on error: {{result_of(step 2).error_message}}") AS REFLECTION_STEP
+            POSTCONDITION: result.version > prev.version
+        REACH step 2 // RECURSIVE LOOP
+    4. RETURN result_of(step 2)

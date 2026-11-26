@@ -1,0 +1,47 @@
+VERSION 1.2
+CONTEXT: "High-Throughput Video Transcoding Pipeline"
+TARGET: "C++ / FFmpeg / AWS MediaConvert"
+NAMESPACE: "org.gasd.realistic.video"
+
+/* 
+   Scenario: Automated Media Processing
+   ====================================
+   Converting raw video into multiple bitrates.
+   Features:
+   - ASSUMPTION on GPU acceleration availability.
+   - ON_ERROR fallback strategies from GPU to CPU.
+   - POSTCONDITION on output file integrity (MOOV atom).
+*/
+
+TYPE TranscodeJob:
+    job_id: UUID
+    source_url: String
+    target_formats: List<String>
+    priority: Integer @range(1, 10) AS PRIORITY_RANGE
+
+COMPONENT GPUWorker:
+    INTERFACE:
+        transcode_hw(job: TranscodeJob) -> Result<Void>
+
+COMPONENT CPUWorker:
+    INTERFACE:
+        transcode_sw(job: TranscodeJob) -> Result<Void>
+
+ASSUMPTION "NVIDIA NVENC drivers version > 525":
+    AFFECTS: [GPUWorker.transcode_hw]
+    CONSEQUENCE: "Hardware acceleration will fail, defaulting to slow CPU path"
+
+FLOW process_video_job(job: TranscodeJob) -> Result<Void>:
+    1. ACHIEVE "Download Source File"
+        POSTCONDITION: result.local_path IS String
+    2. ACHIEVE "GPUWorker.transcode_hw"
+        POSTCONDITION: "All target_formats generated using NVENC"
+        ON_ERROR: 
+            LOG("GPU Transcode failed for job {{job.job_id}}, falling back to CPU")
+            REACH step 3
+    3. ACHIEVE "CPUWorker.transcode_sw"
+        POSTCONDITION: "All target_formats generated using x264/x265"
+    4. ACHIEVE "Verify File Integrity"
+        POSTCONDITION: "FFprobe reports valid stream data"
+        POSTCONDITION: "Total size < source_file.size * 5"
+    5. RETURN Void

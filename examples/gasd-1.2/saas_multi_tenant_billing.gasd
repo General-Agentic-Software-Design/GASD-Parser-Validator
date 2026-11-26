@@ -1,0 +1,54 @@
+VERSION 1.2
+CONTEXT: "Multi-tenant SaaS Billing & Metering"
+TARGET: "Rust / SQL / Stripe"
+NAMESPACE: "org.gasd.realistic.billing"
+
+/* 
+   Scenario: Subscription Billing Engine
+   =====================================
+   Calculating usage-based invoices for tenants.
+   Features:
+   - MATCH for tiered pricing logic.
+   - POSTCONDITION on tax calculation and total amounts.
+   - AS IDs for financial auditing (SOX compliance).
+*/
+
+TYPE BillingPlan:
+    name: Enum("FREE", "PRO", "ENTERPRISE")
+    base_price: Decimal
+    metered_rate: Decimal
+
+TYPE TenantInvoice:
+    tenant_id: UUID @pii_redact AS TENANT_ID_AUDIT
+    amount_due: Decimal @range(0.01, 1000000.0) AS INVOICE_LIMIT
+    tax_amount: Decimal
+    period_start: Date
+    period_end: Date
+
+COMPONENT MeteringService:
+    INTERFACE:
+        get_usage_count(tenant_id: UUID, metric: String) -> Result<Integer>
+
+FLOW calculate_monthly_bill(tenant_id: UUID, plan: BillingPlan) -> Result<TenantInvoice>:
+    1. ACHIEVE "MeteringService.get_usage_count"
+        POSTCONDITION: result >= 0
+    2. MATCH plan.name:
+        CASE "FREE":
+            ACHIEVE "Calculate Free Tier"
+                POSTCONDITION: result == 0.0
+        CASE "PRO":
+            ACHIEVE "Calculate Pro Tier"
+                POSTCONDITION: result == plan.base_price + (usage * plan.metered_rate)
+        CASE "ENTERPRISE":
+            ACHIEVE "Calculate Enterprise Tier"
+                POSTCONDITION: result >= plan.base_price
+        OTHERWISE:
+             THROW BillingError("Unknown plan type") AS UNKNOWN_PLAN_EXCEPTION
+    3. ACHIEVE "Apply Regional Taxes"
+        POSTCONDITION: result.tax_amount == amount * 0.2 // Simplified 20% tax
+    4. CREATE TenantInvoice:
+        tenant_id = tenant_id
+        amount_due = subtotal + tax
+        tax_amount = tax
+        @compliance("IFRS-15") AS REVENUE_RECOGNITION_AUDIT
+    5. RETURN result_of(step 4)

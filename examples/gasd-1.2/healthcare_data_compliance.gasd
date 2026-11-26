@@ -1,0 +1,47 @@
+VERSION 1.2
+CONTEXT: "HIPAA-Compliant Patient Data Access"
+TARGET: "Java / Spring Security / Vault"
+NAMESPACE: "org.gasd.realistic.healthcare"
+
+/* 
+   Scenario: Secure Patient Record Access
+   ======================================
+   Enforcing strict data access controls for PII/PHI.
+   Features:
+   - AS identifiers for compliance audit trails (HIPAA).
+   - INVARIANT LOCAL for localized data masking logic.
+   - POSTCONDITION on record encryption.
+*/
+
+TYPE PatientRecord:
+    id: UUID @pii_redact AS RECORD_ID_AUDIT
+    patient_name: String @pii_redact AS NAME_PII_AUDIT
+    medical_history: List<String> @encrypted AS PHI_PROTECTION
+    access_logs: List<{user: String, time: DateTime}>
+
+COMPONENT AccessController:
+    INTERFACE:
+        request_access(user_id: String, record_id: UUID) -> Result<PatientRecord>
+
+COMPONENT AuditService:
+    INTERFACE:
+        log_access(user_id: String, record_id: UUID, status: String) -> Result<Void>
+
+/// localized check: medical history must be masked for non-authorized roles
+INVARIANT LOCAL: "AccessRole('RESEARCHER') -> Mask(medical_history)"
+
+FLOW request_access(user_id: String, record_id: UUID) -> Result<PatientRecord>:
+    1. ACHIEVE "Verify User Credentials"
+        POSTCONDITION: result.is_active == true
+        ON_ERROR: THROW SecurityError("Invalid session") AS AUTH_FAILURE_AUDIT
+    2. ACHIEVE "Check IAM Permissions"
+        POSTCONDITION: "User has READ permission on record_id"
+    3. ACHIEVE "Retrieve Record from Vault"
+        DEPENDS_ON: [step 2]
+        POSTCONDITION: result.id == record_id
+        POSTCONDITION: "PHI fields are decrypted in-memory"
+    4. ACHIEVE "AuditService.log_access"
+        DEPENDS_ON: [step 3]
+        POSTCONDITION: "Log entry created in immutable storage"
+        @compliance("HIPAA-ACT-164.312") AS HIPAA_ACCESS_AUDIT
+    5. RETURN result_of(step 3)

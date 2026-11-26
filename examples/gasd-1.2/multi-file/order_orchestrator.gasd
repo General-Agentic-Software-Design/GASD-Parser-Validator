@@ -1,0 +1,33 @@
+VERSION 1.2
+NAMESPACE: "org.gasd.examples.multifile.orchestrator"
+
+IMPORT "common_types.gasd" AS Common
+IMPORT "payment_service.gasd" AS Pay
+IMPORT "inventory_service.gasd" AS Inv
+
+/* 
+   Order Orchestrator (Consumer)
+   =============================
+   Coordinates the end-to-end order flow by importing external services
+   and adhering to their provider-defined CONTRACTs.
+*/
+
+COMPONENT OrderOrchestrator:
+    INTERFACE:
+        process_order(order: Common.Order) -> Result<Void>
+
+FLOW process_order(order: Common.Order) -> Result<Void>:
+    1. ACHIEVE "Inv.InventoryService.reserve_stock"
+        POSTCONDITION: "Inventory reserved"
+        @idempotency("provider-managed") AS INV_SYNC_AUDIT
+
+    2. ACHIEVE "Pay.PaymentProvider.authorize"
+        POSTCONDITION: "Payment authorized"
+        ON_ERROR:
+            ACHIEVE "Inv.InventoryService.release_stock"
+                POSTCONDITION: "Inventory released after payment failure"
+
+    3. ACHIEVE "Pay.PaymentProvider.capture"
+        POSTCONDITION: "Order successfully paid"
+
+    4. RETURN Void

@@ -1,0 +1,10 @@
+.DS_Store
+**/.DS_Store
+agent.md
+GASD-Agents/
+GASD-1.0/
+GASD-1.1/
+tmp/
+task.md
+implementation_plan.md
+walkthrough.md

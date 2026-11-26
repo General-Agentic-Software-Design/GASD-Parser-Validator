@@ -1,0 +1,204 @@
+/* 
+   GASD 1.0.0 — General Agentic Software Design Language
+   ====================================================
+   Official Authoritative Self-Definition & Metamodel Reference
+   Status: OFFICIAL
+   Version: 1.0.0
+   Compliance: RFC 2119
+   
+   This file MUST be interpreted as the ground truth for GASD agents.
+*/
+
+CONTEXT: "Metamodeling / Language Definition"
+TARGET: "GASD Agent / Transpiler"
+TRACE: "GASD_Specification.md"
+NAMESPACE: "org.gasd.core.v1"
+
+// --- 1. Design Decisions ---
+
+/// @status OFFICIAL
+DECISION "Self-Definition Level":
+    CHOSEN: "Total Coverage"
+    RATIONALE: "The .gasd file MUST be a 100% faithful representation of the MD specification."
+    AFFECTS: [*]
+
+// --- 2. Core Directives (Section 3) ---
+
+/// Defines the global settings that inform the transpiler.
+TYPE Directive:
+    type: Enum(CONTEXT, TARGET, TRACE, NAMESPACE, IMPORT)
+    value: String @min_length(1)
+    alias: String @optional // Used for IMPORT AS
+
+// --- 3. Abstract Data Types (Section 5) ---
+
+/// Represents the Behavioral Contracts of GASD primitives.
+TYPE PrimitiveType @status("OFFICIAL"):
+    String: "UTF-8 Text Sequence. MUST be valid UTF-8."
+    Integer: "Signed 64-bit safe numbers. MUST handle overflow."
+    Float: "IEEE 754 Double Precision. MUST NOT be used for Money."
+    Decimal: "Fixed-point arithmetic. MUST be used for exact precision."
+    Boolean: "True/False logic. MUST NOT use truthy/falsy coercion."
+    Bytes: "Raw sequence of uint8."
+    UUID: "128-bit Universally Unique ID (RFC 4122)."
+    DateTime: "ISO 8601 Timestamp. MUST be stored as UTC."
+    Result<T>: "Success or Failure Monad. Forces explicit error handling."
+    Void: "Unit / Empty."
+    Any: "Dynamic / Unsafe. Type safety is explicitly opted-out."
+
+// --- 4. Standard Annotation Library (Section 13) ---
+
+/// The exhaustive set of official GASD annotations.
+/// Transpilers MUST support the entire library.
+TYPE StandardAnnotation:
+    category: Enum(VALIDATION, ARCHITECTURAL, IMPLEMENTATION, METADATA, EXTENDED)
+    
+    // 13.1 Data Validation
+    @range(min: Number, max: Number)
+    @min_length(n: Integer)
+    @max_length(n: Integer)
+    @format(fmt: String) // MUST be one of: "email", "uuid", "url"
+    @unique(scope: String @optional)
+    @default(value: Any)
+
+    // 13.2 Architectural
+    @injectable
+    @mockable
+    @optimize(goal: String)
+    @transaction_type(t: Enum("SAGA", "ACID"))
+
+    // 13.3 Implementation
+    @async
+    @external
+    @error_strategy(strategy: String)
+    @algorithm(name: String)
+    @hash(algo: String)
+
+    // 13.4 Metadata & Lifecycle
+    @trace(id: String)
+    @status(s: Enum("DRAFT", "REVIEW_REQUIRED", "APPROVED", "OFFICIAL"))
+    @agent_note(txt: String)
+    @heuristic(txt: String)
+
+    // 13.5 Extended Library
+    @sensitive
+    @authorized(role: String)
+    @retry(n: Integer)
+    @timeout(ms: Integer)
+    @cacheable(ttl: Integer)
+    @rest(verb: Enum("GET", "POST", "PUT", "DELETE", "PATCH"), path: String)
+
+// --- 5. Structural Building Blocks (Sections 4-11) ---
+
+/// A formal architectural decision.
+TYPE DecisionDefinition:
+    name: String
+    chosen: String
+    rationale: String
+    alternatives: List<String> @optional
+    affects: List<String>
+
+/// A data contract field.
+TYPE Field:
+    name: String
+    type: String
+    annotations: List<Annotation> @optional
+
+/// A design-level object definition.
+TYPE TypeDefinition:
+    name: String
+    fields: List<Field>
+    annotations: List<Annotation> @optional
+
+/// A component method contract.
+TYPE MethodSignature:
+    name: String
+    args: List<Parameter>
+    return_type: String
+    annotations: List<Annotation> @optional
+
+/// An architectural building block.
+COMPONENT ComponentDefinition:
+    PATTERN: "Architectural Block"
+    INTERFACE:
+        name: String
+        pattern: String @optional
+        dependencies: List<String> @optional
+        interface_methods: List<MethodSignature>
+
+/// A discrete step within a FLOW.
+TYPE FlowStep:
+    number: Integer
+    action: Enum(VALIDATE, ACHIEVE, CREATE, PERSIST, RETURN, LOG, ENSURE, MATCH, IF)
+    target: String
+    annotations: List<Annotation> @optional
+
+/// A design-level logic flow.
+FLOW DesignFlow:
+    name: String
+    args: List<Parameter>
+    return_type: String @optional
+    steps: List<FlowStep>
+
+/// An algorithmic approach specification.
+STRATEGY AlgorithmicStrategy:
+    ALGORITHM: String
+    PRECONDITION: String @optional
+    COMPLEXITY: String @optional
+    INPUT: List<Parameter>
+    OUTPUT: String
+
+// --- 6. Human-in-the-Loop (Section 10) ---
+
+/// An agent-raised question.
+TYPE Question:
+    text: String
+    blocking: Boolean @default(true)
+    context: String @optional
+
+/// A human architectural approval.
+TYPE Approval:
+    status: Enum(APPROVED, REJECTED)
+    by: String
+    date: DateTime
+    notes: String @optional
+
+// --- 7. Pattern Matching (Section 11) ---
+
+/// A deterministic branching construct.
+TYPE MatchConstruct:
+    expression: String
+    cases: Map<String, FlowStep>
+    default_case: FlowStep
+
+// --- 8. Global Constraints & Invariants (Section 9) ---
+
+CONSTRAINT: "A GASD Transpiler MUST NOT invent new annotations for functional logic."
+CONSTRAINT: "All database operations SHALL be documented via PERSIST or ACHIEVE."
+CONSTRAINT: "Every COMPONENT MUST expose an INTERFACE."
+INVARIANT: "A FLOW MUST NOT contain implementation code."
+ENSURE: "Result<T> MUST force explicit handling of error states."
+
+// --- 9. Core Transpiler Architecture ---
+
+/// The official GASD generation engine contract.
+COMPONENT GasdTranspiler @injectable @status("OFFICIAL"):
+    PATTERN: "Deterministic Transformer Pipeline"
+    DEPENDENCIES: [Parser, SymbolTable, CodeGenerator]
+    
+    INTERFACE:
+        transpile(source: String, target: String) -> Result<String> @trace("Section 12")
+        validate_spec(doc: GasdDocument) -> List<Diagnostic>
+
+/// The normative process for code generation.
+FLOW transpile_process(source: String, target: String) -> String:
+    @error_strategy("Fail-Fast")
+    
+    1. VALIDATE source @format("UTF-8")
+    2. ACHIEVE "Lexical Analysis"
+    3. ACHIEVE "Syntactic Parsing" @heuristic("Follow EBNF Grammar")
+    4. ENSURE grammar_match IS TRUE OTHERWISE THROW SyntaxError
+    5. ACHIEVE "Semantic Enrichment" // Apply annotations
+    6. ACHIEVE "Platform Optimization" @optimize("target-specific")
+    7. TRANSFORM intermediate_model via CodeGenerator(target)
+    8. RETURN result_of(step 7)

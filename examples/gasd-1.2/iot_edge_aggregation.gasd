@@ -1,0 +1,52 @@
+VERSION 1.2
+CONTEXT: "IoT Edge Data Aggregation Pipeline"
+TARGET: "Rust / MQTT / ClickHouse"
+NAMESPACE: "org.gasd.realistic.iot"
+
+/* 
+   Scenario: Massive IoT Data Ingestion
+   ====================================
+   Thousands of sensors send telemetry to cloud hubs.
+   This design uses:
+   1. INVARIANT GLOBAL to enforce message loss limits across nodes.
+   2. MODEL to link a TLA+ specification for throughput verification.
+   3. DEPENDS_ON for complex deduplication logic.
+*/
+
+TYPE TelemetryMessage:
+    device_id: String
+    payload: Map<String, Float>
+    timestamp: DateTime
+    sequence_id: Integer
+
+COMPONENT EdgeGateway:
+    INTERFACE:
+        forward_telem(msg: TelemetryMessage) -> Result<Void>
+
+COMPONENT CloudHub:
+    INTERFACE:
+        ingest_batch(msgs: List<TelemetryMessage>) -> Result<Void>
+
+/// Global invariant: no more than 1% message loss across the cluster
+INVARIANT GLOBAL: "Count(DroppedMessages) / Count(TotalSent) <= 0.01"
+
+/// Link to TLA+ model for verifying throughput and backpressure
+MODEL "Telemetry Flow Model":
+    TYPE: TLA+
+    FILE: "models/iot_telemetry_flow.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Message loss across nodes must be bounded"
+    ASSUMPTIONS:
+        "Edge nodes may temporarily lose connectivity"
+        "Cloud Hub has at least 3x ingest capacity of peak edge traffic"
+
+FLOW ingest_telemetry(msg: TelemetryMessage) -> Result<Void>:
+    1. ACHIEVE "Deduplicate Message"
+        POSTCONDITION: result.is_duplicate == false
+        ON_ERROR: LOG("Duplicate message ignored: {{msg.sequence_id}}")
+    2. ACHIEVE "Buffer for Batching"
+        POSTCONDITION: "Buffer size < 1000 items"
+    3. ACHIEVE "CloudHub.ingest_batch"
+        DEPENDS_ON: [step 1, step 2]
+        POSTCONDITION: "Batch written to persistent storage"
+    4. RETURN Void

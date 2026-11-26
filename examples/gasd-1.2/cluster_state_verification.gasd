@@ -1,0 +1,38 @@
+VERSION 1.2
+CONTEXT: "Distributed Cluster State"
+TARGET: "Rust / Raft"
+NAMESPACE: "org.gasd.examples.v1_2.cluster"
+
+/* 
+   Showcase: Global Invariants and Formal Models
+   ============================================
+   This file demonstrates:
+   1. INVARIANT GLOBAL for across-component properties
+   2. MODEL blocks to link external formal verification (TLA+)
+   3. VERIFIES clause to link invariants to the model
+*/
+
+COMPONENT ClusterNode:
+    INTERFACE:
+        request_vote(term: Integer) -> Result<Boolean>
+        append_entries(term: Integer, entries: List<String>) -> Result<Boolean>
+
+/// Global invariant: only one leader per term
+INVARIANT GLOBAL: "At any time, at most one node is in state LEADER for a given term"
+
+/// Link to external TLA+ model for verifying distributed properties
+MODEL "Raft Safety Model":
+    TYPE: TLA+
+    FILE: "models/raft_safety.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "At any time, at most one node is in state LEADER for a given term"
+    ASSUMPTIONS:
+        "Network partitions eventually resolve"
+        "Messages may be delayed or reordered but not corrupted"
+
+FLOW election_tick() -> Result<Void>:
+    1. ACHIEVE "Check election timeout"
+        POSTCONDITION: result.timeout == true
+    2. ACHIEVE "Start election"
+        POSTCONDITION: result.status == "CANDIDATE"
+    3. RETURN result_of(step 2)

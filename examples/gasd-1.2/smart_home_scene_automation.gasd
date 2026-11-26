@@ -1,0 +1,58 @@
+VERSION 1.2
+CONTEXT: "Smart Home Scene Automation (Matter Hub)"
+TARGET: "TypeScript / Node.js / Matter.js"
+NAMESPACE: "org.gasd.realistic.smarthome"
+
+/* 
+   Scenario: Cross-Protocol Home Automation
+   ========================================
+   Orchestrating lights, locks, and climate.
+   Features:
+   - MATCH for heterogenous device protocol abstraction.
+   - DEPENDS_ON for complex scene sequencing.
+   - ASSUMPTION on local network connectivity.
+*/
+
+TYPE DeviceType:
+    id: UUID
+    protocol: Enum("MATTER", "ZIGBEE", "WIFI")
+    category: Enum("LIGHT", "LOCK", "THERMOSTAT")
+
+TYPE SceneRequest:
+    name: String
+    devices: List<DeviceType>
+
+COMPONENT DeviceHub:
+    INTERFACE:
+        set_state(device_id: UUID, state: Map<String, Any>) -> Result<Void>
+
+ASSUMPTION "Local mDNS discovery active":
+    AFFECTS: [DeviceHub.set_state]
+    CONSEQUENCE: "Matter devices will be unreachable via IP"
+
+FLOW run_goodnight_scene() -> Result<Void>:
+    1. ACHIEVE "Lock All Security Doors"
+        POSTCONDITION: "All LOCK category devices status == LOCKED"
+    2. ACHIEVE "Dim Master Bedroom Lights"
+        DEPENDS_ON: [step 1]
+        POSTCONDITION: "Brightness set to 10%"
+    3. ACHIEVE "Enable Night Mode Climate"
+        POSTCONDITION: "Thermostat target set to 18C"
+    4. ACHIEVE "Notify Occupants"
+        DEPENDS_ON: [step 1, step 2, step 3]
+        POSTCONDITION: "Audio alert sent to Hub speakers"
+    5. RETURN Void
+
+FLOW toggle_device(device: DeviceType, state: Boolean) -> Result<Void>:
+    1. MATCH device.protocol:
+        CASE "MATTER":
+            ACHIEVE "Send Matter Command"
+                POSTCONDITION: "UDP Cluster command acknowledged"
+        CASE "ZIGBEE":
+            ACHIEVE "Send Zigbee Protocol Frame"
+                @monitor("Zigbee Bridge Status") AS ZIGBEE_COMM_AUDIT
+                POSTCONDITION: result.status == "DELIVERED"
+        OTHERWISE:
+            ACHIEVE "Send REST API Request"
+                POSTCONDITION: result.status_code == 200
+    2. RETURN Void

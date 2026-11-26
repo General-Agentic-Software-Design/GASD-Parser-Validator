@@ -1,0 +1,59 @@
+VERSION 1.2
+CONTEXT: "Dynamic Agentic Tool Selection"
+TARGET: "TypeScript / OpenAI-Tools / LangChain"
+NAMESPACE: "org.gasd.agentic.tools"
+
+/* 
+   Scenario: AI Assistant with Multiple Capabilities
+   ===============================================
+   An agent chooses between Search, Calculator, and Database tools.
+   Features:
+   - MATCH for dynamic tool routing based on intent.
+   - CONTRACT for tool return types.
+   - AS IDs for tool usage auditing.
+*/
+
+TYPE ToolCall:
+    tool_name: String
+    arguments: Map<String, Any>
+
+TYPE UserProfile:
+    id: UUID
+    username: String @min_length(3) AS USERNAME_MIN @max_length(50) AS USERNAME_MAX
+    email: String @format("email") AS EMAIL_FMT
+    bio: String @optional AS BIO_PRESENT
+
+COMPONENT LLMPlanner:
+    INTERFACE:
+        decide_tool(query: String) -> Result<ToolCall>
+
+COMPONENT WebSearch:
+    INTERFACE:
+        search(q: String) -> Result<List<String>>
+
+COMPONENT Database:
+    INTERFACE:
+        query(sql: String) -> Result<Any>
+
+FLOW route_and_execute(user_query: String) -> Result<Any>:
+    1. ACHIEVE "LLMPlanner.decide_tool"
+        POSTCONDITION: result.tool_name IS String
+        @reasoning("Selecting tool based on query intent") AS TOOL_SELECTION_AUDIT
+        TIMEOUT: 5000ms
+    2. MATCH result_of(step 1).tool_name:
+        CASE "search":
+            ACHIEVE "WebSearch.search"
+                POSTCONDITION: result.length >= 0
+                TIMEOUT: 10s
+        CASE "db_query":
+            ACHIEVE "Database.query"
+                POSTCONDITION: "Result matches expected schema"
+                TIMEOUT: 2s
+        OTHERWISE:
+            ACHIEVE "Generate Direct LLM Response"
+                POSTCONDITION: result IS String
+                TIMEOUT: 30s
+    3. ACHIEVE "Summarize Result"
+        DEPENDS_ON: [step 2]
+        POSTCONDITION: result.length > 0
+    4. RETURN TRANSFORM(result_of(step 3), @sensitive AS MASK_OUTPUT)

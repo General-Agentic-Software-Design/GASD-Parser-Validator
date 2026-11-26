@@ -1,0 +1,46 @@
+VERSION 1.2
+CONTEXT: "User Management Service"
+TARGET: "Java / Spring Boot"
+NAMESPACE: "org.gasd.examples.v1_2"
+
+/* 
+   Showcase: Basic GASD 1.2 features
+   =================================
+   This file demonstrates:
+   1. VERSION 1.2 Directive
+   2. AS identifiers for all annotations (Obligation Identifiers)
+   3. POSTCONDITION blocks for ACHIEVE steps
+   4. INVARIANT LOCAL scoping
+*/
+
+TYPE UserProfile:
+    id: UUID @auto_generate AS USER_ID_GEN
+    username: String 
+        @min_length(3) AS USERNAME_MIN
+        @max_length(20) AS USERNAME_MAX
+        @unique AS USERNAME_UNIQUE
+    email: String 
+        @format("email") AS EMAIL_FORMAT_VALID
+    status: Enum("ACTIVE", "INACTIVE", "PENDING") AS USER_STATUS_ENUM
+
+/// Local invariant: account balance can't be negative for localized logic
+INVARIANT LOCAL: "User profile must have a valid email domain"
+
+COMPONENT UserService:
+    INTERFACE:
+        create_user(username: String, email: String) -> Result<UserProfile>
+
+FLOW create_user(username: String, email: String) -> Result<UserProfile>:
+    1. VALIDATE username AS TYPE.UserProfile.username
+    2. VALIDATE email AS TYPE.UserProfile.email
+    3. ACHIEVE "Check for existing user"
+        POSTCONDITION: result == null
+        ON_ERROR: THROW ConflictError("User already exists") AS CHECK_EXISTING_USER
+    4. CREATE UserProfile:
+        username = username
+        email = email
+        status = "PENDING"
+    5. ACHIEVE "Persist User Profile"
+        POSTCONDITION: result.id IS UUID
+        POSTCONDITION: result.status == "PENDING"
+    6. RETURN result_of(step 5)
