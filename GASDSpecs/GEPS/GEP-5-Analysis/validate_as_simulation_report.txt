@@ -1,0 +1,39 @@
+====================================================================================================
+GASD VALIDATE AS + IMPLICIT BINDING SIMULATION REPORT
+====================================================================================================
+Timestamp: 2026-03-08T19:16:45.155883
+Total Simulations: 10
+Scenarios per Run: 5
+Agents per Scenario: 3
+
+AGGREGATE RESULTS
+----------------------------------------------------------------------------------------------------
+Average Quality Score:          100.0%
+Average Consensus:               85.0%
+Average Inventions per Run:       0.0 (goal: <0.5)
+Average ACCEPT Rate:            100.0%
+
+Quality Range:                  100.0% -  100.0%
+Consensus Range:                 60.0% -  100.0%
+Invention Range:                  0.0 -    0.0
+
+SCENARIO PERFORMANCE ACROSS ALL RUNS
+----------------------------------------------------------------------------------------------------
+S001  | Simple User Validation (Implicit)   | Q=100.0% C= 80.0% | Inv: 0 | I:30 E: 0 | A:10
+S002  | Email Validation (Implicit)         | Q=100.0% C= 80.0% | Inv: 0 | I:30 E: 0 | A:10
+S003  | Multi-TYPE Validation (Explicit AS) | Q=100.0% C= 85.0% | Inv: 0 | I: 0 E:30 | A:10
+S004  | Complex Validation (AS Override)    | Q=100.0% C= 90.0% | Inv: 0 | I: 0 E:30 | A:10
+S005  | Optional AS Usage (Should Use Implicit) | Q=100.0% C= 90.0% | Inv: 0 | I: 2 E:28 | A:10
+
+====================================================================================================
+INTERPRETATION
+----------------------------------------------------------------------------------------------------
+I (Implicit):   Number of agents using implicit VALIDATE binding
+E (Explicit):   Number of agents using explicit VALIDATE ... AS TYPE binding
+Inv:            Number of agents inventing alternative binding (@enforces, etc)
+Goal:           High quality, high consensus, LOW invention rate
+
+✓ SUCCESS: Agents follow VALIDATE AS + Implicit approach faithfully
+           Very few inventions detected
+
+====================================================================================================

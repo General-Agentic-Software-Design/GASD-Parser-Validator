@@ -1,0 +1,159 @@
+
+# GASD Enhancement Proposal (GEP) Template
+
+```text
+GEP: XXXX
+Title: <Short descriptive title>
+Author: <Name(s)>
+Status: Draft | Review | Accepted | Rejected
+Type: Standards Track | Informational | Process
+Created: YYYY-MM-DD
+Replaces: <optional>
+Requires: <optional>
+```
+
+---
+
+# Abstract
+
+Provide a short summary of the proposal.
+
+Explain **what change is being proposed and why it matters** in 2–4 sentences.
+
+---
+
+# Motivation
+
+Describe the problem this proposal solves.
+
+Include:
+
+* current limitation or issue
+* why the change is needed
+* who benefits from the change
+
+---
+
+# Specification
+
+Describe the **proposed change clearly and precisely**.
+
+This section should contain enough detail for implementers.
+
+Examples may include:
+
+* grammar changes
+* new keywords or constructs
+* validation rules
+* changes to system behavior
+
+Example structure:
+
+```
+Change:
+Add a new GASD construct called <ExampleConstruct>.
+
+Syntax:
+ExampleConstruct <name>
+
+Rules:
+- Must appear inside <parent construct>
+- Name must be unique within scope
+```
+
+---
+
+# Rationale
+
+Explain the design decisions.
+
+Include:
+
+* why this approach was chosen
+* alternative designs considered
+* trade-offs or limitations
+
+---
+
+# Backwards Compatibility
+
+Describe whether the proposal affects existing GASD files or tooling.
+
+Possible cases:
+
+* fully backward compatible
+* partially compatible with migration
+* breaking change
+
+If breaking, provide a migration approach.
+
+---
+
+# Reference Implementation (Optional)
+
+If available, reference implementation details such as:
+
+* grammar updates
+* parser changes
+* AST changes
+* validation rules
+
+Example:
+
+```
+ANTLR rule: exampleConstruct
+AST node: ExampleConstructNode
+```
+
+---
+
+# Test Plan
+
+Describe how the proposal will be validated.
+
+Examples:
+
+Acceptance Test
+
+```
+AT-EXAMPLE-001
+Valid ExampleConstruct parses successfully
+```
+
+Regression Test
+
+```
+RT-EXAMPLE-001
+Existing constructs still parse correctly
+```
+
+Negative Test
+
+```
+NT-EXAMPLE-001
+ExampleConstruct without name fails validation
+```
+
+---
+
+# Traceability
+
+Link the proposal to specification and implementation artifacts.
+
+Example:
+
+```
+Requirement: REQ-EX-001
+Spec Section: 4.3 ExampleConstruct
+Grammar: exampleConstruct rule
+Parser: ExampleConstructNode
+Tests: AT-EX-001
+```
+
+---
+
+# Change History
+
+```
+YYYY-MM-DD — Initial draft
+```

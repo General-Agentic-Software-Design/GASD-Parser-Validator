@@ -1,0 +1,36 @@
+VERSION 1.2
+CONTEXT: "Human-in-the-Loop (HITL) Agentic Deployment"
+TARGET: "Go / Temporal / Slack-Bot"
+NAMESPACE: "org.gasd.agentic.hitl"
+
+/* 
+   Scenario: Autonomous Infrastructure Update
+   =========================================
+   Agent proposes a change, but requires human approval for production.
+   Features:
+   - INTERFACE for Human interaction.
+   - POSTCONDITION on manual sign-off.
+   - AS IDs for accountability tracking.
+*/
+
+COMPONENT DeploymentAgent:
+    INTERFACE:
+        generate_plan(env: String) -> Result<String>
+        execute_apply(plan_id: String) -> Result<Void>
+
+COMPONENT HumanSupervisor:
+    INTERFACE:
+        review_and_approve(plan: String) -> Result<Boolean>
+
+FLOW deploy_to_production() -> Result<Void>:
+    1. ACHIEVE "DeploymentAgent.generate_plan('PROD')"
+        POSTCONDITION: "Plan ID generated"
+    2. ACHIEVE "HumanSupervisor.review_and_approve"
+        DEPENDS_ON: [step 1]
+        @interaction("Slack post to #ops-approvals") AS HUMAN_CHECKPOINT
+        POSTCONDITION: result == true // Hard gate
+    3. ACHIEVE "DeploymentAgent.execute_apply"
+        DEPENDS_ON: [step 2]
+        POSTCONDITION: "Infrastructure updated successfully"
+        @accountability("Approved by: {{human_user_id}}") AS AUDIT_TRAIL
+    4. RETURN Void

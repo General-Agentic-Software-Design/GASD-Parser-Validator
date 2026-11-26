@@ -1,0 +1,49 @@
+VERSION 1.2
+CONTEXT: "Deterministic Game State Rollback (GGPO-style)"
+TARGET: "C++ / Netcode / UDP"
+NAMESPACE: "org.gasd.realistic.game"
+
+/* 
+   Scenario: High-Speed P2P Game Netcode
+   ====================================
+   Synchronizing player state across high-latency networks.
+   Features:
+   - INVARIANT GLOBAL for deterministic state consistency.
+   - MODEL linking to TLA+ to verify rollback safety (no state divergence).
+   - POSTCONDITION on state checksums.
+*/
+
+TYPE GameFrame:
+    frame_number: Integer
+    player_inputs: List<{id: Integer, buttons: Int32}>
+    state_checksum: String
+
+COMPONENT StateMachine:
+    INTERFACE:
+        apply_inputs(frame: Integer, inputs: List<Any>) -> Result<GameFrame>
+        rollback_to(frame: Integer) -> Result<Void>
+
+/// Global invariant: all clients must eventually reach the same checksum for a given frame
+INVARIANT GLOBAL: "Eventually(Checksum(ClientA, F) == Checksum(ClientB, F))"
+
+/// Formal model to verify that rollback never results in permanent divergence
+MODEL "Rollback Safety Model":
+    TYPE: TLA+
+    FILE: "models/game_rollback.tla"
+    VERIFIES:
+        INVARIANT GLOBAL: "Deterministic state must be preserved after resimulation"
+    ASSUMPTIONS:
+        "Input arrival may be delayed by up to 100ms"
+        "UDP packets may be dropped or reordered"
+
+FLOW process_network_tick() -> Result<Void>:
+    1. ACHIEVE "Receive Remote Inputs"
+        POSTCONDITION: "Inputs added to local buffer"
+    2. IF "Input mismatch detected for past frame F":
+        ACHIEVE "StateMachine.rollback_to(F)"
+            POSTCONDITION: "State restored to frame F-1"
+        ACHIEVE "Resimulate from F to Current"
+            POSTCONDITION: "Local state checksum matches remote at frame F"
+    3. ACHIEVE "StateMachine.apply_inputs(Current)"
+        POSTCONDITION: "Frame checksum generated"
+    4. RETURN Void

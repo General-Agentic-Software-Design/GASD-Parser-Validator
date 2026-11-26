@@ -1,0 +1,152 @@
+# GASD Enhancement Proposal (GEP)
+
+```text
+GEP: 3
+Title: Formalizing Missing Control Flow and Transformation Keywords (`TRANSFORM`, `ON_ERROR`, `THROW`, `UPDATE`, and `APPLY`)
+Author: Agentic Software Design (https://github.com/agentic-software-design)
+Status: Accepted
+Type: Standards Track
+Created: 2026-03-07
+```
+
+---
+
+# Abstract
+
+This proposal formally defines several critical control flow and data transformation keywords (`TRANSFORM`, `ON_ERROR`, `THROW`, `UPDATE`, and `APPLY`) that are either partially documented in examples or entirely missing from the GASD 1.0.0 and 1.1.0 formal EBNF grammar.
+
+---
+
+# Motivation
+
+Review of the GASD 1.0.0 and 1.1.0 specifications reveals significant gaps between example usage, keyword tables, and the formal EBNF grammar:
+
+* `TRANSFORM` appears in examples (e.g., Section 7) but is not in the grammar or keyword tables.
+* `ON_ERROR` is used in examples and the Flow Keywords table, but missing from the EBNF grammar.
+* `THROW` appears in examples but is absent from both the Flow Keywords table and the EBNF.
+* `UPDATE` and `APPLY` are absent entirely, representing semantic gaps in handling mutations and strategies.
+
+Without these being formally specified:
+
+* **`TRANSFORM`**: Transpilers have no standard way to handle hashing, encoding, or encrypting, breaking determinism.
+* **`ON_ERROR`**: Error handling for external calls in `ACHIEVE` blocks is undefined.
+* **`THROW`**: The `OTHERWISE` clause becomes incomplete without a way to surface errors.
+* **`UPDATE`**: The language cannot model mutations of existing records.
+* **`APPLY`**: Complex algorithmic flows cannot cleanly reference `STRATEGY` blocks.
+
+This proposal aims to close these gaps so transpilers can safely and deterministically support production-grade flow logic.
+
+---
+
+# Specification
+
+Add the following keywords to the GASD EBNF grammar and formal keyword definitions:
+
+### 1. `TRANSFORM`
+
+Provides a standard mechanism for data transformation.
+
+* **Syntax**: `result = TRANSFORM(source, @algorithm("args"))`
+* **Rules**: Must specify a source data point and a transformation algorithm.
+
+### 2. `ON_ERROR`
+
+Provides a standard error-handling mechanism, particularly within `ACHIEVE` blocks.
+
+* **Syntax**: `ON_ERROR: <action>`
+* **Rules**: Must appear inside blocks that interface with external systems or where failures are expected.
+
+### 3. `THROW`
+
+Provides a mechanism to surface an error condition explicitly.
+
+* **Syntax**: `THROW <error_identifier>`
+* **Rules**: Can be used within `OTHERWISE` branches or standard control flows to escalate exceptions.
+
+### 4. `UPDATE`
+
+Provides a standard primitive for mutating an existing record.
+
+* **Syntax**: `UPDATE <entity> SET <field> = <value>`
+* **Rules**: Complements `CREATE` and `PERSIST` by formalizing mutation semantics.
+
+### 5. `APPLY`
+
+Applies a strategy or transformation to a collection/object.
+
+* **Syntax**: `APPLY <strategy> TO <target>`
+* **Rules**: Allows `FLOW` blocks to invoke `STRATEGY` blocks logically cleanly.
+
+---
+
+# Rationale
+
+`TRANSFORM`, `ON_ERROR`, and `THROW` together form the backbone of safe, production-grade logic. Their absence from the formal grammar means any transpiler built strictly from the EBNF would silently drop or mishandle them, which is worse than them not existing. Formalizing them ensures deterministic and safe transpilation.
+
+`UPDATE` fills a critical semantic gap; without it, the language cannot express state mutation. `APPLY` provides the necessary syntactic glue between structural blocks.
+
+Only `OTHERWISE` and `ELSE` are currently fully specified in the EBNF and keyword tables; this proposal brings the remaining essential flow keywords up to the same standard.
+
+---
+
+# Backwards Compatibility
+
+This proposal is fully backward compatible with validly parsed scripts relying on the current, limited formal grammar. It standardizes behavior that may have been parsed loosely or incorrectly transpiled by existing implementations. Existing transpilers will need to be updated to recognize and correctly emit code for these new grammar constructs.
+
+---
+
+# Reference Implementation (Optional)
+
+```
+ANTLR rules to be added/updated:
+- transformStatement
+- onErrorClause
+- throwStatement
+- updateStatement
+- applyStatement
+```
+
+---
+
+# Test Plan
+
+Acceptance Test
+
+```
+AT-GEP3-001
+Valid TRANSFORM, ON_ERROR, THROW, UPDATE, and APPLY blocks parse successfully
+```
+
+Regression Test
+
+```
+RT-GEP3-001
+Existing flow control constructs (ELSE, OTHERWISE) still parse correctly
+```
+
+Negative Test
+
+```
+NT-GEP3-001
+THROW used without an error reference fails validation
+```
+
+---
+
+# Traceability
+
+```
+Requirement: REQ-CORE-FLOW-001
+Spec Section: Flow Control and Data Transformation
+Grammar: Flow rules
+Parser: Flow Nodes (TransformNode, ThrowNode, etc.)
+Tests: AT-GEP3-001
+```
+
+---
+
+# Change History
+
+```
+2026-03-07 — Initial draft formally specifying missing flow keywords
+```

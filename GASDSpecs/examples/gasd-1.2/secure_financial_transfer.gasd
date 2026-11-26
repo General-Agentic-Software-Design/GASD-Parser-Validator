@@ -1,0 +1,47 @@
+VERSION 1.2
+CONTEXT: "Secure Bank Transfer Service"
+TARGET: "Rust / Tonic (gRPC)"
+NAMESPACE: "org.gasd.realistic.finance"
+
+/* 
+   Scenario: High-Security Financial Transfer
+   ==========================================
+   A bank transfer involves multiple security layers.
+   This design uses:
+   1. AS ids for PII redaction and audit trails.
+   2. POSTCONDITIONs on encryption and MFA steps.
+   3. INVARIANT LOCAL for localized account balance integrity.
+*/
+
+TYPE FinancialTransaction:
+    id: UUID @pii_redact AS TRANS_ID_AUDIT
+    sender_account_id: String @pii_redact AS SENDER_ID_AUDIT
+    receiver_account_id: String @pii_redact AS RECEIVER_ID_AUDIT
+    amount: Decimal @range(0.01, 1000000.0) AS TRANSFER_LIMIT_CHECK
+    currency: String @format("ISO-4217") AS CURRENCY_VALID
+
+COMPONENT AuthService:
+    INTERFACE:
+        verify_mfa(user_id: String, code: String) -> Result<Boolean>
+
+COMPONENT LedgerService:
+    INTERFACE:
+        execute_transfer(tx: FinancialTransaction) -> Result<Void>
+
+/// localized check: total outgoing amount must not exceed balance
+INVARIANT LOCAL: "Pending transfers <= Available Balance"
+
+FLOW perform_transfer(user_id: String, tx: FinancialTransaction, mfa_code: String) -> Result<Void>:
+    1. ACHIEVE "Verify Multi-Factor Authentication"
+        POSTCONDITION: result == true
+        ON_ERROR: THROW AuthError("Invalid MFA") AS MFA_VIOLATION_AUDIT
+    2. ACHIEVE "Encrypt Transaction Details"
+        POSTCONDITION: result.algorithm == "AES-256-GCM"
+        POSTCONDITION: "Secret key retrieved from HSM"
+    3. ACHIEVE "Execute Ledger Transaction"
+        DEPENDS_ON: [step 1, step 2]
+        POSTCONDITION: "Journal entry created with ID: {{tx.id}}"
+    4. ACHIEVE "Log Audit Trail"
+        POSTCONDITION: "Audit stored in secure immutable log"
+        @compliance("SOC2-CONTROL-7.1") AS AUDIT_COMPLIANCE
+    5. RETURN Void

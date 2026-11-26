@@ -1,0 +1,36 @@
+VERSION 1.2
+NAMESPACE: "org.gasd.examples.multifile.payment"
+
+IMPORT "common_types.gasd" AS Common
+
+/* 
+   Payment Service Provider
+   ========================
+   Defines the formal contract for payment processing.
+*/
+
+COMPONENT PaymentProvider:
+    INTERFACE:
+        authorize(order_id: UUID, amount: Common.Money) -> Result<String>
+        capture(auth_id: String) -> Result<Void>
+
+CONTRACT PaymentProvider.authorize:
+    INPUT: order_id: UUID, amount: Common.Money
+    OUTPUT: Result<String>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: result.status == "AUTHORIZED"
+            POSTCONDITION: "Authorization ID is present in result"
+        CASE insufficient_funds:
+            THROWS: InsufficientFunds
+        CASE gateway_error:
+            THROWS: GatewayError
+    IDEMPOTENT: true
+
+CONTRACT PaymentProvider.capture:
+    INPUT: auth_id: String
+    OUTPUT: Result<Void>
+    BEHAVIORS:
+        CASE success:
+            POSTCONDITION: "Funds captured successfully"
+    IDEMPOTENT: true

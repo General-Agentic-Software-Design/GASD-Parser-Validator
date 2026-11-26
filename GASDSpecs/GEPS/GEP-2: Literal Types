@@ -1,0 +1,104 @@
+# GASD Enhancement Proposal (GEP)
+
+```text
+GEP: 2
+Title: Literal Types
+Author: Agentic Software Design (https://github.com/agentic-software-design)
+Status: Accepted
+Type: Standards Track
+Created: 2024-03-07
+```
+
+---
+
+# Abstract
+
+This proposal introduces **Literal Types** to the GASD specification. Literal Types allow specific values (strings, numbers) to define a type contract, enabling discriminant fields, constant values, and strict protocol matching.
+
+---
+
+# Motivation
+
+The current GASD 1.0.0 type system is primarily nominal/structural. Many modern development patterns (e.g., in TypeScript and Python) rely on value-based refinement where a field must match a specific literal value.
+
+Adding Literal Types moves GASD towards a more expressive type system that can guarantee specific values during validation and code generation.
+
+---
+
+# Specification
+
+### Grammar Changes (Appendix A)
+
+The `type_expr` rule is updated to include `string_literal` and `number_literal`.
+
+```diff
+(* --- Types --- *)
+ type_expr     ::= identifier
++                | string_literal    (* Allows "Todo", "Review", etc. *)
++                | number_literal    (* Allows 200, 404, etc. *)
+                 | "List" "<" type_expr ">"
+                 | "Map" "<" type_expr "," type_expr ">"
+-                | "Enum" "(" identifier { "," identifier } ")"
++                | "Enum" "(" (identifier | string_literal) { "," (identifier | string_literal) } ")"
+                 | "Optional" "<" type_expr ">"
+```
+
+### Type Semantics (Section 5)
+
+A new subsection is added to define the behavior:
+
+#### 5.2 Literal Types
+GASD supports **Literal Types**, where a specific value defines the type contract. This is used for discriminant fields, constant values, and strict protocol matching.
+
+| Example | Behavioral Contract | Transpiler Guarantee |
+|---|---|---|
+| `"Review"` | Must be exactly this string. | Generated as a literal type (e.g., TypeScript `"Review"`). |
+| `404`      | Must be exactly this number. | Generated as a constant or literal value. |
+
+#### 5.1 Strict Type Semantics (Update)
+The following row is added to the behavioral contract table:
+
+| Type | Behavioral Contract | Transpiler Guarantee |
+|---|---|---|
+| Literal Type | Exact value match. | MUST fail validation if the value does not match exactly. |
+
+---
+
+# Rationale
+
+Literal Types are essential for modeling modern APIs and event-driven architectures where "type" is often determined by a literal string or integer field. Alternative designs like using Enums for everything are less flexible when the set of values is not naturally a closed set within a single domain.
+
+---
+
+# Backwards Compatibility
+
+This change is fully backward compatible as it only adds new valid expressions to `type_expr`. Existing GASD files will remain valid.
+
+---
+
+# Reference Implementation (Optional)
+
+The reference implementation involves updating the ANTLR4 grammar for the GASD parser to include literals in the `type_expr` rule and ensuring the validator enforces exact matches for these types.
+
+---
+
+# Test Plan
+
+*   **Acceptance Test**: Valid Literal Types (e.g., `type Status = "Active"`) parse successfully.
+*   **Negative Test**: Assigned values that do not match the literal type (e.g., assigning `"Inactive"` to a `"Active"` type) fail validation.
+
+---
+
+# Traceability
+
+*   **Requirement**: Support value-based refinement and discriminant fields.
+*   **Grammar**: `type_expr` rule.
+*   **Spec Section**: 5.1 and 5.2.
+
+---
+
+# Change History
+
+```
+2024-03-07 — Initial draft (as part of GASD 1.1.0 proposal)
+```
