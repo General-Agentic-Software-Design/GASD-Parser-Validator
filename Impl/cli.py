@@ -25,7 +25,7 @@ from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.12"
+    __version__ = "2.1.13"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 
@@ -71,7 +71,8 @@ def main():
     args = parser.parse_args()
     has_ast_output = args.ast_output is not None
     export_requested = args.json or has_ast_output or args.ast_combine
-    semantic_export_requested = export_requested and args.ast_sem and not args.no_validate
+    semantic_validation_requested = args.ast_sem and not args.no_validate
+    semantic_export_requested = semantic_validation_requested and export_requested
 
     if not args.path and sys.stdin.isatty():
         stream = sys.stderr if args.json or has_ast_output else sys.stdout
@@ -106,7 +107,7 @@ def main():
 
     # === Phase 2: Syntactic Validation and Local Analysis ===
     parser_api = ParseTreeAPI()
-    cpc_sources = CPCSources() if semantic_export_requested else None
+    semantic_sources = CPCSources() if semantic_validation_requested else None
     source_paths = {}
     source_digests = {}
     exporter = SemanticASTExporter(source_paths)
@@ -115,7 +116,11 @@ def main():
     valid_asts = []
     collected_asts = []
     processed_files = set()
-    queue = sorted(os.path.realpath(path) for path in target_files) if semantic_export_requested else sorted(target_files)
+    entry_paths = {}
+    for path in sorted(target_files):
+        key = os.path.realpath(path) if semantic_validation_requested else path
+        entry_paths.setdefault(key, path)
+    queue = sorted(entry_paths)
     if use_stdin:
         queue.append("stdin")
 
@@ -124,12 +129,10 @@ def main():
         if file_path in processed_files: continue
         processed_files.add(file_path)
 
+        report_path = file_path if semantic_export_requested else entry_paths.get(file_path, file_path)
         try:
-            capture_path = file_path
-            if semantic_export_requested and file_path != "stdin":
-                capture_path = os.path.realpath(file_path)
             if semantic_export_requested:
-                logical_path = exporter._do_relativize(capture_path, cwd)
+                logical_path = exporter._do_relativize(file_path, cwd)
                 if not logical_path or os.path.isabs(logical_path):
                     raise ValueError("Could not establish a logical source path")
                 source_paths[file_path] = logical_path
@@ -140,29 +143,29 @@ def main():
                 buffer = getattr(sys.stdin, "buffer", None)
                 data = buffer.read() if buffer is not None else sys.stdin.read().encode(encoding, errors)
                 capture = SourceCapture(data)
-                tree, reporter = parser_api.parse_capture(capture, file_path, encoding=encoding, errors=errors)
+                tree, reporter = parser_api.parse_capture(capture, report_path, encoding=encoding, errors=errors)
             else:
-                capture = parser_api.read_capture(capture_path)
-                tree, reporter = parser_api.parse_capture(capture, file_path)
+                capture = parser_api.read_capture(file_path)
+                tree, reporter = parser_api.parse_capture(capture, report_path)
         except Exception as e:
             if semantic_export_requested and file_path not in source_paths:
                 try:
                     source_paths[file_path] = os.path.relpath(file_path, cwd).replace("\\", "/")
                 except ValueError:
                     source_paths[file_path] = os.path.basename(file_path)
-            reporter = ErrorReporter(file_path)
-            reporter.add_io_error(IOErrorData(message=str(e), path=file_path, operation="READ"))
+            reporter = ErrorReporter(report_path)
+            reporter.add_io_error(IOErrorData(message=str(e), path=report_path, operation="READ"))
 
         reporters[file_path] = reporter
 
         if reporter.get_error_count() > 0:
             if not args.json:
-                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
+                print(f"ERROR: {reporter.source_file} failed validation", file=sys.stderr)
                 print(reporter.to_console(), file=sys.stderr)
             continue
 
         # AST Generation
-        generator = ASTGenerator(source_file=file_path, cpc=semantic_export_requested)
+        generator = ASTGenerator(source_file=file_path, cpc=semantic_validation_requested)
         ast = generator.visit(tree)
 
         # Semantic Validation (syntactic/local)
@@ -188,8 +191,8 @@ def main():
                  collected_asts.append(ast)
             
             # Recursive Discovery of Imports
-            if cpc_sources is not None:
-                queue.extend(path for path in cpc_sources.discover(ast) if path not in processed_files)
+            if semantic_sources is not None:
+                queue.extend(path for path in semantic_sources.discover(ast) if path not in processed_files)
                 continue
             for d in ast.directives:
                 if d.directiveType == "IMPORT" and d.values:
@@ -200,24 +203,29 @@ def main():
                             queue.append(abs_import)
     
     target_files = sorted(processed_files)
-    if cpc_sources is not None:
-        cpc_sources.resolve(valid_asts, reporters)
+    if semantic_sources is not None:
+        semantic_sources.resolve(valid_asts, reporters, require_captured=semantic_export_requested)
 
     # === Phase 4: Semantic AST Generation (Cross-File) ===
     semantic_system = None
     sem_pipeline = None
     inventory = None
-    if (args.ast_sem and not args.no_validate and valid_asts
-            and (not semantic_export_requested or not any(reporter.has_errors() for reporter in reporters.values()))):
+    if semantic_validation_requested and valid_asts:
         from .semantic.SemanticPipeline import SemanticPipeline
-        from .semantic.SymbolTable import SemanticError as STSemanticError
-        from .semantic.AnnotationResolver import SemanticError as AnnotationSemanticError
+        from .semantic.SymbolTable import SemanticError
 
-        sem_pipeline = SemanticPipeline(validate_built_in_types=True, cpc=semantic_export_requested)
+        asts = [ast for _, ast in valid_asts]
+        inventory_error = None
+        # Capture expected occurrences before semantic conversion mutates the model.
+        if semantic_export_requested and not any(reporter.has_errors() for reporter in reporters.values()):
+            try:
+                inventory = CPCInventory(asts, source_paths, source_digests)
+            except CPCReconciliationError as exc:
+                inventory_error = exc
+
+        sem_pipeline = SemanticPipeline(validate_built_in_types=True, cpc=True)
         try:
-            if semantic_export_requested:
-                inventory = CPCInventory([ast for _, ast in valid_asts], source_paths, source_digests)
-            semantic_system = sem_pipeline.run([ast for _, ast in valid_asts], global_version=args.gasd_ver)
+            semantic_system = sem_pipeline.run(asts, global_version=args.gasd_ver)
             sem_rep = sem_pipeline.get_reporter()
             for sem_err in sem_rep.errors:
                 file_key = sem_err.location.file if sem_err.location and sem_err.location.file else "unknown"
@@ -235,27 +243,25 @@ def main():
                         endLine=sem_err.location.endLine, endColumn=sem_err.location.endCol,
                         sourceFile=file_key
                     ))
-        except CPCReconciliationError as exc:
-            occurrence = exc.occurrence
+        except SemanticError as exc:
+            location = exc.location
+            key = location.file if location and location.file in reporters else next(iter(reporters))
+            reporters[key].add_semantic_error(ValidationSemanticError(
+                code="SEMANTIC", severity="ERROR", message=str(exc),
+                line=location.startLine if location else 1,
+                column=location.startCol if location else 1,
+                endLine=location.endLine if location else None,
+                endColumn=location.endCol if location else None,
+                sourceFile=key,
+            ))
+
+        if inventory_error and not any(reporter.has_errors() for reporter in reporters.values()):
+            occurrence = inventory_error.occurrence
             key = next(path for path in target_files if source_paths.get(path) == occurrence.path)
             reporters[key].add_semantic_error(ValidationSemanticError(
-                code="CPC-RECONCILIATION", severity="ERROR", message=str(exc),
+                code="CPC-RECONCILIATION", severity="ERROR", message=str(inventory_error),
                 line=occurrence.line, column=occurrence.column, sourceFile=key,
             ))
-        except (STSemanticError, AnnotationSemanticError) as e:
-            # Report the error to the first available reporter
-            err_msg = str(e)
-            if not args.json:
-                print("ERROR: Semantic validation failed", file=sys.stderr)
-                print(f"error[SEMANTIC]: {err_msg}", file=sys.stderr)
-            loc = getattr(e, 'location', None)
-            first_rep = list(reporters.values())[0] if reporters else None
-            if first_rep:
-                first_rep.add_semantic_error(ValidationSemanticError(
-                    code='SEMANTIC', severity='ERROR', message=err_msg,
-                    line=loc.startLine if loc else 1,
-                    column=loc.startCol if loc else 1
-                ))
 
     # === Phase 5: Result Reporting ===
     failure_count = 0
@@ -282,12 +288,12 @@ def main():
             all_reports.append(reporter.to_dict())
         elif reporter.has_errors() or reporter.get_warning_count() > 0 or reporter.get_info_count() > 0:
             if is_failure:
-                print(f"ERROR: {file_path} failed validation", file=sys.stderr)
+                print(f"ERROR: {reporter.source_file} failed validation", file=sys.stderr)
             else:
-                print(f"OK Passed (with warnings): {file_path}", file=sys.stderr)
+                print(f"OK Passed (with warnings): {reporter.source_file}", file=sys.stderr)
             print(reporter.to_console(), file=sys.stderr)
         elif not has_ast_output:
-            print(f"OK Passed: {file_path}", file=sys.stderr)
+            print(f"OK Passed: {reporter.source_file}", file=sys.stderr)
 
     # === Phase 4.5: Validation Marker Construction ===
     marker = None

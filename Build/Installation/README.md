@@ -1,6 +1,6 @@
 # GASD Parser-Validator Installation
 
-Version 2.1.12
+Version 2.1.13
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Version 2.1.12
 ## Installation
 From this directory, run:
 ```bash
-python3 -m pip install dist/gasd_parser-2.1.12-py3-none-any.whl
+python3 -m pip install dist/gasd_parser-2.1.13-py3-none-any.whl
 ```
 
 ## Running the Parser
@@ -28,7 +28,7 @@ To write the same AST format directly to a file and capture the JSON validation 
 gasd_parser --json --ast-output ast.json file.gasd 2> parse-report.json
 ```
 
-Source reconciliation runs automatically for every validated semantic export. The AST includes `provenance.sources`, the verified `source_inventory`, and a `PASSED` validation marker. The JSON report's root `semantic_ast_sha512` is the SHA-512 digest of every byte written to `ast.json`. The `semantic_validate` object in the JSON report also carries the exact-byte and semantic-content fingerprints.
+Plain validation and semantic AST exports run the same semantic checks. Source reconciliation runs automatically for every validated semantic export. The AST includes `provenance.sources`, the verified `source_inventory`, and a `PASSED` validation marker. The JSON report's root `semantic_ast_sha512` is the SHA-512 digest of every byte written to `ast.json`. The `semantic_validate` object in the JSON report also carries the exact-byte and semantic-content fingerprints.
 
 Omit `--json` to get a human-readable report with the same exact-byte digest on stderr.
 
@@ -36,4 +36,4 @@ Omit `--json` to get a human-readable report with the same exact-byte digest on 
 gasd_parser --ast-output ast.json file.gasd
 ```
 
-Use `gasd_parser --version` to check the installed version and build timestamp. [Release notes](../ver-2.1/RELEASE_NOTES_2.1.12.md) · [AST export requirements](../../Requirements/ver-2.x/ver-2.1/GASD_Parser_AST_Requirements.md)
+Use `gasd_parser --version` to check the installed version and build timestamp. [Release notes](../ver-2.1/RELEASE_NOTES_2.1.13.md) · [AST export requirements](../../Requirements/ver-2.x/ver-2.1/GASD_Parser_AST_Requirements.md)

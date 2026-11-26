@@ -139,7 +139,7 @@ class CPCInventory:
         self.occurrences.append(Occurrence(kind, path, line, column, owner, address, deepcopy(fields)))
 
     def _include_annotations(self, node, scope, owner, address, *, offset=0):
-        converted = self.annotations.resolve(node.annotations, scope)
+        converted = self.annotations.resolve(node.annotations, scope, validate=False)
         for index, (annotation, semantic) in enumerate(zip(node.annotations, converted), offset):
             fields = semantic.to_dict()
             fields.pop("sourceMap", None)

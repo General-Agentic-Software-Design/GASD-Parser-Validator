@@ -7,7 +7,7 @@ class AnnotationResolver:
     def __init__(self):
         pass
 
-    def resolve(self, syntactic_annotations: List[Any], scope: ScopeEnum) -> List[ResolvedAnnotation]:
+    def resolve(self, syntactic_annotations: List[Any], scope: ScopeEnum, *, validate: bool = True) -> List[ResolvedAnnotation]:
         if not syntactic_annotations:
             return []
             
@@ -56,7 +56,8 @@ class AnnotationResolver:
                 ]
                 if attachment:
                     res_ann.attachment = attachment
-            self.validate(res_ann)
+            if validate:
+                self.validate(res_ann)
             resolved.append(res_ann)
             
         return resolved
@@ -65,7 +66,7 @@ class AnnotationResolver:
         from .AnnotationRegistry import validate_annotation_semantics
         error = validate_annotation_semantics(annotation.name, annotation.scope, annotation.arguments)
         if error:
-            raise SemanticError(error)
+            raise SemanticError(error, location=getattr(annotation, "sourceMap", None))
 
     def get(self, node: SemanticNodeBase, name: str, parent_node: Optional[SemanticNodeBase] = None) -> Optional[ResolvedAnnotation]:
         # Local annotation

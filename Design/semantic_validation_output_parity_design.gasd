@@ -1,0 +1,11 @@
+VERSION 1.2
+CONTEXT: "Semantic validation independent of CLI output selection"
+TARGET: "Python3"
+NAMESPACE: "design.semantic_validation_output_parity"
+TRACE: "BUG-4", "AC-V2-002-02", "AC-PARSER-007-02", "AC-PARSER-007-03", "AC-PARSER-007-04", "AC-PARSER-007-05", "AT-PARSER-007-03", "AST-AC-003-01"
+
+// Extends the component, CLI, and CPC semantic AST designs.
+CONSTRAINT: "Build the same syntax and semantic models and run the same language checks with default validation, explicit --ast-sem, and any semantic AST output destination. Use each file's declared version in the absence of --gasd-ver."
+CONSTRAINT: "Validate flow-step annotations in the same scope in every semantic mode, including nested steps and annotated expressions. Apply the existing registry rules. Report a rejected annotation once at the first token in the source that owns it, using one-based lines and zero-based columns."
+CONSTRAINT: "Discover and resolve readable imports the same way in every semantic mode. Retain unresolved import references for language validation. Export additionally requires a complete captured source set and checks the verified occurrence inventory before publishing."
+CONSTRAINT: "On semantic failure, return a nonzero status, report FAILED when a JSON report is requested, and leave AST destinations untouched. A --no-validate run skips semantic checks and can publish syntax-only output."

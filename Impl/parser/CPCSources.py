@@ -1,4 +1,4 @@
-"""Resolve CPC imports to captured sources before semantic validation."""
+"""Resolve CLI imports before semantic validation and source verification."""
 
 from collections import defaultdict
 import os
@@ -21,7 +21,7 @@ class CPCSources:
         self.imports[source.sourceFile] = imports
         return [candidate for _, _, candidate in imports if candidate is not None]
 
-    def resolve(self, valid_asts, reporters):
+    def resolve(self, valid_asts, reporters, *, require_captured):
         captured = {path for path, _ in valid_asts}
         namespaces = defaultdict(list)
         for path, source in valid_asts:
@@ -35,13 +35,16 @@ class CPCSources:
                 if target is None and not any(mark in name for mark in ("/", "\\")):
                     choices = namespaces.get(name.lower(), ())
                     target = choices[0] if choices else None
-                if target not in captured:
+                if require_captured and target not in captured:
                     reporters[path].add_semantic_error(SemanticError(
                         code="CPC-IMPORT", severity="ERROR",
                         message=f"Could not resolve import {name!r} to a readable captured source",
                         line=directive.line, column=directive.column, sourceFile=path,
                     ))
-                    continue
+                if target is None:
+                    target = name
+                    if name.endswith(".gasd"):
+                        target = os.path.realpath(os.path.join(os.path.dirname(path), name))
                 source.cpc_imports.append({
                     "path": target, "alias": directive.alias,
                     "sourceMap": {"file": path, "startLine": directive.line, "startCol": directive.column},

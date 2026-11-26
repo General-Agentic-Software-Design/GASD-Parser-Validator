@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "Rejection validation for invalid flow-step annotations in every semantic mode"
+TARGET: "Python3"
+NAMESPACE: "validation.semantic_output_parity.negative"
+TRACE: "BUG-4", "AC-V2-002-02", "AC-PARSER-008-06", "AT-PARSER-007-03"
+
+// Scenarios derive from Design/semantic_validation_output_parity_design.gasd.
+FLOW reject_invalid_annotations():
+    1. ACHIEVE "Validate GASD 1.2 source with @format attached to a numbered VALIDATE step"
+        POSTCONDITION: "Default validation, plain --ast-sem, --json, --ast-output, and --ast-combine all exit one and report one STEP scope diagnostic at the annotation. Stdout is empty and an existing AST file retains its bytes. The JSON report has FAILED status."
+    2. ACHIEVE "Validate a nested flow step containing an @constraint with no argument"
+        POSTCONDITION: "Plain --ast-sem and both export destinations reject the annotation with a required-argument error at that annotation."

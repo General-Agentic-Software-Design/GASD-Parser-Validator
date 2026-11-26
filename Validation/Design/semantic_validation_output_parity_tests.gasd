@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "Design validation for semantic validation without an AST destination"
+TARGET: "Python3"
+NAMESPACE: "validation.semantic_output_parity.design"
+TRACE: "BUG-4", "AC-PARSER-007-02", "AC-PARSER-007-03", "AC-PARSER-007-04"
+
+// Scenarios derive from Design/semantic_validation_output_parity_design.gasd.
+FLOW verify_syntax_only_bypass():
+    1. ACHIEVE "Read the same invalid flow-step annotation in syntax-only mode with explicit --ast-sem"
+        POSTCONDITION: "Both the plain invocation and JSON syntax export exit zero. Neither has an annotation scope diagnostic. JSON stdout is a syntactic AST without a verified occurrence inventory or digest."

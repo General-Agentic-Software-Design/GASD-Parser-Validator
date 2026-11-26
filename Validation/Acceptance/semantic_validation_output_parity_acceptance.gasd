@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "Acceptance validation for semantic validation across CLI output modes"
+TARGET: "Python3"
+NAMESPACE: "validation.semantic_output_parity.acceptance"
+TRACE: "BUG-4", "AT-PARSER-007-03", "AST-AC-002-03", "AST-AC-003-01"
+
+// Scenarios derive from Design/semantic_validation_output_parity_design.gasd.
+FLOW verify_valid_annotations():
+    1. ACHIEVE "Validate a 1.2 flow with a TYPE field carrying @format and a VALIDATE step carrying a legal @constraint"
+        POSTCONDITION: "Default validation, plain --ast-sem, --json, --ast-output, and --ast-combine all succeed. Semantic exports preserve the field and step scopes and the authored AS identifiers. Each exported occurrence resolves to its annotation."

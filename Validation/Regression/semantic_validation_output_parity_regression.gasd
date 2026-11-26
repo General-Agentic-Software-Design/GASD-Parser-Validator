@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "Regression validation for semantic checks and import handling across CLI output modes"
+TARGET: "Python3"
+NAMESPACE: "validation.semantic_output_parity.regression"
+TRACE: "BUG-4", "AT-PARSER-007-03", "AC-PARSER-007-05", "AC-V2-001-03"
+
+// Scenarios derive from Design/semantic_validation_output_parity_design.gasd.
+FLOW verify_imported_annotation_diagnostics():
+    1. ACHIEVE "Validate a GASD 1.1 entry file importing a readable source with no .gasd extension and an invalid flow-step annotation"
+        POSTCONDITION: "Plain --ast-sem, --json, and --ast-output find the imported source and report the error in that file at the annotation's first token. An earlier-sorting entry file receives no annotation error."
+    2. ACHIEVE "Validate a GASD 1.1 file with an external namespace import and no captured source"
+        POSTCONDITION: "Plain validation retains its GASD 1.1 language result. A validated export rejects the unresolved source reference and leaves the selected output untouched."

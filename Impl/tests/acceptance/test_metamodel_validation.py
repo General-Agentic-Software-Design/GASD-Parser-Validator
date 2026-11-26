@@ -14,7 +14,7 @@ def test_authoritative_metamodel_validation():
     """
     # Go up 4 levels to reach project root: Impl/tests/acceptance/ -> Impl/tests/ -> Impl/ -> root
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    metamodel_path = os.path.join(base_dir, "GASD", "GASD-1.2", "gasd-1.2.0.gasd")
+    metamodel_path = os.path.join(base_dir, "GASDSpecs", "GASD-1.2", "gasd-1.2.0.gasd")
     
     assert os.path.exists(metamodel_path), f"Metamodel file not found at {metamodel_path}"
     
