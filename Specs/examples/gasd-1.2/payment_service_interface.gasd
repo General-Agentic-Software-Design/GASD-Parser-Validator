@@ -15,7 +15,7 @@ NAMESPACE: "org.gasd.examples.v1_2.payments"
 TYPE TransactionData:
     id: UUID
     amount: Decimal @range(0.01, 10000.0) AS VALID_AMOUNT
-    currency: String @min_length(3) @max_length(3) AS CURRENCY_CODE
+    currency: String @min_length(3) AS CURRENCY_CODE_MIN @max_length(3) AS CURRENCY_CODE
 
 TYPE PaymentMethod:
     name: String

@@ -1,6 +1,6 @@
 # GASD Parser-Validator Installation
 
-Version 2.1.11
+Version 2.1.12
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Version 2.1.11
 ## Installation
 From this directory, run:
 ```bash
-python3 -m pip install dist/gasd_parser-2.1.11-py3-none-any.whl
+python3 -m pip install dist/gasd_parser-2.1.12-py3-none-any.whl
 ```
 
 ## Running the Parser
@@ -36,4 +36,4 @@ Omit `--json` to get a human-readable report with the same exact-byte digest on 
 gasd_parser --ast-output ast.json file.gasd
 ```
 
-Use `gasd_parser --version` to check the installed version and build timestamp. [Release notes](../ver-2.1/RELEASE_NOTES_2.1.11.md) · [AST export requirements](../../Requirements/ver-2.x/ver-2.1/GASD_Parser_AST_Requirements.md)
+Use `gasd_parser --version` to check the installed version and build timestamp. [Release notes](../ver-2.1/RELEASE_NOTES_2.1.12.md) · [AST export requirements](../../Requirements/ver-2.x/ver-2.1/GASD_Parser_AST_Requirements.md)

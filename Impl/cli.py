@@ -25,7 +25,7 @@ from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.11"
+    __version__ = "2.1.12"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 

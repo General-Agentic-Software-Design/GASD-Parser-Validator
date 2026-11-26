@@ -1,0 +1,11 @@
+VERSION 1.2
+CONTEXT: "Acceptance validation for TYPE field annotation identifiers"
+TARGET: "Python3"
+NAMESPACE: "validation.field_annotation_alias.acceptance"
+TRACE: "AT-V2-111", "AST-AC-002-03", "AST-AC-003-01"
+
+CONSTRAINT: "Scenarios derive from Design/field_annotation_alias_design.gasd."
+
+FLOW verify_authored_field_identifiers():
+    1. ACHIEVE "Export a TYPE field with two inline annotations carrying distinct AS identifiers"
+        POSTCONDITION: "Semantic validation passes. Each annotation source inventory pointer resolves to its field annotation and both entries carry the authored identifier."

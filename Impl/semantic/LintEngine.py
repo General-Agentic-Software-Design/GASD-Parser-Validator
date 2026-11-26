@@ -1,8 +1,9 @@
 import os
 import re
 from typing import List, Dict, Any, Optional, Set
-from .SemanticNodes import SemanticNodeBase, ResolvedAnnotation, SemanticSystem, ScopeEnum, ResolvedFlowNode
+from .SemanticNodes import ResolvedFlowNode, ScopeEnum, SemanticNodeBase, SemanticSystem, SourceRange
 from .SemanticErrorReporter import SemanticErrorReporter, StructuredSemanticError, ErrorLevel
+from .VersionResolver import VersionResolver
 
 class LintEngine:
     """
@@ -25,19 +26,23 @@ class LintEngine:
         """Determines severity based on the file version."""
         return v12_level if version == "1.2" else v11_level
 
-    def lint_system(self, system: SemanticSystem):
+    def lint_system(self, system: SemanticSystem, *, cli_version: Optional[str] = None):
         """Runs all LINT rules across the entire semantic system."""
         self.system = system
         
         # Pass 0: Lint the system (top-level properties)
         self.lint_node(system)
         
-        # Pass 0b: File-level check (Version & Placement)
+        # Pass 0b: File-level checks (version placement and field annotation IDs)
         for fnode in system.metadata.files:
             if not fnode.syntacticRoot: continue
+            syntax = fnode.syntacticRoot
+            # Unversioned legacy fields may omit AS unless the caller selects GASD 1.2.
+            field_version = cli_version or VersionResolver.resolve_declared_version(syntax) or "1.1"
+            self._lint_field_annotation_aliases(syntax, fnode.filePath, field_version)
             
             # US-V2-001: VERSION MUST be first
-            if not getattr(fnode.syntacticRoot, "version_first", True):
+            if not getattr(syntax, "version_first", True):
                 file_ver = self.file_versions.get(fnode.filePath, self.version)
                 severity = ErrorLevel.ERROR if file_ver == "1.2" else ErrorLevel.WARNING
                 self._report_at("V2-001", "SyntaxError: VERSION directive MUST be the first directive in the file.", 1, 1, fnode.filePath, level=severity)
@@ -90,6 +95,24 @@ class LintEngine:
         for ass in system.assumptions:
             self.lint_node(ass)
 
+    def _lint_field_annotation_aliases(self, syntax, file: str, version: str):
+        for declaration in syntax.types:
+            for field in declaration.fields or ():
+                for annotation in field.annotations:
+                    if not annotation.alias:
+                        line = getattr(annotation, "line", field.line)
+                        column = getattr(annotation, "column", field.column)
+                        location = SourceRange(file, line, column, None, None)
+                        self._report_missing_alias(annotation.name, version, location)
+
+    def _report_missing_alias(self, name: str, version: str, location: SourceRange):
+        self.reporter.report(StructuredSemanticError(
+            code="LINT-011",
+            message=f"Annotation @{name} is missing mandatory 'AS' identifier in GASD 1.2",
+            level=self._get_severity(version, ErrorLevel.ERROR, ErrorLevel.INFO),
+            location=location,
+        ))
+
     def lint_node(self, node: SemanticNodeBase):
         """Runs node-level LINT rules."""
         version = self._get_version(node)
@@ -105,8 +128,7 @@ class LintEngine:
 
             # LINT-011: Annotation without AS identifier (1.2 ERROR, 1.1 Info)
             if not ann.alias:
-                severity = self._get_severity(version, ErrorLevel.ERROR, ErrorLevel.INFO)
-                self._report("LINT-011", f"Annotation @{ann.name} is missing mandatory 'AS' identifier in GASD 1.2", node, level=severity)
+                self._report_missing_alias(ann.name, version, node.sourceMap)
             else:
                 # LINT-010: Identifier collision (1.2 ERROR, 1.1 Error)
                 if ann.alias in aliases:
@@ -231,7 +253,6 @@ class LintEngine:
         ))
 
     def _report_at(self, code: str, message: str, line: int, col: int, file: str, level: ErrorLevel = ErrorLevel.ERROR):
-        from .SemanticNodes import SourceRange
         self.reporter.report(StructuredSemanticError(
             code=code, message=message, level=level, location=SourceRange(file, line, col, line, col)
         ))
