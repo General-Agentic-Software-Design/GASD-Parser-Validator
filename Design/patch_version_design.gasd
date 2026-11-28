@@ -1,0 +1,11 @@
+VERSION 1.2
+CONTEXT: "GASD patch version declarations and CLI diagnostics"
+TARGET: "ANTLR4", "Python3"
+TRACE: "BUG-5", "US-V2-001", "US-V2-009", "US-PARSER-009", "AC-V2-001-01", "AC-V2-001-02", "AC-V2-007-03", "AC-PARSER-007-05", "AC-PARSER-009-02", "AC-PARSER-009-06"
+TRACE: "AC-V2-009-02", "AC-V2-009-05", "AC-V2-009-06", "AC-V2-009-07", "AC-V2-009-08", "AC-V2-009-09", "AC-V2-009-11", "AC-PARSER-005-01", "AC-PARSER-005-03"
+
+CONSTRAINT: "Accept two unsigned numeric VERSION components and an optional third component. Preserve existing quoted declarations and optional colons. Reject a missing patch after the third-component separator and reject a fourth numeric component."
+CONSTRAINT: "Resolve 1.2, 1.2.0 and 1.2.1 to the inherited GASD 1.2 rules for postconditions, imports, invariant scope, obligation IDs and assumptions. In particular, a field annotation missing its AS identifier raises LINT-011 at ERROR for all three versions. GASD 1.1 retains its legacy severity."
+CONSTRAINT: "The CLI selector 1.2 matches each declaration using the inherited 1.2 rules. A mismatch with the 1.1 selector emits exactly one LINT-013 ERROR per file and includes the declared version."
+CONSTRAINT: "The parser retains the declared version string for AST export. Validated semantic output includes it in both metadata.version and semantic_validate.gasd_file_version. Syntax-only AST output stores the VERSION directive value in the root version field."
+CONSTRAINT: "For an input with a syntax error, store its diagnostics and skip its AST. The final CLI report prints one failure banner and one copy of each diagnostic in human-readable mode or one entry per diagnostic in JSON mode. Syntax-only mode follows the same reporting rule."

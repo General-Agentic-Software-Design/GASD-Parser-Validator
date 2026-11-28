@@ -20,21 +20,21 @@ CONTRACT ASTOutput.ASTOutputRouter.route_ast_output:
             POSTCONDITION: "When supplied, the output path receives the AST JSON"
 
 FLOW test_design_routing_decision():
-    @trace #AC-PARSER-013-01, #AC-PARSER-013-02
+    @trace("AC-PARSER-013-01", "AC-PARSER-013-02") AS TRACE_TEST_DESIGN_ROUTING_DECISION
     1. ACHIEVE "Review DEC_AST_OUTPUT_ROUTING in Design"
         POSTCONDITION: "Decision for exclusive file write is extracted"
     2. ENSURE "CHOSEN strategy uses the existing AST serializer and routes its UTF-8 output to exactly one destination"
         OTHERWISE THROW "Design Mismatch: Destinations do not share a single AST serialization"
 
 FLOW test_design_error_handling_decision():
-    @trace #AC-PARSER-013-06
+    @trace("AC-PARSER-013-06") AS TRACE_TEST_DESIGN_ERROR_HANDLING_DECISION
     1. ACHIEVE "Review DEC_AST_OUTPUT_ERROR in Design"
         POSTCONDITION: "Decision for unwritable output file handling is extracted"
     2. ENSURE "CHOSEN strategy specifies non-zero exit code and stderr error message"
         OTHERWISE THROW "Design Mismatch: Error handling decision does not mandate fail-fast behavior"
 
 FLOW test_ast_output_design_constraint_coverage():
-    @trace #AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-03, #AC-PARSER-013-04, #AC-PARSER-013-05, #AC-PARSER-013-06
+    @trace("AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-03", "AC-PARSER-013-04", "AC-PARSER-013-05", "AC-PARSER-013-06") AS TRACE_TEST_AST_OUTPUT_DESIGN_CONSTRAINT_COVERAGE
     1. ACHIEVE "Examine constraints in Design/ast_output_exclusive_file_design.gasd"
         POSTCONDITION: "Constraint set for US-PARSER-013 is extracted"
     2. ENSURE "Exclusive file write constraint is present"
@@ -51,7 +51,7 @@ FLOW test_ast_output_design_constraint_coverage():
         OTHERWISE THROW "Design Mismatch: Missing CONST_WRITE_ERROR_HANDLING"
 
 FLOW test_design_flow_coverage():
-    @trace #AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-04
+    @trace("AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-04") AS TRACE_TEST_DESIGN_FLOW_COVERAGE
     1. ACHIEVE "Review FLOW_ROUTE_AST in Design"
         POSTCONDITION: "Flow for AST output routing is extracted"
     2. ENSURE "Flow handles both file output and default stdout output paths"

@@ -45,7 +45,8 @@ section
 // ===================================================================
 
 version_dir     : VERSION_KW COLON? (version_number | STRING_LITERAL) NEWLINE ;
-version_number  : FLOAT_LITERAL | (INTEGER DOT INTEGER (DOT INTEGER)?) ;
+// INTEGER also accepts signed literals elsewhere, so check the patch separately.
+version_number  : (FLOAT_LITERAL | INTEGER DOT INTEGER) (DOT {not self._input.LT(1).text.startswith('-')}? INTEGER)? ;
 context_dir     : CONTEXT_KW COLON value_list NEWLINE ;
 target_dir      : TARGET_KW COLON value_list NEWLINE ;
 trace_dir       : TRACE_KW COLON value_list NEWLINE ;

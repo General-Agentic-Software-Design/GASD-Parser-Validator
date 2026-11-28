@@ -15,7 +15,7 @@ TRACE: "US-PARSER-004"
 // ===================================================================
 
 FLOW test_duplicate_names():
-    @trace #AC-PARSER-004-01, #AT-PARSER-004-01
+    @trace("AC-PARSER-004-01", "AT-PARSER-004-01")
     1. ACHIEVE "Submit file with two FLOWs named 'Login'"
     2. ENSURE "ValidationPipeline returns a SemanticError"
         OTHERWISE THROW "Validation Failed"
@@ -30,7 +30,7 @@ FLOW test_duplicate_names():
 // ===================================================================
 
 FLOW test_required_sections():
-    @trace #AC-PARSER-004-02, #AT-PARSER-004-02
+    @trace("AC-PARSER-004-02", "AT-PARSER-004-02")
     1. ACHIEVE "Submit file missing CONTEXT directive"
     2. ENSURE "Validation fails with error for missing mandatory directive"
         OTHERWISE THROW "Validation Failed"
@@ -43,7 +43,7 @@ FLOW test_required_sections():
 // ===================================================================
 
 FLOW test_reference_resolution():
-    @trace #AC-PARSER-004-03, #AT-PARSER-004-03
+    @trace("AC-PARSER-004-03", "AT-PARSER-004-03")
     1. ACHIEVE "Submit FLOW referencing unknown TYPE 'Nonexistent'"
     2. ENSURE "Validation returns a WARNING (Unknown reference)"
         OTHERWISE THROW "Validation Failed"
@@ -56,7 +56,7 @@ FLOW test_reference_resolution():
 // ===================================================================
 
 FLOW test_validate_as_type_resolution():
-    @trace #AC-PARSER-008-05, #AT-VALIDATE-001, #NT-VALIDATE-002
+    @trace("AC-PARSER-008-05", "AT-VALIDATE-001", "NT-VALIDATE-002")
     1. ACHIEVE "Submit VALIDATE user AS TYPE.User where 'User' exists"
     2. ENSURE "Validation succeeds (resolution successful)"
         OTHERWISE THROW "Validation Failed"
@@ -70,5 +70,5 @@ FLOW test_validate_as_type_resolution():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Every SemanticError MUST include line, column, and context" @trace #AC-PARSER-004-04
-CONSTRAINT: "Validation pipeline MUST NOT halt on the first error" @trace #AC-PARSER-004-01
+CONSTRAINT: "Every SemanticError MUST include line, column, and context" @trace("AC-PARSER-004-04")
+CONSTRAINT: "Validation pipeline MUST NOT halt on the first error" @trace("AC-PARSER-004-01")

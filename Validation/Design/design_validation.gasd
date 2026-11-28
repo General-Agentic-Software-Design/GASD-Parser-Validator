@@ -46,4 +46,4 @@ FLOW validate_system_flow():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Every core interface MUST support version-aware processing" @trace(#AC-V2-001-01) AS CONST_VER_AWARE
+CONSTRAINT: "Every core interface MUST support version-aware processing" @trace("AC-V2-001-01") AS CONST_VER_AWARE

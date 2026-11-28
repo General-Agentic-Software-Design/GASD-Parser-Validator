@@ -15,37 +15,37 @@ TRACE: "US-SEMAST-016", "US-SEMAST-018", "US-X-SEMAST-010"
 // ===================================================================
 
 FLOW test_semast_cli_activation():
-    @trace #AT-SEMAST-016-01, #AC-SEMAST-016-01
+    @trace("AT-SEMAST-016-01", "AC-SEMAST-016-01")
     1. ACHIEVE "Run CLI with a valid file and --json"
     2. ENSURE "The CLI writes one validated SemanticSystem to stdout and a JSON report with the byte digest to stderr"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_syntax_output():
-    @trace #AT-SEMAST-016-02, #AC-SEMAST-016-02
+    @trace("AT-SEMAST-016-02", "AC-SEMAST-016-02")
     1. ACHIEVE "Run CLI with --json --no-validate"
     2. ENSURE "The CLI writes a syntactic AST without a verified inventory or artifact digest"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_multi_file_input():
-    @trace #AT-X-SEMAST-010-01, #AC-X-SEMAST-010-01
+    @trace("AT-X-SEMAST-010-01", "AC-X-SEMAST-010-01")
     1. ACHIEVE "Run CLI with --json and multiple GASD files as input"
     2. ENSURE "CLI processes them as a single compilation unit and generates one global Semantic AST"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_output_dir():
-    @trace #AT-SEMAST-016-03, #AC-SEMAST-016-03
+    @trace("AT-SEMAST-016-03", "AC-SEMAST-016-03")
     1. ACHIEVE "Run CLI with --ast-output ./custom-dir/ast.json"
     2. ENSURE "The file contains the reconciled semantic AST and stdout is empty"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_combine():
-    @trace #AT-SEMAST-016-04, #AC-SEMAST-016-04, #AC-SEMAST-018-04
+    @trace("AT-SEMAST-016-04", "AC-SEMAST-016-04", "AC-SEMAST-018-04")
     1. ACHIEVE "Run CLI on a directory with --ast-combine --ast-output single.json"
     2. ENSURE "Output is a single SemanticSystem containing all successfully validated inputs"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_errors():
-    @trace #AT-SEMAST-016-05, #AC-SEMAST-016-05, #AC-X-SEMAST-010-01, #AC-X-SEMAST-010-05
+    @trace("AT-SEMAST-016-05", "AC-SEMAST-016-05", "AC-X-SEMAST-010-01", "AC-X-SEMAST-010-05")
     1. ACHIEVE "Run CLI with --ast-sem on multiple files with validation errors"
     2. ENSURE "Semantic errors are aggregated across files and printed to stderr"
         OTHERWISE THROW "Validation Failed"
@@ -53,19 +53,19 @@ FLOW test_semast_cli_errors():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_deterministic_errors():
-    @trace #AT-X-SEMAST-010-02, #AC-X-SEMAST-010-04
+    @trace("AT-X-SEMAST-010-02", "AC-X-SEMAST-010-04")
     1. ACHIEVE "Run CLI multiple times on the same set of erroneous files"
     2. ENSURE "The order of reported errors remains identical every time"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_default_behavior():
-    @trace #AT-SEMAST-016-06, #AC-SEMAST-016-06
+    @trace("AT-SEMAST-016-06", "AC-SEMAST-016-06")
     1. ACHIEVE "Run CLI without any AST flags"
     2. ENSURE "Semantic validation runs and prints a summary without exporting an AST"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_cli_combined_opts():
-    @trace #AT-SEMAST-018-01, #AC-SEMAST-018-05
+    @trace("AT-SEMAST-018-01", "AC-SEMAST-018-05")
     1. ACHIEVE "Run CLI with --json --ast-combine --ast-output single.json"
     2. ENSURE "The CLI writes one source-checked AST to the file and a JSON report to stderr"
         OTHERWISE THROW "Validation Failed"
@@ -75,7 +75,7 @@ FLOW test_semast_cli_combined_opts():
 // ===================================================================
 
 FLOW test_semast_cli_regression_missing_file():
-    @trace #RT-SEMAST-016-01
+    @trace("RT-SEMAST-016-01")
     1. ACHIEVE "Run CLI with --ast-sem on non-existent file"
     2. ENSURE "Standard missing file error triggers before AST pipeline activates"
         OTHERWISE THROW "Validation Failed"

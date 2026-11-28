@@ -62,5 +62,5 @@ FLOW validate_cli_versioning():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "CLI MUST NOT accept --ast as a valid argument in v2.0" @trace(#AC-PARSER-007-01) AS CONST_AST_REM
-CONSTRAINT: "Default AST output mode MUST be semantic if no mode specified" @trace(#AC-PARSER-007-02) AS CONST_DEFAULT_MODE
+CONSTRAINT: "CLI MUST NOT accept --ast as a valid argument in v2.0" @trace("AC-PARSER-007-01") AS CONST_AST_REM
+CONSTRAINT: "Default AST output mode MUST be semantic if no mode specified" @trace("AC-PARSER-007-02") AS CONST_DEFAULT_MODE

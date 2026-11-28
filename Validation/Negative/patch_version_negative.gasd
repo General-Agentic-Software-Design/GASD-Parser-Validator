@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "BUG-5 rejection and reporting scenarios"
+TARGET: "Python3"
+TRACE: "BUG-5", "AC-PARSER-005-01", "AC-PARSER-005-03", "AT-V2-118"
+
+FLOW reject_malformed_patch_versions() -> Void:
+    1. ACHIEVE "Validate stdin with VERSION 1.2. or VERSION 1.2.1.0 in default and syntax-only modes":
+        POSTCONDITION: "Each invocation exits one with one failure banner and one syntax diagnostic"
+    2. ACHIEVE "Validate the same malformed sources with JSON output requested":
+        POSTCONDITION: "Each invocation exits one with one syntax error in the JSON report and empty stdout"
+    3. ACHIEVE "Validate a conforming file declaring VERSION 1.2.1 with the 1.1 CLI selector":
+        POSTCONDITION: "The invocation exits one and reports exactly one LINT-013 ERROR with the declared version"

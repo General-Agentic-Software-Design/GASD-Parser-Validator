@@ -83,8 +83,8 @@ COMPONENT CollisionDetector @trace("AC-SEMAST-002-06"):
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Symbol resolution MUST be case-sensitive as per GASD 1.1.0 §4." @trace #AC-SEMAST-002-07
-CONSTRAINT: "Circular dependencies between TYPES or COMPONENTS MUST be detected and reported." @trace #AC-SEMAST-002-08
-CONSTRAINT: "Symbol definitions MUST be immutable once resolved." @trace #AC-SEMAST-002-01
-CONSTRAINT: "Duplicate symbol definitions within the same namespace MUST produce a DuplicateSymbolError." @trace #AC-X-SEMAST-003-03
-CONSTRAINT: "Local definitions MUST NOT shadow built-in types." @trace #AC-X-SEMAST-003-05
+CONSTRAINT: "Symbol resolution MUST be case-sensitive as per GASD 1.1.0 §4." @trace("AC-SEMAST-002-07")
+CONSTRAINT: "Circular dependencies between TYPES or COMPONENTS MUST be detected and reported." @trace("AC-SEMAST-002-08")
+CONSTRAINT: "Symbol definitions MUST be immutable once resolved." @trace("AC-SEMAST-002-01")
+CONSTRAINT: "Duplicate symbol definitions within the same namespace MUST produce a DuplicateSymbolError." @trace("AC-X-SEMAST-003-03")
+CONSTRAINT: "Local definitions MUST NOT shadow built-in types." @trace("AC-X-SEMAST-003-05")

@@ -1,0 +1,12 @@
+VERSION 1.2
+CONTEXT: "BUG-5 regression scenarios"
+TARGET: "Python3"
+TRACE: "BUG-5", "AT-V2-111", "RT-V2-204", "AC-V2-009-02"
+
+FLOW preserve_patch_version_lint_and_legacy_headers() -> Void:
+    1. ACHIEVE "Omit the AS identifier on a field annotation and validate under 1.2, 1.2.0 and 1.2.1, including quoted 1.2.1":
+        POSTCONDITION: "Each invocation exits one and reports LINT-011 at ERROR"
+    2. ACHIEVE "Validate the same annotation under VERSION 1.1":
+        POSTCONDITION: "The invocation exits zero and reports LINT-011 at INFO"
+    3. ACHIEVE "Validate a conforming file with a colon and a quoted version in its VERSION header":
+        POSTCONDITION: "Validation succeeds and the semantic export preserves the declared version string"

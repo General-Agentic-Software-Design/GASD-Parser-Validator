@@ -4,7 +4,7 @@ TARGET: "Python3"
 TRACE: "GEP-7", "US-V2-004", "AC-V2-004-01", "AC-V2-004-02", "AC-V2-004-03", "AC-V2-004-04", "AC-V2-004-05"
 
 FLOW test_contract_target_and_type_resolution():
-    @trace(#AT-GEP7-001, #NT-GEP7-002, #AC-V2-004-03) AS DT_GEP7_TYPE_RESOLUTION
+    @trace("AT-GEP7-001", "NT-GEP7-002", "AC-V2-004-03") AS DT_GEP7_TYPE_RESOLUTION
     1. ACHIEVE "Resolve a contract target as Component.method, Namespace.Component.method, Alias.Component.method, and Alias.method":
         POSTCONDITION: "Every unambiguous spelling resolves to the intended interface method. The short alias form resolves only if the method is unique in the imported file."
     2. ACHIEVE "Compare signatures whose nested type arguments use distinct spellings of the same resolved type":
@@ -13,14 +13,14 @@ FLOW test_contract_target_and_type_resolution():
         POSTCONDITION: "A valid import contract still satisfies LINT-002. An import without its required contract in GASD 1.2 still yields LINT-002."
 
 FLOW test_contract_clause_representation():
-    @trace(#AT-GEP7-002, #AC-V2-004-02) AS DT_GEP7_AST_CLAUSES
+    @trace("AT-GEP7-002", "AC-V2-004-02") AS DT_GEP7_AST_CLAUSES
     1. ACHIEVE "Inspect valid cases with repeated POSTCONDITION clauses, qualified THROWS, and an AFTER clause":
         POSTCONDITION: "The case AST preserves each postcondition in order and distinguishes the quoted postcondition from the formal predicate. It retains the qualified error type and the duration or retry clause."
     2. ACHIEVE "Export guards with reference, string, signed number, boolean, null, and IS type operands":
         POSTCONDITION: "AST operands retain their meaning and types, including a qualified generic type on the right of IS. Guard source locations identify the WHEN clauses."
 
 FLOW test_strict_predicate_evaluation():
-    @trace(#AT-GEP7-002, #AT-GEP7-003, #NT-GEP7-003) AS DT_GEP7_PREDICATES
+    @trace("AT-GEP7-002", "AT-GEP7-003", "NT-GEP7-003") AS DT_GEP7_PREDICATES
     1. ACHIEVE "Evaluate equality and inequality for null, booleans, numbers, and strings against raw inputs":
         POSTCONDITION: "Null equals only itself. Boolean true differs from Integer 1, and String '1' differs from Integer 1. Comparisons preserve the declared numeric semantics and treat Boolean as nonnumeric."
     2. ACHIEVE "Exercise the four numeric ordering operators with less-than, equal, and greater-than operands":
@@ -29,7 +29,7 @@ FLOW test_strict_predicate_evaluation():
         POSTCONDITION: "Eligibility follows GASD's strict type rules. Where the expected type is a generic, a value with an incompatible element type does not satisfy IS."
 
 FLOW test_contract_completion_bindings():
-    @trace(#AT-GEP7-003, #AT-GEP7-004, #RT-GEP7-002) AS DT_GEP7_COMPLETION
+    @trace("AT-GEP7-003", "AT-GEP7-004", "RT-GEP7-002") AS DT_GEP7_COMPLETION
     1. ACHIEVE "Check a normal return and each normal Result variant":
         POSTCONDITION: "A normal return with an ordinary payload binds result. Result success binds only result and Result failure binds only error. Failure is a normal completion for cases without THROWS."
     2. ACHIEVE "Check an exception with the declared qualified type and a different exception":
@@ -38,7 +38,7 @@ FLOW test_contract_completion_bindings():
         POSTCONDITION: "A supplied null is a binding and compares equal to null. Unit matches void, and the unavailable result or error binding does not match either null or void."
 
 FLOW test_contract_timing_evidence():
-    @trace(#AT-GEP7-003, #AT-GEP7-004) AS DT_GEP7_TIMING
+    @trace("AT-GEP7-003", "AT-GEP7-004") AS DT_GEP7_TIMING
     1. ACHIEVE "Check AFTER durations written in ms, s, and m with equivalent minimum elapsed times":
         POSTCONDITION: "An observation at or above the threshold satisfies AFTER. One below it rules out the case. Missing elapsed time leaves an otherwise matching case unverified."
     2. ACHIEVE "Check retry(0) and retry(2) with recorded counts below, at, and above the applicable count":
@@ -47,7 +47,7 @@ FLOW test_contract_timing_evidence():
         POSTCONDITION: "The contradictory observation rules out the case and does not yield an unverified status."
 
 FLOW test_contract_hash_and_coverage():
-    @trace(#AC-V2-004-05, #AT-GEP7-002, #AT-GEP7-004) AS DT_GEP7_HASH_AND_COVERAGE
+    @trace("AC-V2-004-05", "AT-GEP7-002", "AT-GEP7-004") AS DT_GEP7_HASH_AND_COVERAGE
     1. ACHIEVE "Compare hashes of equivalent contract content at different locations and then change one guard":
         POSTCONDITION: "Identical content produces identical SHA-256 hashes. Changing a guard value or the order of distinct guards changes the hash."
     2. ACHIEVE "Verify one observed call for an input-dependent contract":

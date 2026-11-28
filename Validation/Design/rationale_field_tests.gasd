@@ -16,21 +16,21 @@ TRACE: "BUG-2"
 // ===================================================================
 
 FLOW test_design_rationale_grammar_rule():
-    @trace #BUG-2
+    @trace("BUG-2") AS TRACE_TEST_DESIGN_RATIONALE_GRAMMAR_RULE
     1. ACHIEVE "Verify GASDParser.g4 decision_blk rule requires RATIONALE_KW":
         POSTCONDITION: "RATIONALE line is not wrapped in optional modifier"
     2. ENSURE "Grammar rule does not contain '(RATIONALE_KW COLON STRING_LITERAL NEWLINE)?'"
         OTHERWISE THROW "Design Validation Failed: RATIONALE still optional in grammar"
 
 FLOW test_design_rationale_ast_node():
-    @trace #BUG-2
+    @trace("BUG-2") AS TRACE_TEST_DESIGN_RATIONALE_AST_NODE
     1. ACHIEVE "Verify Decision AST node defines rationale as str, not Optional":
         POSTCONDITION: "rationale field type is str"
     2. ENSURE "Decision.rationale is typed as 'str' not 'Optional[str]'"
         OTHERWISE THROW "Design Validation Failed: rationale still Optional in ASTNodes"
 
 FLOW test_design_rationale_field_populated():
-    @trace #BUG-2
+    @trace("BUG-2") AS TRACE_TEST_DESIGN_RATIONALE_FIELD_POPULATED
     1. ACHIEVE "Parse a valid DECISION block with RATIONALE present":
         POSTCONDITION: "Decision AST node has non-empty rationale string"
     2. ENSURE "result.rationale != '' AND result.rationale IS String"

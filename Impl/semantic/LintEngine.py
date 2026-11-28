@@ -12,7 +12,7 @@ class LintEngine:
     """
     def __init__(self, reporter: SemanticErrorReporter, version: str = "1.2"):
         self.reporter = reporter
-        self.version = version
+        self.version = VersionResolver.validation_version(version)
         self.file_versions: Dict[str, str] = {}
         self.system: Optional[SemanticSystem] = None
 
@@ -24,7 +24,7 @@ class LintEngine:
 
     def _get_severity(self, version: str, v12_level: ErrorLevel, v11_level: ErrorLevel) -> ErrorLevel:
         """Determines severity based on the file version."""
-        return v12_level if version == "1.2" else v11_level
+        return v12_level if VersionResolver.validation_version(version) == "1.2" else v11_level
 
     def lint_system(self, system: SemanticSystem, *, cli_version: Optional[str] = None):
         """Runs all LINT rules across the entire semantic system."""

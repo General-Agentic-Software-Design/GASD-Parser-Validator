@@ -4,28 +4,28 @@ TARGET: "Python3"
 TRACE: "GEP-7", "RT-GEP7-001", "RT-GEP7-002"
 
 FLOW test_gasd_12_example_suite():
-    @trace(#RT-GEP7-001) AS RT_GEP7_EXAMPLE_SUITE
+    @trace("RT-GEP7-001") AS RT_GEP7_EXAMPLE_SUITE
     1. ACHIEVE "Enumerate every GASD file in Specs/examples/gasd-1.2 recursively":
         POSTCONDITION: "The bundled suite includes its 31 baseline examples, including the multi-file providers and consumers."
     2. ACHIEVE "Run gasd_parser --gasd-ver 1.2 on each example separately and then on the whole examples directory":
         POSTCONDITION: "Each individual validation exits successfully without warnings. The directory invocation reports every example as passing, with zero failed files and zero warnings."
 
 FLOW test_unguarded_contract_compatibility():
-    @trace(#RT-GEP7-001, #AC-V2-004-02) AS RT_GEP7_UNGUARDED
+    @trace("RT-GEP7-001", "AC-V2-004-02") AS RT_GEP7_UNGUARDED
     1. ACHIEVE "Parse an existing fully specified unguarded GASD 1.2 contract with several cases":
         POSTCONDITION: "The syntax remains valid and exports the existing signature, cases, postconditions, optional version, and idempotence. Each case has an empty guard list."
     2. ACHIEVE "Check outcomes against the unguarded cases with distinct raw arguments":
         POSTCONDITION: "All unguarded cases are eligible, and completion mode and postconditions determine which ones match."
 
 FLOW test_inventory_release_contract_ast():
-    @trace(#RT-GEP7-002) AS RT_GEP7_INVENTORY_AST
+    @trace("RT-GEP7-002") AS RT_GEP7_INVENTORY_AST
     1. ACHIEVE "Export the AST for Specs/examples/gasd-1.2/multi-file/inventory_service.gasd":
         POSTCONDITION: "InventoryService.release_stock preserves items: List<Common.OrderItem>, Result<Void>, and IDEMPOTENT true. Its case names are released and failed."
     2. ACHIEVE "Inspect the formal and quoted postconditions for release_stock":
         POSTCONDITION: "The released case expresses result == void and stock restoration without duplicating a previous release. The failed case expresses error != null and unchanged inventory."
 
 FLOW test_inventory_release_observations():
-    @trace(#RT-GEP7-002, #AT-GEP7-004) AS RT_GEP7_INVENTORY_OBSERVATIONS
+    @trace("RT-GEP7-002", "AT-GEP7-004") AS RT_GEP7_INVENTORY_OBSERVATIONS
     1. ACHIEVE "Record a successful release in a small inventory fixture with a pre-existing reservation":
         POSTCONDITION: "Result success carries the void unit. The first release restores exactly the reserved quantity and clears the reservation."
     2. ACHIEVE "Repeat the same release and record stock before and after the repeat":

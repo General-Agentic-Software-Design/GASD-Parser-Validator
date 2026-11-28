@@ -213,7 +213,7 @@ COMPONENT SemanticModelBuilder @trace("AC-SEMAST-001-11"):
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Every SemanticNode MUST yield a deterministic hash for CI/CD comparison." @trace #AC-SEMAST-001-08
-CONSTRAINT: "Semantic AST MUST be self-contained for offline validation." @trace #AC-SEMAST-001-09
-CONSTRAINT: "File paths MUST be normalized across different OS environments." @trace #AC-X-SEMAST-001-01
-CONSTRAINT: "Input files MUST be sorted by canonical path for deterministic processing." @trace #AC-X-SEMAST-001-02
+CONSTRAINT: "Every SemanticNode MUST yield a deterministic hash for CI/CD comparison." @trace("AC-SEMAST-001-08")
+CONSTRAINT: "Semantic AST MUST be self-contained for offline validation." @trace("AC-SEMAST-001-09")
+CONSTRAINT: "File paths MUST be normalized across different OS environments." @trace("AC-X-SEMAST-001-01")
+CONSTRAINT: "Input files MUST be sorted by canonical path for deterministic processing." @trace("AC-X-SEMAST-001-02")

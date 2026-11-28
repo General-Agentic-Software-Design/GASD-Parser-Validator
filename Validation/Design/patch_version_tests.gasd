@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "BUG-5 design validation"
+TARGET: "Python3"
+TRACE: "BUG-5", "AC-V2-001-01", "AC-PARSER-009-02", "AC-PARSER-009-06"
+
+FLOW check_patch_version_design() -> Void:
+    1. ACHIEVE "Export the syntax-only AST for VERSION 1.2.1":
+        POSTCONDITION: "The root version field contains the string 1.2.1"
+    2. ACHIEVE "Export the validated AST for VERSION 1.2.1 with the 1.2 selector":
+        POSTCONDITION: "Both semantic version fields contain the string 1.2.1"

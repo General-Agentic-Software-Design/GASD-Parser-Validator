@@ -2,7 +2,7 @@
 
 The official, canonical parser and validator for the **General Agentic Software Design (GASD)** specification language (Version **1.2**).
 
-Version **2.1.13** applies the same semantic checks to validation-only runs and AST exports. Invalid flow-step annotations are reported at their source location. Validated exports include verified source provenance and the SHA-512 digest of the delivered bytes. The parser also supports GEP-7 contract signatures, ordered case guards, and a Python API for verifying observed calls. [Release notes](Build/ver-2.1/RELEASE_NOTES_2.1.13.md)
+Version **2.1.14** accepts GASD `VERSION 1.2`, `1.2.0`, and `1.2.1` headers and applies GASD 1.2 validation rules to each. AST exports preserve the declared version, and the CLI prints each syntax diagnostic once. [Release notes](Build/ver-2.1/RELEASE_NOTES_2.1.14.md)
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ By enforcing strict, language-level compliance through standard compiler design,
 The easiest way to use the parser is to install it as a standalone tool:
 
 ```bash
-python3 -m pip install Build/Installation/dist/gasd_parser-2.1.13-py3-none-any.whl
+python3 -m pip install Build/Installation/dist/gasd_parser-2.1.14-py3-none-any.whl
 ```
 
 To uninstall the standalone CLI:

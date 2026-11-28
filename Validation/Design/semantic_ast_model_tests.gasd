@@ -16,7 +16,7 @@ TRACE: "US-SEMAST-001", "US-X-SEMAST-001"
 // ===================================================================
 
 FLOW test_semast_core_generation():
-    @trace #AT-SEMAST-001-01, #AC-SEMAST-001-01
+    @trace("AT-SEMAST-001-01", "AC-SEMAST-001-01")
     1. ACHIEVE "Generate Semantic AST from a valid file"
     2. ENSURE "All nodes extend SemanticNodeBase"
         OTHERWISE THROW "Validation Failed"
@@ -24,7 +24,7 @@ FLOW test_semast_core_generation():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_source_maps():
-    @trace #AT-SEMAST-001-02, #AC-SEMAST-001-01
+    @trace("AT-SEMAST-001-02", "AC-SEMAST-001-01")
     1. ACHIEVE "Generate Semantic AST for nested constructs"
     2. ENSURE "SourceRange matches exactly with original text locations"
         OTHERWISE THROW "Validation Failed"
@@ -32,7 +32,7 @@ FLOW test_semast_source_maps():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_root_system():
-    @trace #AT-SEMAST-001-03, #AC-SEMAST-001-02
+    @trace("AT-SEMAST-001-03", "AC-SEMAST-001-02")
     1. ACHIEVE "Generate Semantic AST for system"
     2. ENSURE "Root node is SemanticSystem"
         OTHERWISE THROW "Validation Failed"
@@ -40,43 +40,43 @@ FLOW test_semast_root_system():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_type_references():
-    @trace #AT-SEMAST-001-04, #AC-SEMAST-001-03
+    @trace("AT-SEMAST-001-04", "AC-SEMAST-001-03")
     1. ACHIEVE "Generate object using types"
     2. ENSURE "Type bindings map to ResolvedTypeNode"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_flow_analysis():
-    @trace #AT-SEMAST-001-05, #AC-SEMAST-001-04
+    @trace("AT-SEMAST-001-05", "AC-SEMAST-001-04")
     1. ACHIEVE "Generate FLOW in Semantic AST"
     2. ENSURE "Inputs and outputs map to valid TypeContracts"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_component_analysis():
-    @trace #AT-SEMAST-001-06, #AC-SEMAST-001-05
+    @trace("AT-SEMAST-001-06", "AC-SEMAST-001-05")
     1. ACHIEVE "Parse COMPONENT"
     2. ENSURE "Dependencies list maps to accurate SymbolLinks"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_deterministic_hash():
-    @trace #AT-SEMAST-001-07, #AC-SEMAST-001-08
+    @trace("AT-SEMAST-001-07", "AC-SEMAST-001-08")
     1. ACHIEVE "Parse the same file multiple times"
     2. ENSURE "All SemanticNode hashes remain deterministic across runs"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_self_contained():
-    @trace #AT-SEMAST-001-08, #AC-SEMAST-001-09
+    @trace("AT-SEMAST-001-08", "AC-SEMAST-001-09")
     1. ACHIEVE "Generate semantic AST tree"
     2. ENSURE "All symbols use relative GUIDs without memory references"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_flow_step_bindings():
-    @trace #AT-SEMAST-001-10, #AC-SEMAST-001-10
+    @trace("AT-SEMAST-001-10", "AC-SEMAST-001-10")
     1. ACHIEVE "Parse complex FLOW with steps and bindings"
     2. ENSURE "Step variable bindings resolve to symbol entries"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_model_builder_incremental():
-    @trace #AT-SEMAST-001-11, #AC-SEMAST-001-11
+    @trace("AT-SEMAST-001-11", "AC-SEMAST-001-11")
     1. ACHIEVE "Update an existing system with a modified AST"
     2. ENSURE "Only affected nodes are rehashed and regenerated"
         OTHERWISE THROW "Validation Failed"
@@ -86,7 +86,7 @@ FLOW test_semast_model_builder_incremental():
 // ===================================================================
 
 FLOW test_semast_compilation_unit():
-    @trace #AT-X-SEMAST-001-01, #AC-X-SEMAST-001-03
+    @trace("AT-X-SEMAST-001-01", "AC-X-SEMAST-001-03")
     1. ACHIEVE "Generate Semantic AST from a set of files"
     2. ENSURE "Root SemanticSystem contains a non-null CompilationUnit"
         OTHERWISE THROW "Validation Failed"
@@ -94,7 +94,7 @@ FLOW test_semast_compilation_unit():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_path_normalization():
-    @trace #AT-X-SEMAST-001-02, #AC-X-SEMAST-001-01, #AC-X-SEMAST-001-05
+    @trace("AT-X-SEMAST-001-02", "AC-X-SEMAST-001-01", "AC-X-SEMAST-001-05")
     1. ACHIEVE "Pass absolute and relative paths to the builder"
     2. ENSURE "All paths are normalized to a consistent internal format"
         OTHERWISE THROW "Validation Failed"
@@ -102,7 +102,7 @@ FLOW test_semast_path_normalization():
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_deterministic_processing():
-    @trace #AT-X-SEMAST-001-03, #AC-X-SEMAST-001-02
+    @trace("AT-X-SEMAST-001-03", "AC-X-SEMAST-001-02")
     1. ACHIEVE "Run the builder multiple times with shuffled input file list"
     2. ENSURE "The resulting CompilationUnit structure is byte-identical every time"
         OTHERWISE THROW "Validation Failed"
@@ -112,13 +112,13 @@ FLOW test_semast_deterministic_processing():
 // ===================================================================
 
 FLOW test_semast_model_regression_cycles():
-    @trace #RT-SEMAST-001-01
+    @trace("RT-SEMAST-001-01")
     1. ACHIEVE "Provide file with deep circular type references"
     2. ENSURE "Builder resolves cleanly without recursion panic"
         OTHERWISE THROW "Validation Failed"
 
 FLOW test_semast_model_regression_empty():
-    @trace #RT-SEMAST-001-02
+    @trace("RT-SEMAST-001-02")
     1. ACHIEVE "Provide an empty file"
     2. ENSURE "Returns a valid SemanticSystem with empty maps"
         OTHERWISE THROW "Validation Failed"
@@ -127,4 +127,4 @@ FLOW test_semast_model_regression_empty():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Tests MUST assert that all nodes are immutable." @trace #AC-SEMAST-001-01
+CONSTRAINT: "Tests MUST assert that all nodes are immutable." @trace("AC-SEMAST-001-01")

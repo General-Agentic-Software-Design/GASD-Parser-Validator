@@ -48,4 +48,4 @@ FLOW validate_negative_scenarios():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Syntactic errors MUST prevent any AST generation or semantic validation" @trace(#AC-V2-001-01) AS CONST_SYNTAX_BLOCK
+CONSTRAINT: "Syntactic errors MUST prevent any AST generation or semantic validation" @trace("AC-V2-001-01") AS CONST_SYNTAX_BLOCK

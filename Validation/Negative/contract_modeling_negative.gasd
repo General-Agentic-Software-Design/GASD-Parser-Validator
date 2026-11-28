@@ -4,14 +4,14 @@ TARGET: "Python3"
 TRACE: "GEP-7", "NT-GEP7-001", "NT-GEP7-002", "NT-GEP7-003"
 
 FLOW test_contract_requires_observable_outcomes():
-    @trace(#NT-GEP7-001, #AC-V2-004-04) AS NT_GEP7_MISSING_OUTCOME
+    @trace("NT-GEP7-001", "AC-V2-004-04") AS NT_GEP7_MISSING_OUTCOME
     1. ACHIEVE "Validate separate otherwise-valid GASD 1.2 contracts with missing or empty BEHAVIORS":
         POSTCONDITION: "Both fail with LINT-007 at the contract or BEHAVIORS declaration. An empty cases list cannot pass semantic validation."
     2. ACHIEVE "Validate separate GASD 1.2 cases that are empty, guard-only, timing-only, or both guarded and timed":
         POSTCONDITION: "Every variant fails because it has no POSTCONDITION or THROWS. LINT-007 identifies each case whose parsed clauses contain no observable outcome."
 
 FLOW test_contract_signature_and_names():
-    @trace(#NT-GEP7-002) AS NT_GEP7_INVALID_SIGNATURE
+    @trace("NT-GEP7-002") AS NT_GEP7_INVALID_SIGNATURE
     1. ACHIEVE "Validate separate otherwise-valid contracts containing a repeated input name or repeated case name":
         POSTCONDITION: "Each duplicate is rejected with a diagnostic identifying the duplicate and its source location."
     2. ACHIEVE "Mutate one property of a matching signature per validation run":
@@ -20,7 +20,7 @@ FLOW test_contract_signature_and_names():
         POSTCONDITION: "Both fail with a target resolution diagnostic identifying the contract reference."
 
 FLOW test_invalid_guard_binding_type_and_position():
-    @trace(#NT-GEP7-003) AS NT_GEP7_INVALID_GUARD
+    @trace("NT-GEP7-003") AS NT_GEP7_INVALID_GUARD
     1. ACHIEVE "Validate separate guards referencing an undeclared input, an undeclared field, and the outcome bindings result or error":
         POSTCONDITION: "Each fails because its value reference does not resolve through the declared inputs."
     2. ACHIEVE "Validate guards that order strings, booleans, or null and a guard that uses a function call as an operand":
@@ -29,14 +29,14 @@ FLOW test_invalid_guard_binding_type_and_position():
         POSTCONDITION: "Each misplaced WHEN is rejected and identified in the diagnostic. AST generation cannot silently discard the misplaced guard."
 
 FLOW test_invalid_timing_and_repeated_clauses():
-    @trace(#NT-GEP7-001, #AC-V2-004-02) AS NT_GEP7_INVALID_CLAUSES
+    @trace("NT-GEP7-001", "AC-V2-004-02") AS NT_GEP7_INVALID_CLAUSES
     1. ACHIEVE "Validate separate cases with two THROWS or two AFTER clauses":
         POSTCONDITION: "Validation fails for each duplicate, even if both declarations specify the same value."
     2. ACHIEVE "Validate AFTER retry forms with a negative, fractional, string, boolean, absent, or multiple arguments":
         POSTCONDITION: "Every malformed retry fails. Exactly one nonnegative integer is required."
 
 FLOW test_reached_guard_evaluation_error():
-    @trace(#AT-GEP7-002, #AT-GEP7-003, #NT-GEP7-003) AS NT_GEP7_GUARD_EVALUATION
+    @trace("AT-GEP7-002", "AT-GEP7-003", "NT-GEP7-003") AS NT_GEP7_GUARD_EVALUATION
     1. ACHIEVE "Verify a raw argument with a missing field that an earlier true guard allows evaluation to reach":
         POSTCONDITION: "The report is verification_error with the case and reached guard identified, even if another eligible case would otherwise verify."
     2. ACHIEVE "Repeat with a false first guard for the case that accesses the missing field":

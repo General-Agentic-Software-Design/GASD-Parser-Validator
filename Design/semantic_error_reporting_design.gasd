@@ -47,7 +47,7 @@ COMPONENT SemanticErrorReporter @trace("AC-SEMAST-012-03", "AC-X-SEMAST-010-03")
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Errors MUST include precise line/column mapping back to origin." @trace #AC-SEMAST-012-02
-CONSTRAINT: "Error codes MUST correspond to GASD 1.1.0 Spec sections." @trace #AC-SEMAST-012-01
-CONSTRAINT: "Semantic error reporting MUST be deterministic, sorted by file path then location." @trace #AC-X-SEMAST-010-05
-CONSTRAINT: "Severity levels (ERROR vs WARNING) MUST be enforced; analysis fails on any error." @trace #AC-X-SEMAST-010-04
+CONSTRAINT: "Errors MUST include precise line/column mapping back to origin." @trace("AC-SEMAST-012-02")
+CONSTRAINT: "Error codes MUST correspond to GASD 1.1.0 Spec sections." @trace("AC-SEMAST-012-01")
+CONSTRAINT: "Semantic error reporting MUST be deterministic, sorted by file path then location." @trace("AC-X-SEMAST-010-05")
+CONSTRAINT: "Severity levels (ERROR vs WARNING) MUST be enforced; analysis fails on any error." @trace("AC-X-SEMAST-010-04")

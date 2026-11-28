@@ -111,4 +111,4 @@ FLOW validate_standard_annotations():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Registry MUST define at least two verification dimensions for each triple" @trace(#AC-V2-002-01) AS CONST_REG_TRI_DIM
+CONSTRAINT: "Registry MUST define at least two verification dimensions for each triple" @trace("AC-V2-002-01") AS CONST_REG_TRI_DIM

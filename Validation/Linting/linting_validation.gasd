@@ -85,4 +85,4 @@ FLOW validate_lint_rules():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "GEP-6 rules MUST escalate severity to ERROR in VERSION 1.2" @trace(#AC-V2-001-02) AS CONST_SEVERITY_ESC
+CONSTRAINT: "GEP-6 rules MUST escalate severity to ERROR in VERSION 1.2" @trace("AC-V2-001-02") AS CONST_SEVERITY_ESC

@@ -44,5 +44,5 @@ COMPONENT ConstraintValidator @trace("AC-X-SEMAST-009-03") AS TRACE_GLOBAL_INVAR
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Global invariants MUST be included in the deterministic semantic hash." @trace #AC-X-SEMAST-009-02
-CONSTRAINT: "Conflicting invariants defined in different files MUST trigger a ConstraintConflictError." @trace #AC-X-SEMAST-009-04
+CONSTRAINT: "Global invariants MUST be included in the deterministic semantic hash." @trace("AC-X-SEMAST-009-02") AS TRACE_AC_X_SEMAST_009_02
+CONSTRAINT: "Conflicting invariants defined in different files MUST trigger a ConstraintConflictError." @trace("AC-X-SEMAST-009-04") AS TRACE_AC_X_SEMAST_009_04

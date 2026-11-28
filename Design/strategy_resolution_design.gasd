@@ -49,5 +49,5 @@ COMPONENT StrategyResolver @trace("AC-SEMAST-007-05"):
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Strategy algorithms MUST be valid against internal registry." @trace #AC-SEMAST-007-07
-CONSTRAINT: "Complexity strings MUST follow standard Big-O notation format." @trace #AC-SEMAST-007-08
+CONSTRAINT: "Strategy algorithms MUST be valid against internal registry." @trace("AC-SEMAST-007-07")
+CONSTRAINT: "Complexity strings MUST follow standard Big-O notation format." @trace("AC-SEMAST-007-08")

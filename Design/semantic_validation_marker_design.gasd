@@ -14,8 +14,8 @@ TRACE: "AC-AST-PROVENANCE-015-05", "AC-AST-PROVENANCE-015-06"
 IMPORT "semantic_ast_model_design.gasd" AS Model
 
 CONTRACT Model.SemanticModelBuilder.build:
-    INPUT: asts: List<Model.GASDFile>
-    OUTPUT: Model.SemanticSystem
+    INPUT: asts: List<GASDFile>
+    OUTPUT: SemanticSystem
     BEHAVIORS:
         CASE built:
             POSTCONDITION: "The returned semantic system represents the supplied syntax trees"
@@ -24,13 +24,13 @@ CONTRACT Model.SemanticModelBuilder.build:
 // Decisions
 // ===================================================================
 
-DECISION "Marker Placement" @trace(#AC-PARSER-008-01):
+DECISION "Marker Placement" @trace("AC-PARSER-008-01") AS MARKER_PLACEMENT:
     CHOSEN: "Root-level key 'semantic_validate' in the JSON output"
     RATIONALE: "Placing the marker at the root level ensures that downstream tools can verify the validation status without traversing the node tree."
     ALTERNATIVES: ["Nested in SystemMetadata", "Root-level key"]
     AFFECTS: [SemanticSystem]
 
-DECISION "Time Format" @trace(#AC-PARSER-008-04, #AC-PARSER-008-05):
+DECISION "Time Format" @trace("AC-PARSER-008-04", "AC-PARSER-008-05") AS MARKER_TIME_FORMAT:
     CHOSEN: "ISO-8601 String"
     RATIONALE: "Standardized, human-readable, and machine-parsable format for build and validation timestamps."
     ALTERNATIVES: ["Unix Timestamp", "ISO-8601 String"]
@@ -62,12 +62,12 @@ FLOW inject_validation_marker(system: SemanticSystem, passed: Boolean) -> Semant
         POSTCONDITION: "The marker records the current validation time in ISO-8601 format"
     5. ACHIEVE "Attach marker to result root":
         POSTCONDITION: "The SemanticSystem root contains semantic_validate"
-    @trace(#AC-PARSER-008-06) AS FLOW_MARKER_INJECT
+    @trace("AC-PARSER-008-06") AS FLOW_MARKER_INJECT
 
 // ===================================================================
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "The root semantic_validate marker appears in every validated semantic AST export to stdout or a file, including with --ast-output alone." @trace(#AC-PARSER-008-01, #AC-AST-PROVENANCE-015-05) AS CONST_MARKER_VISIBILITY
-CONSTRAINT: "The exported marker includes the byte digest, content digest and content rules version as specified in ast_provenance_design.gasd." @trace(#AC-AST-PROVENANCE-015-05, #AC-AST-PROVENANCE-015-06) AS CONST_MARKER_PROVENANCE
-CONSTRAINT: "Status MUST NOT be 'PASSED' if any FATAL or ERROR diagnostics were emitted during the semantic pass." @trace(#AC-PARSER-008-06) AS CONST_MARKER_INTEGRITY
+CONSTRAINT: "The root semantic_validate marker appears in every validated semantic AST export to stdout or a file, including with --ast-output alone." @trace("AC-PARSER-008-01", "AC-AST-PROVENANCE-015-05") AS CONST_MARKER_VISIBILITY
+CONSTRAINT: "The exported marker includes the byte digest, content digest and content rules version as specified in ast_provenance_design.gasd." @trace("AC-AST-PROVENANCE-015-05", "AC-AST-PROVENANCE-015-06") AS CONST_MARKER_PROVENANCE
+CONSTRAINT: "Status MUST NOT be 'PASSED' if any FATAL or ERROR diagnostics were emitted during the semantic pass." @trace("AC-PARSER-008-06") AS CONST_MARKER_INTEGRITY

@@ -11,28 +11,28 @@ TARGET: "GASD Agent", "Python3"
 TRACE: "US-PARSER-013"
 
 FLOW test_acceptance_file_write():
-    @trace #AT-PARSER-013-01, #AC-PARSER-013-01
+    @trace("AT-PARSER-013-01", "AC-PARSER-013-01") AS TRACE_TEST_ACCEPTANCE_FILE_WRITE
     1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd"
         POSTCONDITION: "out.json is created"
     2. ENSURE "out.json contains a valid, complete AST JSON document"
         OTHERWISE THROW "Acceptance Failure: Output file does not contain valid AST JSON"
 
 FLOW test_acceptance_stdout_suppressed():
-    @trace #AT-PARSER-013-02, #AC-PARSER-013-02
+    @trace("AT-PARSER-013-02", "AC-PARSER-013-02") AS TRACE_TEST_ACCEPTANCE_STDOUT_SUPPRESSED
     1. ACHIEVE "Run gasd_parser --ast-sem --ast-output out.json valid.gasd and capture stdout"
         POSTCONDITION: "stdout is captured"
     2. ENSURE "stdout does not contain any JSON content (no '{', no AST nodes)"
         OTHERWISE THROW "Acceptance Failure: AST JSON leaked to stdout when --ast-output was specified"
 
 FLOW test_acceptance_default_stdout_preserved():
-    @trace #AT-PARSER-013-03, #AC-PARSER-013-04
+    @trace("AT-PARSER-013-03", "AC-PARSER-013-04") AS TRACE_TEST_ACCEPTANCE_DEFAULT_STDOUT_PRESERVED
     1. ACHIEVE "Run gasd_parser --json valid.gasd without --ast-output"
         POSTCONDITION: "stdout and stderr are captured"
     2. ENSURE "stdout contains a top-level SemanticSystem and stderr contains the validation report"
         OTHERWISE THROW "Acceptance Failure: AST or validation report uses the wrong stream"
 
 FLOW test_acceptance_content_identity():
-    @trace #AT-PARSER-013-04, #AC-PARSER-013-05
+    @trace("AT-PARSER-013-04", "AC-PARSER-013-05") AS TRACE_TEST_ACCEPTANCE_CONTENT_IDENTITY
     1. ACHIEVE "Run gasd_parser --json --ast-output out.json valid.gasd"
         POSTCONDITION: "out.json is created"
     2. ACHIEVE "Run gasd_parser --json valid.gasd and capture stdout"
@@ -43,7 +43,7 @@ FLOW test_acceptance_content_identity():
         OTHERWISE THROW "Acceptance Failure: Stdout and file use different serialization"
 
 FLOW test_acceptance_unwritable_path():
-    @trace #AT-PARSER-013-05, #AC-PARSER-013-06
+    @trace("AT-PARSER-013-05", "AC-PARSER-013-06") AS TRACE_TEST_ACCEPTANCE_UNWRITABLE_PATH
     1. ACHIEVE "Run gasd_parser --ast-sem --ast-output /invalid/path/out.json valid.gasd"
         POSTCONDITION: "Command execution completes"
     2. ENSURE "Exit code is non-zero"
@@ -52,7 +52,7 @@ FLOW test_acceptance_unwritable_path():
         OTHERWISE THROW "Acceptance Failure: Missing stderr error message for unwritable path"
 
 FLOW test_acceptance_json_flag_with_ast_output():
-    @trace #AT-PARSER-013-06, #AC-PARSER-013-02
+    @trace("AT-PARSER-013-06", "AC-PARSER-013-02") AS TRACE_TEST_ACCEPTANCE_JSON_FLAG_WITH_AST_OUTPUT
     1. ACHIEVE "Run gasd_parser --ast-sem --json --ast-output out.json valid.gasd"
         POSTCONDITION: "Command execution completes"
     2. ENSURE "stdout is empty and stderr contains the validation report"

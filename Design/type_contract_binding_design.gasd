@@ -66,9 +66,9 @@ COMPONENT BinderEngine @trace("AC-SEMAST-003-05", "AC-X-SEMAST-007-01"):
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Binding MUST fail if any non-optional field is missing from the source." @trace #AC-SEMAST-003-06
-CONSTRAINT: "Binding MUST detect type mismatches in nested structures." @trace #AC-SEMAST-003-07
-CONSTRAINT: "Recursive bindings MUST be handled via lazy resolution to prevent stack overflow." @trace #AC-SEMAST-003-08
-CONSTRAINT: "Unresolved type references across files MUST produce an UnknownTypeError." @trace #AC-X-SEMAST-004-04
-CONSTRAINT: "Recursive generic depth (up to 10 levels) MUST be supported." @trace #AC-X-SEMAST-004-05
-CONSTRAINT: "Missing TYPE definitions in VALIDATE steps MUST be reported as semantic errors." @trace #AC-X-SEMAST-007-03
+CONSTRAINT: "Binding MUST fail if any non-optional field is missing from the source." @trace("AC-SEMAST-003-06")
+CONSTRAINT: "Binding MUST detect type mismatches in nested structures." @trace("AC-SEMAST-003-07")
+CONSTRAINT: "Recursive bindings MUST be handled via lazy resolution to prevent stack overflow." @trace("AC-SEMAST-003-08")
+CONSTRAINT: "Unresolved type references across files MUST produce an UnknownTypeError." @trace("AC-X-SEMAST-004-04")
+CONSTRAINT: "Recursive generic depth (up to 10 levels) MUST be supported." @trace("AC-X-SEMAST-004-05")
+CONSTRAINT: "Missing TYPE definitions in VALIDATE steps MUST be reported as semantic errors." @trace("AC-X-SEMAST-007-03")

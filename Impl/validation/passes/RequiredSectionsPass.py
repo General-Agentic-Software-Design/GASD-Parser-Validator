@@ -1,6 +1,7 @@
 from typing import List
 from ..ValidationPipeline import ValidationPass, SemanticError
 from ...ast.ASTNodes import GASDFile
+from ...semantic.VersionResolver import VersionResolver
 
 class RequiredSectionsPass(ValidationPass):
     """
@@ -17,7 +18,8 @@ class RequiredSectionsPass(ValidationPass):
         has_target = False
         has_namespace = False
         
-        is_v12 = getattr(ast, 'version', '1.1') == "1.2"
+        declared_version = VersionResolver.resolve_declared_version(ast) or "1.1"
+        is_v12 = VersionResolver.validation_version(declared_version) == "1.2"
         
         for d in ast.directives:
             if d.directiveType == "CONTEXT":

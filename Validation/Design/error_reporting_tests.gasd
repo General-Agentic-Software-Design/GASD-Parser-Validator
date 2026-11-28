@@ -14,7 +14,7 @@ TRACE: "US-PARSER-005"
 // Syntax Error Formatting
 
 FLOW test_syntax_error_format():
-    @trace #AC-PARSER-005-01, #AT-PARSER-005-01
+    @trace("AC-PARSER-005-01", "AT-PARSER-005-01")
     1. ACHIEVE "Trigger a syntax error via GASDErrorListener"
     2. ACHIEVE "Invoke ErrorReporter.toConsole()"
     3. ENSURE "Output contains file path, line, and column"
@@ -26,7 +26,7 @@ FLOW test_syntax_error_format():
 // Semantic Error Formatting
 
 FLOW test_semantic_error_format():
-    @trace #AC-PARSER-005-02
+    @trace("AC-PARSER-005-02")
     1. ACHIEVE "Trigger a semantic error via ValidationPipeline"
     2. ACHIEVE "Invoke ErrorReporter.toConsole()"
     3. ENSURE "Output contains error code and context (e.g. within FLOW name)"
@@ -36,7 +36,7 @@ FLOW test_semantic_error_format():
 // Machine-Readable Output
 
 FLOW test_error_json_output():
-    @trace #AC-PARSER-005-03
+    @trace("AC-PARSER-005-03")
     1. ACHIEVE "Collect multiple errors in ErrorReporter"
     2. ACHIEVE "Invoke ErrorReporter.toJSON()"
     3. ENSURE "Result is valid ErrorReport JSON"
@@ -48,7 +48,7 @@ FLOW test_error_json_output():
 // Regression Tests
 
 FLOW test_error_format_stability():
-    @trace #RT-PARSER-005-01
+    @trace("RT-PARSER-005-01")
     1. ACHIEVE "Compare current JSON output against historical baseline"
     2. ENSURE "JSON schema remains consistent"
         OTHERWISE THROW "Validation Failed"
@@ -56,5 +56,5 @@ FLOW test_error_format_stability():
 // ===================================================================
 // Constraints
 
-CONSTRAINT: "Every error MUST include source file and line" @trace #AC-PARSER-005-01
-CONSTRAINT: "Error reporter MUST be a singleton" @trace #AC-PARSER-005-03
+CONSTRAINT: "Every error MUST include source file and line" @trace("AC-PARSER-005-01")
+CONSTRAINT: "Error reporter MUST be a singleton" @trace("AC-PARSER-005-03")

@@ -238,10 +238,10 @@ TYPE AnnotationRule:
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "Grammar MUST compile successfully using ANTLR4 tooling without errors" @trace #AC-PARSER-001-02
-CONSTRAINT: "Grammar MUST be unambiguous — zero ANTLR warnings in production" @trace #AC-PARSER-001-05
-CONSTRAINT: "All GASD keywords are case-sensitive and MUST be UPPERCASE" @trace #AC-PARSER-001-03
-CONSTRAINT: "Grammar MUST reject syntactically invalid files with clear error tokens" @trace #AC-PARSER-001-04
-CONSTRAINT: "Grammar MUST support all GASD 1.1.0 constructs including Literal Types and expert natural language patterns" @trace #AC-PARSER-001-03
-CONSTRAINT: "Grammar MUST reject VALIDATE statements without explicit AS TYPE binding" @trace #AC-PARSER-008-02
+CONSTRAINT: "Grammar MUST compile successfully using ANTLR4 tooling without errors" @trace("AC-PARSER-001-02")
+CONSTRAINT: "Grammar MUST be unambiguous — zero ANTLR warnings in production" @trace("AC-PARSER-001-05")
+CONSTRAINT: "All GASD keywords are case-sensitive and MUST be UPPERCASE" @trace("AC-PARSER-001-03")
+CONSTRAINT: "Grammar MUST reject syntactically invalid files with clear error tokens" @trace("AC-PARSER-001-04")
+CONSTRAINT: "Grammar MUST support all GASD 1.1.0 constructs including Literal Types and expert natural language patterns" @trace("AC-PARSER-001-03")
+CONSTRAINT: "Grammar MUST reject VALIDATE statements without explicit AS TYPE binding" @trace("AC-PARSER-008-02")
 CONSTRAINT: "INLINE_TRACE (@trace) MUST NOT consume colons ':' to prevent swallowing structural delimiters"

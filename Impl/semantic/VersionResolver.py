@@ -22,37 +22,29 @@ class VersionResolver:
     @staticmethod
     def resolve_metadata_version(ast: Any, cli_version: Optional[str] = None) -> str:
         """
-        Resolve the version value projected into Semantic AST metadata.
-        Explicit CLI version overrides the source; otherwise missing source
-        version is represented as the literal string "unknown".
+        Project the declared version into Semantic AST metadata.
+        If the source omits VERSION, retain the CLI or "unknown" fallback.
         """
-        if cli_version:
-            return str(cli_version).strip('"\' ')
-
         asts = ast if isinstance(ast, list) else [ast]
         if asts:
             declared = VersionResolver.resolve_declared_version(asts[0])
             if declared:
                 return declared
 
+        if cli_version:
+            return str(cli_version).strip('"\' ')
         return "unknown"
 
     @staticmethod
+    def validation_version(version: str) -> str:
+        """Return the version of the validation rules used for this release."""
+        return "1.2" if version in ("1.2.0", "1.2.1") else version
+
+    @staticmethod
     def resolve_version(ast: Any, cli_version: Optional[str] = None) -> str:
-        """
-        GEP-6 §10.1 / US-V2-009:
-        1. If cli_version is provided, it overrides everything.
-        2. Else if VERSION directive exists, use it.
-        3. Default to 1.2.
-        """
-        if cli_version:
-            return cli_version
-        
-        declared = VersionResolver.resolve_declared_version(ast)
-        if declared:
-            return declared
-        
-        return "1.2"
+        """Select validation rules from the CLI, the source, or the 1.2 default."""
+        version = cli_version or VersionResolver.resolve_declared_version(ast) or "1.2"
+        return VersionResolver.validation_version(version)
 
     @staticmethod
     def is_version_12(ast: Any, cli_version: Optional[str] = None) -> bool:
@@ -70,7 +62,7 @@ class VersionResolver:
              
         file_version = VersionResolver.resolve_declared_version(ast)
         
-        if file_version and file_version != cli_version:
+        if file_version and cli_version not in (file_version, VersionResolver.validation_version(file_version)):
                 # We return a structured error to be handled by the reporter
                 from .SemanticErrorReporter import StructuredSemanticError, ErrorLevel
                 from .SemanticNodes import SourceRange

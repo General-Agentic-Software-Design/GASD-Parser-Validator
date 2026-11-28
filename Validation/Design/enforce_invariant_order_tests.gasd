@@ -13,7 +13,7 @@ TRACE: "US-PARSER-012"
 // See Design/enforce_invariant_order_design.gasd for InvariantStmtRule.
 
 FLOW test_design_rule_consistency():
-    @trace #AC-PARSER-012-01, #AC-PARSER-012-02
+    @trace("AC-PARSER-012-01", "AC-PARSER-012-02") AS TRACE_TEST_DESIGN_RULE_CONSISTENCY
     1. ACHIEVE "Review InvariantStmtRule in Design"
         POSTCONDITION: "Rule definition for InvariantStmtRule is extracted"
     2. ENSURE "valid_syntax matches 'INVARIANT_KW (GLOBAL_KW | LOCAL_KW)? ...'"
@@ -22,7 +22,7 @@ FLOW test_design_rule_consistency():
         OTHERWISE THROW "Design Mismatch: Missing invalid syntax pattern"
 
 FLOW test_design_constraint_coverage():
-    @trace #AC-PARSER-012-04, #AC-PARSER-012-03
+    @trace("AC-PARSER-012-04", "AC-PARSER-012-03") AS TRACE_TEST_DESIGN_CONSTRAINT_COVERAGE
     1. ACHIEVE "Examine constraints in Design/enforce_invariant_order_design.gasd"
         POSTCONDITION: "Constraint set for US-PARSER-012 is extracted"
     2. ENSURE "Global enforcement across versions is specified"

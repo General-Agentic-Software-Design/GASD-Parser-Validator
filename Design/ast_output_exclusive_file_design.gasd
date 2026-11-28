@@ -14,13 +14,13 @@ TRACE: "US-PARSER-013", "AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-0
 // Decisions
 // ===================================================================
 
-DECISION "Serialize the AST once and select the destination" @trace(#AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-05) AS DEC_AST_OUTPUT_ROUTING:
+DECISION "Serialize the AST once and select the destination" @trace("AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-05") AS DEC_AST_OUTPUT_ROUTING:
     CHOSEN: "Use the existing AST exporter, encode as UTF-8, and write the same bytes to the requested file or stdout"
     RATIONALE: "Downstream tools already consume the file format. One serialization gives both destinations the same source paths, structure, and validation metadata."
     ALTERNATIVES: ["Use a different JSON envelope for stdout", "Write the AST to both destinations"]
     AFFECTS: [ASTOutputRouter]
 
-DECISION "Unwritable Output File Handling" @trace(#AC-PARSER-013-06) AS DEC_AST_OUTPUT_ERROR:
+DECISION "Unwritable Output File Handling" @trace("AC-PARSER-013-06") AS DEC_AST_OUTPUT_ERROR:
     CHOSEN: "Exit with non-zero code and emit error to stderr"
     RATIONALE: "Fail-fast with a clear error message to stderr ensures the caller can detect and handle the failure programmatically."
     ALTERNATIVES: ["Fallback to stdout on file write failure", "Silently skip file write"]
@@ -51,7 +51,7 @@ TYPE ASTOutputRouting @trace(AC-PARSER-013-01, AC-PARSER-013-02, AC-PARSER-013-0
 // ===================================================================
 
 FLOW route_ast_output(json_content: String, output_path: Optional<String>) -> Void:
-    @trace(#AC-PARSER-013-01, #AC-PARSER-013-02, #AC-PARSER-013-04, #AC-PARSER-013-05) AS FLOW_ROUTE_AST
+    @trace("AC-PARSER-013-01", "AC-PARSER-013-02", "AC-PARSER-013-04", "AC-PARSER-013-05") AS FLOW_ROUTE_AST
     1. ACHIEVE "Use the semantic AST exporter when a semantic system exists and the syntactic AST exporter for an available syntax-only AST"
         POSTCONDITION: "The JSON document has the existing file-export structure and includes the semantic validation marker where applicable"
     2. ACHIEVE "Write the serialized UTF-8 bytes once, to the explicit output path when supplied or to stdout when JSON or combined AST output is requested"
@@ -60,7 +60,7 @@ FLOW route_ast_output(json_content: String, output_path: Optional<String>) -> Vo
         POSTCONDITION: "Diagnostics are available independently of the AST"
 
 FLOW handle_ast_output_error(output_path: String, error: Any) -> Integer:
-    @trace(#AC-PARSER-013-06) AS FLOW_HANDLE_ERROR
+    @trace("AC-PARSER-013-06") AS FLOW_HANDLE_ERROR
     1. ACHIEVE "Emit error message to stderr indicating file write failure for output_path":
         POSTCONDITION: "stderr contains descriptive error message"
     2. RETURN 1
@@ -69,9 +69,9 @@ FLOW handle_ast_output_error(output_path: String, error: Any) -> Integer:
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "When --ast-output is specified, AST JSON content MUST be written exclusively to the output file" @trace(#AC-PARSER-013-01) AS CONST_EXCLUSIVE_FILE_WRITE
-CONSTRAINT: "When --ast-output is specified, AST JSON content MUST NOT appear on stdout" @trace(#AC-PARSER-013-02) AS CONST_NO_STDOUT_JSON
-CONSTRAINT: "The --json validation report is emitted to stderr" @trace(#AC-PARSER-013-03) AS CONST_REPORT_STDERR
-CONSTRAINT: "When --json is supplied without --ast-output, stdout contains the serialized AST if available" @trace(#AC-PARSER-013-04) AS CONST_PRESERVE_DEFAULT
-CONSTRAINT: "Both destinations use the same serialization and encoding. Independent runs can differ in generated node IDs and validation timestamps." @trace(#AC-PARSER-013-05) AS CONST_CONTENT_IDENTITY
-CONSTRAINT: "If the output file path is not writable, the parser MUST exit with non-zero code and emit error to stderr" @trace(#AC-PARSER-013-06) AS CONST_WRITE_ERROR_HANDLING
+CONSTRAINT: "When --ast-output is specified, AST JSON content MUST be written exclusively to the output file" @trace("AC-PARSER-013-01") AS CONST_EXCLUSIVE_FILE_WRITE
+CONSTRAINT: "When --ast-output is specified, AST JSON content MUST NOT appear on stdout" @trace("AC-PARSER-013-02") AS CONST_NO_STDOUT_JSON
+CONSTRAINT: "The --json validation report is emitted to stderr" @trace("AC-PARSER-013-03") AS CONST_REPORT_STDERR
+CONSTRAINT: "When --json is supplied without --ast-output, stdout contains the serialized AST if available" @trace("AC-PARSER-013-04") AS CONST_PRESERVE_DEFAULT
+CONSTRAINT: "Both destinations use the same serialization and encoding. Independent runs can differ in generated node IDs and validation timestamps." @trace("AC-PARSER-013-05") AS CONST_CONTENT_IDENTITY
+CONSTRAINT: "If the output file path is not writable, the parser MUST exit with non-zero code and emit error to stderr" @trace("AC-PARSER-013-06") AS CONST_WRITE_ERROR_HANDLING

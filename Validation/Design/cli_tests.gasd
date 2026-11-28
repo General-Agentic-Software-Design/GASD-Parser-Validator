@@ -14,7 +14,7 @@ TRACE: "US-PARSER-006", "US-PARSER-007"
 // Multiple File Processing
 
 FLOW test_cli_multiple_files():
-    @trace #AC-PARSER-006-01, #AT-PARSER-006-01
+    @trace("AC-PARSER-006-01", "AT-PARSER-006-01")
     1. ACHIEVE "Run gasd_parser file1.gasd file2.gasd"
     2. ENSURE "Both files are processed sequentially"
         OTHERWISE THROW "Validation Failed"
@@ -25,7 +25,7 @@ FLOW test_cli_multiple_files():
 // Recursive Directory Traversal
 
 FLOW test_cli_recursive_traversal():
-    @trace #AC-PARSER-006-02, #AT-PARSER-006-02
+    @trace("AC-PARSER-006-02", "AT-PARSER-006-02")
     1. ACHIEVE "Run gasd_parser MyProjectFolder/"
     2. ENSURE "CLI recursively finds and parses all .gasd files"
         OTHERWISE THROW "Validation Failed"
@@ -36,7 +36,7 @@ FLOW test_cli_recursive_traversal():
 // AST Export Flags
 
 FLOW test_cli_ast_flags():
-    @trace #AC-PARSER-007-01, #AT-PARSER-007-02
+    @trace("AC-PARSER-007-01", "AT-PARSER-007-02")
     1. ACHIEVE "Run gasd_parser file.gasd --json"
     2. ENSURE "The CLI writes a source-checked semantic AST to stdout and a JSON report with the digest to stderr"
         OTHERWISE THROW "Validation Failed"
@@ -48,7 +48,7 @@ FLOW test_cli_ast_flags():
 // Exit Codes
 
 FLOW test_cli_exit_codes():
-    @trace #AC-PARSER-006-03
+    @trace("AC-PARSER-006-03")
     1. ACHIEVE "Run CLI on directory with one invalid file"
     2. ENSURE "CLI exits with code 1"
         OTHERWISE THROW "Validation Failed"
@@ -59,5 +59,5 @@ FLOW test_cli_exit_codes():
 // ===================================================================
 // Constraints
 
-CONSTRAINT: "CLI MUST NOT halt on the first file error" @trace #AC-PARSER-006-03
-CONSTRAINT: "The CLI publishes a semantic AST only after validation and source reconciliation pass" @trace #AC-PARSER-007-01
+CONSTRAINT: "CLI MUST NOT halt on the first file error" @trace("AC-PARSER-006-03")
+CONSTRAINT: "The CLI publishes a semantic AST only after validation and source reconciliation pass" @trace("AC-PARSER-007-01")

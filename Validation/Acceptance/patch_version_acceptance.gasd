@@ -1,0 +1,10 @@
+VERSION 1.2
+CONTEXT: "BUG-5 acceptance scenarios"
+TARGET: "Python3"
+TRACE: "BUG-5", "AT-V2-101", "AT-PARSER-009-04", "AT-PARSER-009-05"
+
+FLOW accept_patch_versions() -> Void:
+    1. ACHIEVE "Validate stdin separately with VERSION 1.2, VERSION 1.2.0 and VERSION 1.2.1 using a valid type definition":
+        POSTCONDITION: "Each invocation exits zero and both semantic AST version fields equal the version declared in the input"
+    2. ACHIEVE "Export the validated AST for a file declaring VERSION 1.2.1 to an explicit output file":
+        POSTCONDITION: "Both semantic version fields in the file contain the string 1.2.1"

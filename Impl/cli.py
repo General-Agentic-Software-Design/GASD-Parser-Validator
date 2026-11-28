@@ -25,7 +25,7 @@ from .semantic.VersionResolver import VersionResolver
 try:
     from . import __version__, __build_time__
 except ImportError:
-    __version__ = "2.1.13"
+    __version__ = "2.1.14"
     __build_time__ = "DEVELOPMENT-BUILD"
 
 
@@ -159,9 +159,6 @@ def main():
         reporters[file_path] = reporter
 
         if reporter.get_error_count() > 0:
-            if not args.json:
-                print(f"ERROR: {reporter.source_file} failed validation", file=sys.stderr)
-                print(reporter.to_console(), file=sys.stderr)
             continue
 
         # AST Generation

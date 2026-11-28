@@ -47,4 +47,4 @@ FLOW validate_acceptance_tests():
 // Constraints
 // ===================================================================
 
-CONSTRAINT: "No validation test may pass if it violates the GEP-6 specification" @trace(#AC-V2-001-02) AS CONST_GEP6_VER
+CONSTRAINT: "No validation test may pass if it violates the GEP-6 specification" @trace("AC-V2-001-02") AS CONST_GEP6_VER
